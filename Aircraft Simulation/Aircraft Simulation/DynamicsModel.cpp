@@ -22,7 +22,6 @@ void DynamicsModel::dynamics(float* velBody,float* pqr,float* Force,float* Momen
     Fy = Force[1];
     Fz = Force[2];
 
-    
     L = Moment[0];
     M = Moment[1];
     N = Moment[2];
@@ -45,7 +44,7 @@ void DynamicsModel::dynamics(float* velBody,float* pqr,float* Force,float* Momen
     pdot = Iz/den*eq1 + Ixz/den*eq2;
     rdot = Ixz/den*eq1 + Ix/den*eq2;
     
-    // convert to deg
+    // convert to deg/s
     u = u + udot*dt;
     v = v + vdot*dt;
     w = w + wdot*dt;
@@ -61,7 +60,7 @@ void DynamicsModel::dynamics(float* velBody,float* pqr,float* Force,float* Momen
     pqr[2]     = r;
 }
 
-void DynamicsModel::kinematics(float* pos, float* angle, float* vel, float* omega, double dt){
+void DynamicsModel::integrate(float* pos, float* angle, float* vel, float* omega, double dt){
     x = pos[0];
     y = pos[1];
     z = pos[2];

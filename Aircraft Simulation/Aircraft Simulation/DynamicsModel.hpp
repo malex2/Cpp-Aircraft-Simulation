@@ -18,7 +18,7 @@ class DynamicsModel
 {
 public:
     void dynamics(float* velBody,float* pqr,float* Force,float* Moment,float* Inertia,float m, double dt);
-    void kinematics(float* pos, float* angle, float* vel, float* omega, double dt);
+    void integrate(float* pos, float* angle, float* vel, float* omega, double dt);
     void sumForces(float* sum,float* aero,float* ground,float* gravity);
     
     float getX(void);

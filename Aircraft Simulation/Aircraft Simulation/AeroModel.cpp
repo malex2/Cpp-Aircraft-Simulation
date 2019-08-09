@@ -8,7 +8,7 @@
 
 #include "AeroModel.hpp"
 
-void AeroModel::rcPlane(float *pqr,float *controls, float *FaeroW, float *MaeroW){
+void AeroModel::rcPlane(float *pqr,float *controls, float *FaeroWind, float *MaeroBody){
     derad = controls[0]*deg2rad;
     darad = controls[1]*deg2rad;
     drrad = controls[2]*deg2rad;
@@ -72,16 +72,16 @@ void AeroModel::rcPlane(float *pqr,float *controls, float *FaeroW, float *MaeroW
     M = qS*cbar*Cm;
     N = qS*b*Cn;
     
-    FaeroW[0] = -Drag;
-    FaeroW[1] = -SideForce;
-    FaeroW[2] = -Lift;
+    FaeroWind[0] = -Drag;
+    FaeroWind[1] = -SideForce;
+    FaeroWind[2] = -Lift;
     
-    MaeroW[0] = L;
-    MaeroW[1] = M;
-    MaeroW[2] = N;
+    MaeroBody[0] = L;
+    MaeroBody[1] = M;
+    MaeroBody[2] = N;
 }
 
-void AeroModel::Dummy(double curTime, const int size,float *dummyTimes, float *dummyForceMoments, float *FaeroW, float *MaeroW){
+void AeroModel::Dummy(double curTime, const int size,float *dummyTimes, float *dummyForceMoments, float *FaeroWind, float *MaeroBody){
     // Get forces    
     for(int i=0;i<6;i++)
     {
@@ -89,8 +89,8 @@ void AeroModel::Dummy(double curTime, const int size,float *dummyTimes, float *d
             {
                if(*(dummyTimes+i*size+j)<=curTime)
                {
-                   if (i<3) FaeroW[i]=*(dummyForceMoments+i*size+j);
-                   else     MaeroW[i-3]=*(dummyForceMoments+i*size+j);
+                   if (i<3) FaeroWind[i]=*(dummyForceMoments+i*size+j);
+                   else     MaeroBody[i-3]=*(dummyForceMoments+i*size+j);
                }
             }
     }

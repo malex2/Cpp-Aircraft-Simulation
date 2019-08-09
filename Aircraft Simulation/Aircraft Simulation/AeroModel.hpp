@@ -19,7 +19,7 @@ class AeroModel
 {
 public:
     void Dummy(double curTime, const int size,float *dummyTimes, float *dummyForceMoments, float *FaeroW, float *MaeroW);
-    void rcPlane(float *pqr,float *controls,float *FaeroW, float *MaeroW);
+    void rcPlane(float *pqr,float *controls,float *FaeroWind, float *MaeroBody);
     
     void Angles(float* velBody);
     float getAlpha();
