@@ -19,25 +19,25 @@
 float mass             = 3;
 float inertia[4]       = {0.1,0.2,0.3,0.002};
 
-float throttle         = 0.0;
+float throttle         = 1.0;
 float maxThrust        = 10;
-float actuators[3]     = {5,0,0}; //{de,da,dr}
+float actuators[3]     = {6,0,0}; //{de,da,dr}
 
 // World constants
 float elevation        = 0;
 
 // Update time constants
-float runTime          = 5;
-float printInterval    = 1;
+float runTime          = 3;
+float printInterval    = 0.01;
 float dynamicsInterval = 0.001;
 
 // Initial conditions
 float xInitial         = 0;
 float yInitial         = 0;
-float zInitial         = 0;
+float zInitial         = -10;
 float altInitial       = -zInitial;
 
-float xdotInitial      = 5;
+float xdotInitial      = 10;
 float ydotInitial      = 0;
 float zdotInitial      = 0;
 
@@ -119,6 +119,7 @@ float sumMoment[3];
 // Functions
 void updateAeroAngles();
 void updateBodyStates();
+void updateWorldStates();
 
 // Constants
 const float rad2deg = 180/M_PI;
