@@ -21,10 +21,10 @@ class RotateFrame
 {
 
 public:
-    void RotateInertialToBody(float phi,float theta,float psi, float *pFrame1, float *pFrame2);
-    void RotateBodyToInertial(float phi,float theta,float psi, float *pFrame1, float *pFrame2);
-    void RotateAngularRatesInertialToBody(float roll,float pitch,float *omegaB,float *omegaI);
-    void RotateAngularRatesBodyToInertial(float roll,float pitch,float *omegaB,float *omegaI);
+    void RotateInertialToBody(float phi,float theta,float psi, float *FrameBody, float *FrameInertial);
+    void RotateBodyToInertial(float phi,float theta,float psi, float *FrameBody, float *FrameInertial);
+    void RotateAngularRatesInertialToBody(float roll,float pitch,float *omegaBody,float *omegaInertial);
+    void RotateAngularRatesBodyToInertial(float roll,float pitch,float *omegaBody,float *omegaInertial);
 private:
     float ctheta;
     float cpsi;
