@@ -9,18 +9,19 @@
 #include <iostream>
 #include <cstdint> // <cstdint> requires c++11 support
 #include <functional>
-//#include Python.h>
-#include <Python/Python.h>
-/*
+#include <Python.h>
+#define WITHOUT_NUMPY
+
+
 #ifndef WITHOUT_NUMPY
-#  define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION*/
+#  define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include </Users/alexandermclean/anaconda/lib/python2.7/site-packages/numpy/core/include/numpy/arrayobject.h>
-/*
+
 #  ifdef WITH_OPENCV
 #  include <opencv2/opencv.hpp>
 #  endif // WITH_OPENCV
 #endif // WITHOUT_NUMPY
-*/
+
 #if PY_MAJOR_VERSION >= 3
 #  define PyString_FromString PyUnicode_FromString
 #  define PyInt_FromLong PyLong_FromLong

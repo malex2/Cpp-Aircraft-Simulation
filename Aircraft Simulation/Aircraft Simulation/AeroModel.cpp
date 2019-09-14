@@ -116,3 +116,4 @@ float AeroModel::getAlpha(){
 float AeroModel::getBeta(){
     return beta;    
 }
+
