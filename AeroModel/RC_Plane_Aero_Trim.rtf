@@ -1,0 +1,153 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1561\cocoasubrtf610
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\margl1440\margr1440\vieww10800\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 \
+xflr5 v6.40\
+04.07.2020  00:12:07\
+\
+Launching the 3D Panel Analysis....\
+RC Airplane Flaps\
+Type 7 - Stability polar\
+\
+Wings as thin surfaces\
+Using ring vortices - VLM2\
+Using Neumann boundary conditions for wings\
+\
+Density   =       1.225kg/m3\
+Viscosity =      1.5e-5m\'b2/s\
+\
+Reference Area   =      0.0676m\'b2\
+Reference length =        0.52m\
+\
+Counted  407 panel elements\
+\
+\
+   Solving the problem... \
+\
+      Calculation for control position  0.00\
+   Mass=       0.372 kg\
+\
+   ___Center of Gravity Position - Body axis____\
+    CoG_x=      0.1525 m\
+    CoG_y=     -0.0000 m\
+    CoG_z=      0.0218 m\
+\
+   ___Inertia - Body Axis - CoG Origin____\
+    Ibxx=   0.0008093 kg.m\'b2\
+    Ibyy=    0.006023 kg.m\'b2\
+    Ibzz=    0.006432 kg.m\'b2\
+    Ibxz=  -0.0001364 kg.m\'b2\
+\
+      Creating the unit RHS vectors...\
+      Creating the influence matrix...\
+      Performing LU Matrix decomposition...\
+      Solving the LU system...\
+      Searching for zero-moment angle... Alpha=1.54828\'b0\
+      Creating source strengths...\
+      Calculating doublet strength...\
+      Calculating speed to balance the weight...VInf = 14.31074 m/s\
+\
+      ___Inertia - Stability Axis - CoG Origin____\
+      Isxx=   0.0008208 \
+      Isyy=    0.006023 \
+      Iszz=     0.00642 \
+      Isxz=  -0.0002881 \
+\
+      Calculating the stability derivatives\
+         Creating the RHS translation vectors\
+         LU solving for RHS - longitudinal\
+         Calculating forces and derivatives - lateral\
+         Creating the RHS rotation vectors\
+         LU solving for RHS - lateral\
+         Calculating forces and derivatives - lateral\
+\
+      No active control - skipping control derivatives\
+\
+\
+      Longitudinal derivatives\
+      Xu=   -0.033344         Cxu=   -0.056273\
+      Xw=     0.10683         Cxa=      0.1803\
+      Zu=    -0.50747         Czu=   0.0042951\
+      Zw=     -2.4929         CLa=      4.2072\
+      Zq=    -0.25962         CLq=      6.7408\
+      Mu= -0.00079108         Cmu=    -0.01027\
+      Mw=   -0.063001         Cma=    -0.81788\
+      Mq=   -0.044641         Cmq=     -8.9158\
+      Neutral Point position=   0.17781 m\
+\
+\
+      Lateral derivatives\
+      Yv=    -0.21313         CYb=    -0.35968\
+      Yp=  -9.0899e-5         CYp= -0.00059002\
+      Yr=    0.062434         CYr=     0.40526\
+      Lv=   -0.012923         Clb=    -0.04194\
+      Lp=   -0.031418         Clp=    -0.39218\
+      Lr=      0.0128         Clr=     0.15978\
+      Nv=    0.056122         Cnb=     0.18215\
+      Np=  -0.0050095         Cnp=   -0.062532\
+      Nr=   -0.016295         Cnr=    -0.20341\
+\
+      _____State matrices__________\
+       Longitudinal state matrix\
+            -0.0896333            0.287184                   0               -9.81\
+              -1.36416            -6.70145             13.6128                   0\
+              -0.13135            -10.4605            -7.41208                   0\
+                     0                   0                   1                   0\
+       Lateral state matrix\
+             -0.572917        -0.000244351            -14.1429                9.81\
+              -19.1136            -38.6129             16.7495                   0\
+               9.59896            0.952316            -3.28964                   0\
+                     0                   1                   0                   0\
+\
+\
+\
+      ___Longitudinal modes____\
+\
+      Eigenvalue:     -7.076+   -11.93i   |      -7.076+    11.93i   |    -0.02516+   -0.826i   |    -0.02516+    0.826i\
+                    _____________________________________________________________________________________________________\
+      Eigenvector:         1+        0i   |           1+        0i   |           1+        0i   |           1+        0i\
+                       34.49+    6.007i   |       34.49+   -6.007i   |    -0.06224+ 0.002114i   |    -0.06224+-0.002114i\
+                       4.413+   -30.39i   |       4.413+    30.39i   |     0.06982+ 0.004813i   |     0.06982+-0.004813i\
+                       1.722+    1.392i   |       1.722+   -1.392i   |   -0.008394+  0.08426i   |   -0.008394+ -0.08426i\
+\
+\
+\
+      ___Lateral modes____\
+\
+      Eigenvalue:     -38.99+        0i   |      -1.834+    -11.5i   |      -1.834+     11.5i   |      0.1817+        0i\
+                    _____________________________________________________________________________________________________\
+      Eigenvector:         1+        0i   |           1+        0i   |           1+        0i   |           1+        0i\
+                      -336.6+        0i   |       -0.54+   0.1862i   |       -0.54+  -0.1862i   |      0.7954+        0i\
+                       8.711+        0i   |     0.08328+   0.7795i   |     0.08328+  -0.7795i   |       2.983+        0i\
+                       8.634+        0i   |   -0.008487+ -0.04831i   |   -0.008487+  0.04831i   |       4.378+        0i\
+\
+      Calculating aerodynamic coefficients in the far field plane\
+        Calculating point    1.55\'b0....\
+      Computing On-Body Speeds...\
+      Computing Plane for alpha=   1.55\'b0\
+       Calculating aerodynamic coefficients...\
+         Calculating wing...Main Wing\
+         Calculating wing...Elevator\
+         Calculating wing...Fin\
+\
+   Phillips formulae:\
+       Phugoid eigenvalue:      -0.00337+  0.83924i\
+               frequency:  0.134 Hz\
+               damping:    0.004\
+       Dutch-Roll eigenvalue:   -1.69764+ 11.46378i\
+               frequency:  1.844 Hz\
+               damping:    0.148\
+\
+\
+     ______Finished operating point calculation for control position  0.00________\
+\
+\
+\
+\
+\
+Panel Analysis completed successfully\
+}
