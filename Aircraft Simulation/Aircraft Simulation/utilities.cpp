@@ -8,6 +8,109 @@
 
 #include "utilities.hpp"
 
+MonitorMacInput::MonitorMacInput(void)
+{
+    error = false;
+    
+    // get old settings
+    tcgetattr(0, &oldSettings);
+    
+    // configure terminal
+    newSettings = oldSettings;
+    
+    newSettings.c_lflag &= ~ICANON; // disable line-at-a-time input
+    newSettings.c_lflag &= ~ECHO;   // disable echo
+    newSettings.c_cc[VMIN]  = 0;    // don't wait for characters
+    newSettings.c_cc[VTIME] = 0;    // minimum wait time
+    
+    // check for errors
+    if ( tcsetattr(0, TCSAFLUSH, &newSettings) != 0)
+    {
+        std::cout << "error code: " << stderr;
+        std::cout << "Unable to set terminal mode" << std::endl;
+        error = true;
+    }
+}
+
+MonitorMacInput::~MonitorMacInput(void)
+{
+    // restore old settings
+    tcsetattr( 0, TCSAFLUSH, &oldSettings );
+}
+
+int MonitorMacInput::monitorInput(void)
+{
+    if (!error)
+    {
+        char input;
+    
+        // return '\0' when no character available
+        if ( read(STDIN_FILENO, &input, 1) == 0 ) { return '\0'; }
+        else { /*tcflush(STDIN_FILENO, TCIOFLUSH);*/ return input; }
+    }
+    return '\0';
+}
+
+Delay::Delay(int *pCounterIn, float counterRateIn, float sDelayIn, bool debugIn)
+{
+    pCounter    = pCounterIn;
+    counterRate = counterRateIn;
+    sDelay      = sDelayIn;
+    debug       = debugIn;
+    
+    timerStarted  = false;
+    changeApplied = false;
+}
+
+template<typename TempType>
+void Delay::delayValue(TempType *value, TempType newValue)
+{
+    // Change sensed
+    if ( (newValue) != (*value) )
+    {
+        // start timer
+        if (!timerStarted)
+        {
+            countStart    = *pCounter;
+            timer         = 0;
+            changeApplied = false;
+            timerStarted  = true;
+            if (debug)
+            {
+                std::cout << "Change sensed (" << countStart << "): " << *value;
+                std::cout << " to "<< newValue;
+                std::cout << " (delay: " << sDelay << "s)" << std::endl;
+            }
+            
+        }
+        else
+        {
+            timer  = (float) (*pCounter - countStart)/(counterRate);
+            if (debug) { std::cout << "timer: " << timer << " (" << *pCounter << ")" << std::endl; }
+        }
+        
+        // Apply value change after delay passed
+        if (timer >= sDelay)
+        {
+            (*value) = newValue;
+            if (debug)
+            {
+                std::cout << *value << " applied";
+                std::cout << " (delay: " << sDelay << "s)" << std::endl;
+            }
+            changeApplied = true;
+            timerStarted  = false;
+        }
+    }
+    
+    // No change, stop timer
+    else
+    {
+        timerStarted  = false;
+        changeApplied = false;
+    }
+}
+
 /* -------------------- General -------------------- */
 template<typename TempType>
 void Utilities::print(TempType *array, int arrayLength)
@@ -116,6 +219,15 @@ void Utilities::print(TempType *matrix, int nrows, int ncols, const char *name)
 }
 
 template<typename TempType>
+void Utilities::initArray(TempType *array, TempType val, int arrayLength)
+{
+    for (int i = 0; i <arrayLength; i++)
+    {
+        array[i] = val;
+    }
+}
+
+template<typename TempType>
 void Utilities::setArray(TempType *array, TempType *setArray, int arrayLength)
 {
     for (int i = 0; i < arrayLength; i++)
@@ -177,6 +289,19 @@ void Utilities::setUnitClassArray(unitType<valType> *unitClass, const valType *s
     {
         unitClass[i].val = setArray[i];
         unitClass[i].convertUnit(initUnit, false);
+    }
+}
+
+template<typename TempType>
+void Utilities::initMatrix(TempType *matrix, TempType val, int nrow, int ncol)
+{
+    for (int i = 0; i < nrow; i++)
+    {
+        for (int j = 0; j < ncol; j++)
+        {
+            *(matrix + i*ncol + j) = val; // matrix[i][j]
+        }
+        
     }
 }
 
@@ -472,7 +597,7 @@ void Utilities::vgain(TempType *vec, TempType gain, int n)
 }
 
 template<typename TempType>
-TempType Utilities::interpolate(TempType *xvec, TempType *yvec, TempType x, int n, bool extrapolate)
+TempType Utilities::interpolate(TempType *xvec, TempType *yvec, TempType x, int n, bool extrapolate, bool print)
 {
     int itr = -1;
     
@@ -480,13 +605,17 @@ TempType Utilities::interpolate(TempType *xvec, TempType *yvec, TempType x, int 
     TempType slope;
     TempType x1, x2, y1, y2;
     
+    enum range {above, below, good};
+    range lookupRange = good;
+    
     bool cont = true;
     
     if (x < xvec[0])
     {
         cont = false;
         itr = 1;
-        if (!extrapolate) { std::cout << "Warning: " << x << " is below range" << std::endl; }
+        if (print) { std::cout << "Warning: " << x << " is below range" << std::endl; }
+        lookupRange = below;
     }
     
     // Find where x falls in xvec
@@ -497,20 +626,98 @@ TempType Utilities::interpolate(TempType *xvec, TempType *yvec, TempType x, int 
         else if (itr > n-1)
         {
             cont = false;
-            if (!extrapolate) { std::cout << "Warning: " << x << " is above range" << std::endl; }
-            itr = n-1;
+            itr  = n-1;
+            if (print) { std::cout << "Warning: " << x << " is above range" << std::endl; }
+            lookupRange = above;
+            
         }
     }
     
-    // Bound range (x1, y1), (x2, y2)
-    x1 = xvec[itr-1];
-    x2 = xvec[itr];
-    y1 = yvec[itr-1];
-    y2 = yvec[itr];
+    if (lookupRange == below && !extrapolate)
+    {
+        y = yvec[0];
+    }
     
-    // (y - y1) = m(x - x1)
-    slope = (y2 - y1)/(x2 - x1);
-    y  = slope * (x - x1) + y1;
+    else if (lookupRange == above && !extrapolate)
+    {
+        y = yvec[n-1];
+    }
+    
+    else
+    {
+        // Bound range (x1, y1), (x2, y2)
+        x1 = xvec[itr-1];
+        x2 = xvec[itr];
+        y1 = yvec[itr-1];
+        y2 = yvec[itr];
+    
+        // (y - y1) = m(x - x1)
+        slope = (y2 - y1)/(x2 - x1);
+        y  = slope * (x - x1) + y1;
+    }
+    
+    return y;
+}
+
+template<typename TempType>
+TempType Utilities::interpolate(const TempType *xvec, const TempType *yvec, TempType x, int n, bool extrapolate, bool print)
+{
+    int itr = -1;
+    
+    TempType y;
+    TempType slope;
+    TempType x1, x2, y1, y2;
+    
+    enum range {above, below, good};
+    range lookupRange = good;
+    
+    bool cont = true;
+    
+    if (x < xvec[0])
+    {
+        cont = false;
+        itr = 1;
+        if (print) { std::cout << "Warning: " << x << " is below range" << std::endl; }
+        lookupRange = below;
+    }
+    
+    // Find where x falls in xvec
+    while (cont)
+    {
+        itr ++;
+        if (x <= xvec[itr]) { cont = false; }
+        else if (itr > n-1)
+        {
+            cont = false;
+            itr  = n-1;
+            if (print) { std::cout << "Warning: " << x << " is above range" << std::endl; }
+            lookupRange = above;
+            
+        }
+    }
+    
+    if (lookupRange == below && !extrapolate)
+    {
+        y = yvec[0];
+    }
+    
+    else if (lookupRange == above && !extrapolate)
+    {
+        y = yvec[n-1];
+    }
+    
+    else
+    {
+        // Bound range (x1, y1), (x2, y2)
+        x1 = xvec[itr-1];
+        x2 = xvec[itr];
+        y1 = yvec[itr-1];
+        y2 = yvec[itr];
+        
+        // (y - y1) = m(x - x1)
+        slope = (y2 - y1)/(x2 - x1);
+        y  = slope * (x - x1) + y1;
+    }
     
     return y;
 }
@@ -592,13 +799,25 @@ void Utilities::mmult(TempType* result, TempType* A, int nrows1, int ncols1, Tem
 }
 
 template<typename TempType>
-void Utilities::mtran(TempType *matrix_t, TempType *matrix, int nrow, int ncol)
+void Utilities::mtran(TempType *matrix_t, TempType *matrix, int nrow_t, int ncol_t)
 {
-    for(int i=0;i<nrow;i++)
+    for(int i=0;i<nrow_t;i++)
     {
-        for(int j=0;j<ncol;j++)
+        for(int j=0;j<ncol_t;j++)
         {
-            *(matrix_t+i*ncol+j) = *(matrix+j*nrow+i);
+            *(matrix_t+i*ncol_t+j) = *(matrix+j*nrow_t+i);
+        }
+    }
+}
+
+template<typename TempType>
+void Utilities::mtran(TempType *matrix_t, const TempType *matrix, int nrow_t, int ncol_t)
+{
+    for(int i=0;i<nrow_t;i++)
+    {
+        for(int j=0;j<ncol_t;j++)
+        {
+            *(matrix_t+i*ncol_t+j) = *(matrix+j*nrow_t+i);
         }
     }
 }
@@ -1035,6 +1254,10 @@ template void Utilities::print(int*, int, int, const char*);
 template void Utilities::print(float*, int, int, const char*);
 template void Utilities::print(double*, int, int, const char*);
 
+template void Utilities::initArray(bool*, bool, int);
+template void Utilities::initArray(int*, int, int);
+template void Utilities::initArray(float*, float, int);
+
 template void Utilities::setArray(float*, float*, int);
 
 template void Utilities::setArray(float*, const float*, int);
@@ -1067,7 +1290,12 @@ template void Utilities::setUnitClassUnit(AngleRateType<float>*, AngleRateListTy
 template void Utilities::setUnitClassArray(AngleRateType<float>*, float*, AngleRateListType ,int);
 template void Utilities::setUnitClassArray(AngleRateType<float>*, const float*, AngleRateListType ,int);
 
+template void Utilities::initMatrix(float*, float, int, int);
+
 template void Utilities::setMatrix(float*, const float*, int, int);
+
+template void Delay::delayValue(bool *value, bool newValue);
+template void Delay::delayValue(float *value, float newValue);
 
 template int Utilities::max(int, int);
 template float Utilities::max(float, float);
@@ -1135,8 +1363,11 @@ template void Utilities::vgain(int* , int, int);
 template void Utilities::vgain(float* , float, int);
 template void Utilities::vgain(double* , double, int);
 
-template float Utilities::interpolate(float*, float*, float, int, bool);
-template double Utilities::interpolate(double*, double*, double, int, bool);
+template float Utilities::interpolate(float*, float*, float, int, bool, bool);
+template double Utilities::interpolate(double*, double*, double, int, bool, bool);
+
+template float Utilities::interpolate(const float*, const float*, float, int, bool, bool);
+template double Utilities::interpolate(const double*, const double*, double, int, bool, bool);
 
 template void Utilities::mmult(int* , int* , int* , int, int);
 template void Utilities::mmult(float* , float* , float* , int, int);
@@ -1155,6 +1386,9 @@ template void Utilities::mmult(double*, double* , int, int, double* , int, int);
 template void Utilities::mtran(int* , int* ,int ,int);
 template void Utilities::mtran(float* , float* ,int ,int);
 template void Utilities::mtran(double* , double* ,int ,int);
+
+template void Utilities::mtran(float* , const float* ,int ,int);
+template void Utilities::mtran(double* , const double* ,int ,int);
 
 template void Utilities::mgain(int* , int, int, int);
 template void Utilities::mgain(float* , float, int, int);

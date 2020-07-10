@@ -87,6 +87,9 @@ public:
     
     // Update obejct states and forces
     virtual bool update(void);
+    
+    // Getters
+    bool isOnGround(void) { return util.any(onGround, nContactPoints); }
 private:
     /*
     const float cgz = 0.09; // Height of center of gravity above ground when aircraft is on ground (0.3 ft)

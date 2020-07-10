@@ -27,8 +27,10 @@ public:
     
     // Getters
     SpeedType<float>* getVelWindBody(void) { return velWindBody; }
-    SpeedType<float>* getVelWindNED(void) { return velWindNED; }
-    float* getAir(void) { return air; }
+    SpeedType<float>* getVelWindNED(void)  { return velWindNED; }
+    float*            getAir(void)         { return air; }
+    float             getRe(void)          { return Re;  }
+    float             getMach(void)        { return Mach; }
     
 private:
     class DynamicsModel *pDyn;

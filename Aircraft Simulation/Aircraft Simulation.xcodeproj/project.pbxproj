@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		1E06A2762494733C00DD8972 /* generic_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E06A2742494733C00DD8972 /* generic_model.cpp */; };
 		1E17D5612495989C00338B14 /* data_logger.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E17D5602495989C00338B14 /* data_logger.cpp */; };
+		1E23C68B24B2AFC800EC4335 /* actuator_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E23C68924B2AFC800EC4335 /* actuator_model.cpp */; };
 		1E29E0DE24A7989B00A8C31A /* atmosphere_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E29E0DC24A7989A00A8C31A /* atmosphere_model.cpp */; };
 		1E3D1D5624951E240025A1CD /* model_mapping.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3D1D5424951E240025A1CD /* model_mapping.cpp */; };
 		1E565081248D4EE200EB0E51 /* time.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E565080248D4EE200EB0E51 /* time.cpp */; };
@@ -38,6 +39,8 @@
 		1E06A2752494733C00DD8972 /* generic_model.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = generic_model.hpp; sourceTree = "<group>"; };
 		1E17D55F2495989C00338B14 /* data_logger.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = data_logger.hpp; sourceTree = "<group>"; };
 		1E17D5602495989C00338B14 /* data_logger.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = data_logger.cpp; sourceTree = "<group>"; };
+		1E23C68924B2AFC800EC4335 /* actuator_model.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = actuator_model.cpp; sourceTree = "<group>"; };
+		1E23C68A24B2AFC800EC4335 /* actuator_model.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = actuator_model.hpp; sourceTree = "<group>"; };
 		1E29E0DC24A7989A00A8C31A /* atmosphere_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = atmosphere_model.cpp; sourceTree = "<group>"; };
 		1E29E0DD24A7989B00A8C31A /* atmosphere_model.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = atmosphere_model.hpp; sourceTree = "<group>"; };
 		1E3D1D5424951E240025A1CD /* model_mapping.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = model_mapping.cpp; sourceTree = "<group>"; };
@@ -53,6 +56,7 @@
 		1E565089248D819F00EB0E51 /* dynamics_model.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = dynamics_model.hpp; sourceTree = "<group>"; };
 		1E99A49F22DFE684008BFEF8 /* Aircraft Simulation */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "compiled.mach-o.executable"; path = "Aircraft Simulation"; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E99A4A222DFE684008BFEF8 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		1EB8FEF924B36CE200A72E56 /* aircraft_simulation_types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = aircraft_simulation_types.h; sourceTree = "<group>"; };
 		1ECCA328249FA96D00820C69 /* ground_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ground_model.cpp; sourceTree = "<group>"; };
 		1ECCA329249FA96D00820C69 /* ground_model.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ground_model.hpp; sourceTree = "<group>"; };
 		1EED09AB24A91A07007DC0C3 /* propulsion_model.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = propulsion_model.cpp; sourceTree = "<group>"; };
@@ -96,6 +100,8 @@
 				1EED09AC24A91A07007DC0C3 /* propulsion_model.hpp */,
 				1EED09AF24A974DA007DC0C3 /* aero_model.cpp */,
 				1EED09AE24A974DA007DC0C3 /* aero_model.hpp */,
+				1E23C68924B2AFC800EC4335 /* actuator_model.cpp */,
+				1E23C68A24B2AFC800EC4335 /* actuator_model.hpp */,
 				1E29E0DC24A7989A00A8C31A /* atmosphere_model.cpp */,
 				1E29E0DD24A7989B00A8C31A /* atmosphere_model.hpp */,
 				1ECCA328249FA96D00820C69 /* ground_model.cpp */,
@@ -115,6 +121,7 @@
 				1E565082248D5FDE00EB0E51 /* utilities.cpp */,
 				1E565083248D5FDE00EB0E51 /* utilities.hpp */,
 				1E56507C248D4DCE00EB0E51 /* initial_conditions.hpp */,
+				1EB8FEF924B36CE200A72E56 /* aircraft_simulation_types.h */,
 			);
 			path = "Aircraft Simulation";
 			sourceTree = "<group>";
@@ -184,6 +191,7 @@
 				1EED09B024A974DA007DC0C3 /* aero_model.cpp in Sources */,
 				1E565081248D4EE200EB0E51 /* time.cpp in Sources */,
 				1ECCA32A249FA96D00820C69 /* ground_model.cpp in Sources */,
+				1E23C68B24B2AFC800EC4335 /* actuator_model.cpp in Sources */,
 				1E565087248D600300EB0E51 /* rotate_frame.cpp in Sources */,
 				1E99A4A322DFE684008BFEF8 /* main.cpp in Sources */,
 				1EED09AD24A91A07007DC0C3 /* propulsion_model.cpp in Sources */,

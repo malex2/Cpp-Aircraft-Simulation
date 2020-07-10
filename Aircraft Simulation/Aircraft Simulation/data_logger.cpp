@@ -10,23 +10,27 @@
 
 #include "model_mapping.hpp"
 #include "data_logger.hpp"
+#include "initial_conditions.hpp"
 
 DataLogger::DataLogger(ModelMap *pMapInit, bool debugFlagIn, std::string filename)
 {
     pMap = pMapInit;
     debugFlag = debugFlagIn;
     
-    outfile.open(filename);
-    
-    if ( outfile.fail() )
+    if (saveOutput)
     {
-        std::cout << "Failed to open output file:" << savefile << "." << std::endl;
+        outfile.open(filename);
+    
+        if ( outfile.fail() )
+        {
+            std::cout << "Failed to open output file:" << savefile << "." << std::endl;
+        }
     }
 }
 
 DataLogger::~DataLogger(void)
 {
-    outfile.close();
+    if (saveOutput) { outfile.close(); }
 }
 
 void DataLogger::printLog(void)
@@ -72,7 +76,7 @@ void DataLogger::saveLog(void)
         // Print Variables
         for (iLog logIter = pMap->getFirstLogVar(saveVar); logIter != pMap->getLogVarEnd(saveVar); logIter++)
         {
-            outfile << std::fixed << std::setprecision(3) << *pMap->getLogVar(logIter) <<",";
+            outfile << std::fixed << std::setprecision(6) << *pMap->getLogVar(logIter) <<",";
         }
         outfile << std::endl;
     }

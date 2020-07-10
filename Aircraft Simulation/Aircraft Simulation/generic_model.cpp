@@ -8,12 +8,34 @@
 
 #include "initial_conditions.hpp"
 #include "generic_model.hpp"
+#include "time.hpp"
 
 GenericModel::GenericModel()
 {
-    pMap = NULL;
+    pMap  = NULL;
     
     debugFlag = false;
+    
+    time     = 0;
+    prevTime = 0;
+    counter  = 0;
+}
+
+void GenericModel::initialize(Time* pTime)
+{
+    time = pTime->getSimTime();
+}
+
+void GenericModel::updateDt(Time* pTime)
+{
+    if (pTime)
+    {
+        counter = pTime->getCount();
+        
+        time = pTime->getSimTime();
+        dt = time - prevTime;
+        prevTime = time;
+    }
 }
 
 GenericForceModel::GenericForceModel()
@@ -29,7 +51,7 @@ GenericForceModel::GenericForceModel()
 #include "model_mapping.hpp"
 #include "rotate_frame.hpp"
 #include "dynamics_model.hpp"
-#include "example_model.hpp"
+#include "time.hpp"
 */
 ExampleModel::ExampleModel(ModelMap *pMapInit, bool debugFlagIn)
 {

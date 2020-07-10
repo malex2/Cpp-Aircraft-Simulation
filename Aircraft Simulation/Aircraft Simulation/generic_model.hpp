@@ -14,6 +14,8 @@
 #include "utilities.hpp"
 #include "model_mapping.hpp"
 
+class Time;
+
 class GenericModel {
 protected:
     // Classes
@@ -22,14 +24,16 @@ protected:
     
     bool debugFlag;
     
-    float dt;
+    float dt, prevTime, time;
+    int counter;
     
+    virtual void updateDt(Time* pTime);
 public:
     // Constructor
     GenericModel();
     
     // Initialize class pointers and variables that rely on other classes
-    virtual void initialize(void) { };
+    virtual void initialize(Time* pTime);
     
     // Update forces and moments
     virtual bool update(void) { return true; };

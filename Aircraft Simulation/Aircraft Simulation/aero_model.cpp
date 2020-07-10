@@ -12,6 +12,8 @@
 #include "atmosphere_model.hpp"
 #include "initial_conditions.hpp"
 #include "time.hpp"
+#include "actuator_model.hpp"
+#include "ground_model.hpp"
 
 #include "aero_model.hpp"
 
@@ -20,15 +22,20 @@ AeroModelBase::AeroModelBase(ModelMap *pMapInit, bool debugFlagIn)
     pDyn    = NULL;
     pRotate = NULL;
     pProp   = NULL;
+    pAct    = NULL;
     pAtmo   = NULL;
     pTime   = NULL;
+    pGnd    = NULL;
     pMap    = pMapInit;
     
     pMap->addLogVar("alpha", &alphaPrint, savePlot, 2);
     pMap->addLogVar("beta", &betaPrint, savePlot, 2);
-    pMap->addLogVar("Lift", &aeroForce[2], printSavePlot, 3);
-    pMap->addLogVar("Drag", &aeroForce[0], printSavePlot, 3);
-    pMap->addLogVar("SideForce", &aeroForce[1], printSavePlot, 3);
+    pMap->addLogVar("Lift  ", &aeroForce[2], savePlot, 2);
+    pMap->addLogVar("Drag  ", &aeroForce[0], savePlot, 2);
+    pMap->addLogVar("SideForce", &aeroForce[1], savePlot, 2);
+    pMap->addLogVar("Aero Roll Moment", &bodyMoment[0], savePlot, 2);
+    pMap->addLogVar("Aero Pitch Moment", &bodyMoment[1], savePlot, 2);
+    pMap->addLogVar("Aero Yaw Moment", &bodyMoment[2], savePlot, 2);
     
     util.setUnitClassArray(aeroEuler, zero_init, degrees, 3);
     util.setArray(aeroForce, zero_init, 3);
@@ -62,8 +69,10 @@ void AeroModelBase::initialize(void)
     pDyn    = (DynamicsModel*)   pMap->getModel("DynamicsModel");
     pRotate = (RotateFrame*)     pMap->getModel("RotateFrame");
     pProp   = (PropulsionModel*) pMap->getModel("PropulsionModel");
+    pAct    = (ActuatorModel*)   pMap->getModel("ActuatorModel");
     pAtmo   = (AtmosphereModel*) pMap->getModel("AtmosphereModel");
     pTime   = (Time*)            pMap->getModel("Time");
+    pGnd    = (GroundModel*)     pMap->getModel("GroundModel");
     
     updateAeroAngles();
 }
@@ -110,13 +119,13 @@ void AeroModelBase::updateAeroCoeffs(void)
 
 void AeroModelBase::updateAeroForces(void)
 {
-
     // Get values from other models
     SpeedType<float>*    velBody = pDyn->getVelBodyRelWind();
     AngleRateType<float>* omega  = pDyn->getBodyRates();
     float V = pDyn->getSpeed().mps();
     float q = pAtmo->getAir()[dynPress];
-    /* get actuators from somewhere */
+    float* actuators = pAct->getActuators();
+    
     
     // Calculations
     float qS  = q*wingArea;
@@ -167,9 +176,9 @@ void AeroModelBase::updateAeroForces(void)
         inputs[6] = omega[2].rps()*b2v; // r*b/(2*V)
     
         // de, da, dr, dT
-        inputs[7] = actuators_init[0]*util.deg2rad;
-        inputs[8] = actuators_init[1]*util.deg2rad;
-        inputs[9] = actuators_init[2]*util.deg2rad;
+        inputs[7] = actuators[de]*util.deg2rad;
+        inputs[8] = actuators[da]*util.deg2rad;
+        inputs[9] = actuators[2]*util.deg2rad;
         inputs[10] = pProp->getThrottle();
     
         // Compute coefficients
@@ -208,10 +217,10 @@ void AeroModelBase::updateAeroForces(void)
 SimpleRCAeroModel::SimpleRCAeroModel(ModelMap *pMapInit, bool debugFlagIn) : AeroModelBase(pMapInit, debugFlagIn)
 {
     dCd_dCL  = 0; // computed dynamically
-    Cdarray[constant]  = 0.04; // Cdo
-    Cdarray[dalpha]    = 0.0;  // Cda  computed dynamically
-    Cdarray[dq]        = 0.0;  // Cdq  computed dynamically
-    Cdarray[delevator] = 0.0;  // Cdde computed dynamically
+    Cdarray[constant]  = 0.04;       // Cdo
+    Cdarray[dalpha]    = 0.0;        // Cda  computed dynamically
+    Cdarray[dq]        = 0.0;        // Cdq  computed dynamically
+    Cdarray[delevator] = 0.0;        // Cdde computed dynamically
     
     CLarray[constant]  = 0.31;       // CLo
     CLarray[dalpha]    = 4.2072;     // CLa
@@ -261,6 +270,75 @@ void SimpleRCAeroModel::updateAeroCoeffs(void)
     Cdarray[dalpha]    = CLarray[dalpha]    * dCd_dCL;
     Cdarray[dq]        = CLarray[dq]        * dCd_dCL;
     Cdarray[delevator] = CLarray[delevator] * dCd_dCL;
+}
+
+RCAeroModel::RCAeroModel(ModelMap *pMapInit, bool debugFlagIn) : AeroModelBase(pMapInit, debugFlagIn)
+{
+    // Transpose tables
+    util.mtran(*AeroTable_Longitudinal, *AeroTable_LongitudinalT, 10, 8);
+    util.mtran(*AeroTable_Lateral, *AeroTable_LateralT, 9, 8);
+    util.mtran(*AeroTable_Control, *AeroTable_ControlT, 7, 8);
+    util.mtran(*elevatorTable, *elevatorTableT, 2, 8);
+    util.mtran(*aileronTable, *aileronTableT, 3, 7);
+    util.mtran(*rudderTable, *rudderTableT, 3, 7);
+}
+
+void RCAeroModel::updateAeroCoeffs(void)
+{
+    float Re = pAtmo->getRe();
+    float elevator = actuators_init[0];
+    float aileron = actuators_init[1];
+    float rudder = actuators_init[2];
+    
+    // Drag coefficient lookup
+    Cdarray[constant] = util.interpolate(reynoldsVec, &AeroTable_Longitudinal[lookupCdo][0], Re, nReynolds);
+    
+    // Lift coefficient lookup
+    CLarray[constant] = util.interpolate(reynoldsVec, &AeroTable_Longitudinal[lookupCLo][0], Re, nReynolds);
+    CLarray[dalpha]   = util.interpolate(reynoldsVec, &AeroTable_Longitudinal[lookupCLa][0], Re, nReynolds);
+    CLarray[dq]       = util.interpolate(reynoldsVec, &AeroTable_Longitudinal[lookupCLq][0], Re, nReynolds);
+    
+    // X Force coefficient lookup
+    CXarray[du]        = util.interpolate(reynoldsVec, &AeroTable_Longitudinal[lookupCXu][0], Re, nReynolds);
+    CXarray[dalpha]    = util.interpolate(reynoldsVec, &AeroTable_Longitudinal[lookupCXa][0], Re, nReynolds);
+    CXarray[delevator] = util.interpolate(deVec, &elevatorTable[lookupCXde][0], elevator, nDe);
+    CXarray[daileron]  = util.interpolate(daVec, &aileronTable[lookupCXda][0] , aileron , nDa);
+    CXarray[drudder]   = util.interpolate(drVec, &rudderTable[lookupCXdr][0]  , rudder  , nDr);
+    
+    // Y (Side) Force coefficient lookup
+    CYarray[dbeta]    = util.interpolate(reynoldsVec, &AeroTable_Lateral[lookupCYb][0], Re, nReynolds);
+    CYarray[dp]       = util.interpolate(reynoldsVec, &AeroTable_Lateral[lookupCYp][0], Re, nReynolds);
+    CYarray[dr]       = util.interpolate(reynoldsVec, &AeroTable_Lateral[lookupCYr][0], Re, nReynolds);
+    CYarray[daileron] = util.interpolate(reynoldsVec, &AeroTable_Control[lookupCYda][0], Re, nReynolds);
+    CYarray[drudder]  = util.interpolate(reynoldsVec, &AeroTable_Control[lookupCYdr][0], Re, nReynolds);
+    
+    // Z Force coefficient lookup
+    CZarray[du]        = util.interpolate(reynoldsVec, &AeroTable_Longitudinal[lookupCZu][0], Re, nReynolds);
+    CZarray[delevator] = util.interpolate(deVec, &elevatorTable[lookupCZde][0], elevator, nDe);
+    CZarray[daileron]  = util.interpolate(daVec, &aileronTable[lookupCZda][0] , aileron , nDa);
+    CZarray[drudder]   = util.interpolate(drVec, &rudderTable[lookupCZdr][0]  , rudder  , nDr);
+    
+    // Roll Moment coefficient lookup
+    Clarray[dbeta]    = util.interpolate(reynoldsVec, &AeroTable_Lateral[lookupClb][0], Re, nReynolds);
+    Clarray[dp]       = util.interpolate(reynoldsVec, &AeroTable_Lateral[lookupClp][0], Re, nReynolds);
+    Clarray[dr]       = util.interpolate(reynoldsVec, &AeroTable_Lateral[lookupClr][0], Re, nReynolds);
+    Clarray[daileron] = util.interpolate(reynoldsVec, &AeroTable_Control[lookupClda][0], Re, nReynolds);
+    Clarray[drudder]  = util.interpolate(reynoldsVec, &AeroTable_Control[lookupCldr][0], Re, nReynolds);
+    
+    // Pitch Moment coefficient lookup
+    Cmarray[constant]  = util.interpolate(reynoldsVec, &AeroTable_Longitudinal[lookupCmo][0], Re, nReynolds);
+    Cmarray[dalpha]    = util.interpolate(reynoldsVec, &AeroTable_Longitudinal[lookupCma][0], Re, nReynolds);
+    Cmarray[dq]        = util.interpolate(reynoldsVec, &AeroTable_Longitudinal[lookupCmq][0], Re, nReynolds);
+    Cmarray[delevator] = util.interpolate(reynoldsVec, &AeroTable_Control[lookupCmde][0], Re, nReynolds);
+    Cmarray[daileron]  = util.interpolate(daVec, &aileronTable[lookupCmda][0] , aileron , nDa);
+    Cmarray[drudder]   = util.interpolate(drVec, &rudderTable[lookupCmdr][0]  , rudder  , nDr);
+    
+    // Rudder Moment coefficient lookup
+    Cnarray[dbeta]    = util.interpolate(reynoldsVec, &AeroTable_Lateral[lookupCnb][0], Re, nReynolds);
+    Cnarray[dp]       = util.interpolate(reynoldsVec, &AeroTable_Lateral[lookupCnp][0], Re, nReynolds);
+    Cnarray[dr]       = util.interpolate(reynoldsVec, &AeroTable_Lateral[lookupCnr][0], Re, nReynolds);
+    Cnarray[daileron] = util.interpolate(reynoldsVec, &AeroTable_Control[lookupCnda][0], Re, nReynolds);
+    Cnarray[drudder]  = util.interpolate(reynoldsVec, &AeroTable_Control[lookupCndr][0], Re, nReynolds);
 }
 
 /*

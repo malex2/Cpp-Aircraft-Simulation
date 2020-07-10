@@ -199,6 +199,18 @@ GroundModel::GroundModel(ModelMap *pMapInit, bool debugFlagIn)
     pTime   = NULL;
     pMap    = pMapInit;
     
+    //pMap->addLogVar("gbxF ", &bodyForce[0], printSavePlot, 3);
+    //pMap->addLogVar("gbyF ", &bodyForce[1], printSavePlot, 3);
+    //pMap->addLogVar("gbzF ", &bodyForce[2], printSavePlot, 3);
+    
+    pMap->addLogVar("gLLxF", &LLForce[0], savePlot, 3);
+    pMap->addLogVar("gLLyF", &LLForce[1], savePlot, 2);
+    pMap->addLogVar("gLLzF", &LLForce[2], savePlot, 3);
+    
+    pMap->addLogVar("gbxM ", &bodyMoment[0], savePlot, 2);
+    pMap->addLogVar("gbyM ", &bodyMoment[1], savePlot, 2);
+    pMap->addLogVar("gbzM ", &bodyMoment[2], savePlot, 2);
+    
     util.setArray(LLForce, zero_init, 3);
     
     // Create contact points
@@ -253,18 +265,6 @@ void GroundModel::initialize(void)
     }
 
     setLoadPercentage();
-    
-    //pMap->addLogVar("gbxF ", &bodyForce[0], printSavePlot, 3);
-    //pMap->addLogVar("gbyF ", &bodyForce[1], printSavePlot, 3);
-    //pMap->addLogVar("gbzF ", &bodyForce[2], printSavePlot, 3);
-    
-    pMap->addLogVar("gLLxF", &LLForce[0], savePlot, 2);
-    pMap->addLogVar("gLLyF", &LLForce[1], savePlot, 2);
-    pMap->addLogVar("gLLzF", &LLForce[2], savePlot, 2);
-    
-    pMap->addLogVar("gbxM ", &bodyMoment[0], savePlot, 2);
-    pMap->addLogVar("gbyM ", &bodyMoment[1], savePlot, 2);
-    pMap->addLogVar("gbzM ", &bodyMoment[2], savePlot, 2);
 }
 
 void GroundModel::setLoadPercentage(void)

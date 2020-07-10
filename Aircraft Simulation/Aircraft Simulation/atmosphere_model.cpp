@@ -19,6 +19,14 @@ AtmosphereModel::AtmosphereModel(ModelMap *pMapInit, bool debugFlagIn)
     pDyn    = NULL;
     pMap    = pMapInit;
     
+    pMap->addLogVar("Grav", &gravity, savePlot, 2);
+    pMap->addLogVar("Wx  ", &bodyForce[0], savePlot, 2);
+    pMap->addLogVar("Wy  ", &bodyForce[1], savePlot, 2);
+    pMap->addLogVar("Wz  ", &bodyForce[2], savePlot, 2);
+    pMap->addLogVar("W   ", &LLForce[2], savePlot, 3);
+    pMap->addLogVar("Re  ", &Re, savePlot, 2);
+    pMap->addLogVar("Mach", &Mach, savePlot, 2);
+    
     util.setArray(nedForce, zero_init, 3);
     util.setUnitClassArray(velWindNED, zero_init, metersPerSecond, 3);
     util.setUnitClassArray(velWindBody, zero_init, metersPerSecond, 3);
@@ -43,12 +51,6 @@ void AtmosphereModel::initialize(void)
 {
     pDyn    = (DynamicsModel*) pMap->getModel("DynamicsModel");
     pRotate = (RotateFrame*)   pMap->getModel("RotateFrame");
-    
-    pMap->addLogVar("Grav", &gravity, savePlot, 2);
-    pMap->addLogVar("Wx  ", &bodyForce[0], savePlot, 2);
-    pMap->addLogVar("Wy  ", &bodyForce[1], savePlot, 2);
-    pMap->addLogVar("Wz  ", &bodyForce[2], savePlot, 2);
-    pMap->addLogVar("W   ", &LLForce[2], savePlot, 2);
     
     updateAir();
 }

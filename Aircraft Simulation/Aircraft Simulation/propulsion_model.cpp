@@ -20,9 +20,9 @@ PropulsionModel::PropulsionModel(ModelMap *pMapInit, bool debugFlagIn)
     
     pMap = pMapInit;
     
-    //pMap->addLogVar("throttle", &throttle, printSavePlot, 3);
-    //pMap->addLogVar("thrust", &bodyForce[0], printSavePlot, 3);
-    pMap->addLogVar("propLLX", &LLForce[0], printSavePlot, 3);
+    pMap->addLogVar("throttle", &throttle, printSavePlot, 3);
+    pMap->addLogVar("thrust", &bodyForce[0], savePlot, 2);
+    pMap->addLogVar("propLLX", &LLForce[0], savePlot, 2);
     
     throttle = actuators_init[3];
     

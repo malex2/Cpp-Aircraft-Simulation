@@ -31,8 +31,10 @@ protected:
     class DynamicsModel   *pDyn;
     class RotateFrame     *pRotate;
     class PropulsionModel *pProp;
+    class ActuatorModel   *pAct;
     class AtmosphereModel *pAtmo;
     class Time            *pTime;
+    class GroundModel     *pGnd;
     
     // Internal Update Functions
     
@@ -96,10 +98,10 @@ public:
     
     typedef AeroModelBase Base;
     
-    // Use base class initialize()
+    // Use Base initialize
     //virtual void initialize(void);
     
-    // Use base class update
+    // Use Base update
     //virtual bool update(void);
     
 private:
@@ -115,11 +117,13 @@ public:
     // Constructor
     RCAeroModel(ModelMap *pMapInit, bool debugFlagIn = false);
     
-    // Initialize class pointers and variables that rely on other classes
-    virtual void initialize(void);
+    typedef AeroModelBase Base;
     
-    // Update obejct states and forces
-    virtual bool update(void);
+    // Use Base initialize
+    //virtual void initialize(void);
+    
+    // Use Base update
+    //virtual bool update(void);
     
 private:
     
@@ -139,10 +143,11 @@ private:
     //                                                                 [ dT     ]
     
     // Aerodynamic coefficients as a function of Reynolds number
-    const double reynoldsVec[8] = {72492.35967, 79016.24268, 84086.99144, 91413.98715, 106452.9941, 126196.9146, 177280.9713, 275866.5754};
+    const static int nReynolds = 8;
+    const float reynoldsVec[nReynolds] = {72492.35967, 79016.24268, 84086.99144, 91413.98715, 106452.9941, 126196.9146, 177280.9713, 275866.5754};
     
     enum longitudinalCoefficients {lookupCLo, lookupCdo, lookupCXu, lookupCXa, lookupCZu, lookupCLa, lookupCLq, lookupCmo, lookupCma, lookupCmq};
-    const double AeroTable_Longitudinal[8][10] {
+    const float AeroTable_LongitudinalT[nReynolds][10] {
         //CLo, Cdo ,    CXu    ,   CXa   ,    CZu     ,  CLa  ,  CLq  ,    Cmo    ,   Cma   ,   Cmq
         {0.31, 0.04, -0.25289  , 0.58102 , -0.034381  , 3.7883, 6.3436, 0.12744635, -1.5562 , -9.4643},
         {0.31, 0.04, -0.17556  , 0.45587 , -0.012854  , 3.9413, 6.4242, 0.0820698 , -1.3519 , -9.3511},
@@ -153,10 +158,11 @@ private:
         {0.31, 0.04, -0.0069296, 0.092156, -0.00034931, 4.2345, 6.8574, 0.02221371, -0.67029, -8.7783},
         {0.31, 0.04, -0.0017353, 0.048239, -0.00041963, 4.2385, 6.9307, 0.02591836, -0.57985, -8.6788}
     };
+    float AeroTable_Longitudinal[10][nReynolds];
     
-    enum lateralCoefficients {lookupCyb, lookupCyp, lookupCyr, lookupClb, lookupClp, lookupClr, lookupCnb, lookupCnp, lookupCnr};
-    const double AeroTable_Lateral[8][9] {
-        // Cyb   ,      Cyp   ,   Cyr  ,    Clb    ,    Clp  ,  Clr    ,   Cnb  ,    Cnp    ,   Cnr
+    enum lateralCoefficients {lookupCYb, lookupCYp, lookupCYr, lookupClb, lookupClp, lookupClr, lookupCnb, lookupCnp, lookupCnr};
+    const float AeroTable_LateralT[nReynolds][9] {
+        // CYb   ,      CYp   ,   CYr  ,    Clb    ,    Clp  ,  Clr    ,   Cnb  ,    Cnp    ,   Cnr
         {-0.3394 , 0.093687   , 0.37337, 0.0073338 , -0.36929, 0.3314  , 0.16463, -0.2437   , -0.18339},
         {-0.34742, 0.070075   , 0.38685, -0.0049111, -0.37514, 0.2856  , 0.17192, -0.19782  , -0.19381},
         {-0.35111, 0.055992   , 0.39291, -0.012252 , -0.3785 , 0.25965 , 0.17523, -0.17088  , -0.19849},
@@ -166,10 +172,11 @@ private:
         {-0.36076, -0.021952  , 0.40553, -0.053196 , -0.39764, 0.12224 , 0.18251, -0.023697 , -0.20722},
         {-0.3609 , -0.034615  , 0.40461, -0.059872 , -0.40098, 0.099661, 0.1821 , 0.00021518, -0.20612}
     };
+    float AeroTable_Lateral[9][nReynolds];
     
-    enum controlCoefficients {lookupCmde, lookupCyda, lookupClda, lookupCnda, lookupCydr, lookupCldr, lookupCndr};
-    const double AeroTable_Control[8][7] {
-        // Cmde ,   Cyda  ,   Clda ,   Cnda  ,   Cydr ,   Cldr  ,   Cndr
+    enum controlCoefficients {lookupCmde, lookupCYda, lookupClda, lookupCnda, lookupCYdr, lookupCldr, lookupCndr};
+    const float AeroTable_ControlT[nReynolds][7] {
+        // Cmde ,   CYda  ,   Clda ,   Cnda  ,   CYdr ,   Cldr  ,   Cndr
         {-1.1968, -0.13034, 0.40029, 0.065812, 0.24698, 0.027361, -0.13426},
         {-1.1871, -0.13034, 0.40029, 0.065812, 0.24698, 0.027361, -0.13426},
         {-1.1826, -0.13034, 0.40029, 0.065812, 0.24698, 0.027361, -0.13426},
@@ -179,12 +186,14 @@ private:
         {-1.1588, -0.13337, 0.39877, 0.067916, 0.28305, 0.033462, -0.15261},
         {-1.1525, -0.13337, 0.39877, 0.067916, 0.28305, 0.033462, -0.15261}
     };
+    float AeroTable_Control[7][nReynolds];
     
     // Control coefficients as a function of control deflection
-    const double deVec[8] = {-15, -10, -7.5, -5, -2.5, 0, 2, 3};
+    const static int nDe = 8;
+    const float deVec[nDe] = {-15, -10, -7.5, -5, -2.5, 0, 2, 3};
     
     enum elevatorCoefficients {lookupCXde, lookupCZde};
-    const double elevatorTable[8][2] {
+    const float elevatorTableT[nDe][2] {
         //  CXde  ,   CZde
         {-0.12147 , -0.48619},
         {-0.10166 , -0.49146},
@@ -195,11 +204,13 @@ private:
         {-0.012103, -0.50743},
         {0.0021437, -0.50725}
     };
+    float elevatorTable[2][nDe];
     
-    const double daVec[7] = {-15, -10, -5, 0, 5, 10, 15};
+    const static int nDa = 7;
+    const float daVec[nDa] = {-15, -10, -5, 0, 5, 10, 15};
     
     enum aileronCoefficients {lookupCXda, lookupCZda, lookupCmda};
-    const double aileronTable[7][3] {
+    const float aileronTableT[nDa][3] {
         // CXda   ,    CZda   ,    Cmda
         {0.15757  , -0.020987 , -0.0097151},
         {0.10848  , -0.014852 , -0.0077044},
@@ -209,11 +220,13 @@ private:
         {-0.10848 , 0.014852  , 0.0077044 },
         {-0.15757 , 0.020987  , 0.0097151 }
     };
+    float aileronTable[3][nDa];
     
-    const double drVec[7] = {-15, -10, -5, 0, 5, 10, 15};
+    const static int nDr = 7;
+    const float drVec[nDr] = {-15, -10, -5, 0, 5, 10, 15};
     
     enum rudderCoefficients {lookupCXdr, lookupCZdr, lookupCmdr};
-    const double rudderTable[7][3] {
+    const float rudderTableT[nDr][3] {
         //  CXdr   ,    CZdr  ,    Cmdr
         {0.74095   , -0.40558 , -0.34345 },
         {-0.015745 , 0.08039  , 0.12488  },
@@ -223,6 +236,7 @@ private:
         {0.015745  , -0.08039 , -0.12488 },
         {-0.74095  , 0.40558  , 0.34345  },
     };
+    float rudderTable[3][nDr];
 };
 
 #endif /* AeroModel_hpp */

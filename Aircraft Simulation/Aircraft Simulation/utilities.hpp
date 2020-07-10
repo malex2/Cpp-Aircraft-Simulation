@@ -11,7 +11,21 @@
 
 #include <iostream>
 #include <stdio.h>
+#include <unistd.h>
 #include <math.h>
+#include <termios.h>
+
+// Mac key enum
+enum keyType {
+    rightArrow = -125, // -17 -100 -125
+    leftArrow = -126,  // -17 -100 -126
+    downArrow = -127,  // -17 -100 -127
+    upArrow = -128,    // -17 -100 -128
+    wKey = 119,
+    aKey = 97,
+    sKey = 115,
+    dKey = 100
+};
 
 // distance enum
 typedef enum DistanceListType
@@ -317,6 +331,57 @@ public:
     
 };
 
+class MonitorMacInput {
+   
+public:
+    // constructor
+    MonitorMacInput(void);
+    
+    // deconstructor
+    ~MonitorMacInput(void);
+    
+    // monitor input
+    int monitorInput(void);
+    
+private:
+    struct termios oldSettings; // current Mac terminal settings
+    struct termios newSettings; // new Mac terminal settings
+    bool error;
+};
+
+class Delay {
+public:
+    
+    // Constructor
+    Delay(int *pCounter, float counterRate, float sDelay, bool debug = false);
+    
+    // Functions
+    template<typename TempType>
+    void delayValue(TempType *value, TempType newValue);
+    
+    // Getters
+    bool getChangeApplied(void) { return changeApplied; }
+    
+    // Setters
+    void setDelay(float inputDelay) { sDelay = inputDelay; }
+    void setRate(float inputRate)   { counterRate = inputRate; }
+    
+private:
+    // settings
+    int   *pCounter;     // pointer to counter
+    float counterRate;   // rate of counter
+    float sDelay;        // delay between changes in seconds
+    
+    // internal variabls
+    bool  timerStarted;  // variable change sensed and time is counting
+    bool  changeApplied; // variable change has been applied
+    float timer;         // amount of time in current state
+    int   countStart;    // counter value when timer started
+    
+    bool debug;
+    
+};
+
 class Utilities : public UnitConversions {
     
 public:
@@ -344,6 +409,12 @@ public:
     
     template<typename TempType>
     void print(TempType *matrix, int nrows, int ncols, const char *name);
+    
+    template<typename TempType>
+    void initArray(TempType *array, TempType val, int arrayLength);
+    
+    template<typename TempType>
+    void initMatrix(TempType *matrix, TempType val, int nrow, int ncol);
     
     template<typename TempType>
     void setArray(TempType *array, TempType *setArray, int arrayLength);
@@ -446,7 +517,10 @@ public:
     void vgain(unitType<valType> *vec, valType gain, int n); //#TODO
     
     template<typename TempType>
-    TempType interpolate(TempType *xvec, TempType *yvec, TempType x, int n, bool extrapolate = false);
+    TempType interpolate(TempType *xvec, TempType *yvec, TempType x, int n, bool extrapolate = false, bool print = false);
+    
+    template<typename TempType>
+    TempType interpolate(const TempType *xvec, const TempType *yvec, TempType x, int n, bool extrapolate = false, bool print = false);
     
     // Matrix math
     template<typename TempType>
@@ -462,7 +536,10 @@ public:
     void mmult(TempType *result, TempType *A, int nrows1, int ncols1, TempType *B, int nrows2, int ncols2);
     
     template<typename TempType>
-    void mtran(TempType *matrix_t, TempType *matrix, int nrow, int ncol);
+    void mtran(TempType *matrix_t, TempType *matrix, int nrow_t, int ncol_t);
+    
+    template<typename TempType>
+    void mtran(TempType *matrix_t, const TempType *matrix, int nrow_t, int ncol_t);
     
     template<typename TempType>
     void mgain(TempType *matrix, TempType gain, int nrow, int ncol);

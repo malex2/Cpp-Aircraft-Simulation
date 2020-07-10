@@ -27,6 +27,7 @@ Time::Time(ModelMap *pMapInit, bool debugFlagIn)
     lastPrintTime    = startTime;
     lastSaveTime     = startTime;
     lastDynamicTime  = startTime;
+    lastClockDt      = startTime;
     
     // Update time constants
     runTime          = runTime_init;
@@ -38,11 +39,15 @@ Time::Time(ModelMap *pMapInit, bool debugFlagIn)
     save     = true;
     dynamics = true;
     
+    counter = 0;
+    
     debugFlag = debugFlagIn;
 }
 
 bool Time::update(void)
 {
+    Base::updateDt(this);
+    
 #ifdef RealTime
     // Update time
     systemtime = std::chrono::system_clock::now();
@@ -61,6 +66,9 @@ bool Time::update(void)
     
     durationTemp = systemtime - startTime;
     curTime = durationTemp.count();
+    
+    durationTemp = systemtime - lastClockDt;
+    timeSinceLastClockDt = durationTemp.count();
 #else
     // Update time
     systemtime += clock_dt;
@@ -70,6 +78,7 @@ bool Time::update(void)
     timeSinceLastDynamics = systemtime - lastDynamicTime;
     timeSinceLastPrint    = systemtime - lastPrintTime;
     timeSinceLastSave     = systemtime - lastSaveTime;
+    timeSinceLastClockDt  = systemtime - lastClockDt;
 #endif
     
     if (timeSinceLastDynamics >= dynamicsInterval)
@@ -93,6 +102,12 @@ bool Time::update(void)
     }
     else { save = false; }
     
+    if (timeSinceLastClockDt >= clock_dt)
+    {
+        lastClockDt = systemtime;
+        counter++;
+    }
+        
     // Udpate stop criteria
     if ( curTime > runTime )
     {

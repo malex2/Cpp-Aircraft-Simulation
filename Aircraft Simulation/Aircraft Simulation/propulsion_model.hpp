@@ -23,7 +23,9 @@ public:
     // Update obejct states and forces
     virtual bool update(void);
     
-    float getThrottle(void) { return throttle; }
+    float getThrottle(void)             { return throttle; }
+    void  setThrottle(float throttleIn) { throttle = throttleIn; }
+    
 private:
     class DynamicsModel *pDyn;
     class RotateFrame   *pRotate;

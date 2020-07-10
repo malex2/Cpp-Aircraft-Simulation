@@ -21,24 +21,30 @@ public:
     
     // Getters
     systemTime getSystemTime(void) { return systemtime; }
-    float getSimTime(void)     { return curTime; }
-    bool performPrint(void)    { return print;    };
-    bool performSave(void)     { return save;     };
-    bool performDynamics(void) { return dynamics; };
+    float getSimTime(void)         { return curTime; }
+    bool  performPrint(void)       { return print; }
+    bool  performSave(void)        { return save; }
+    bool  performDynamics(void)    { return dynamics; }
+    int   getCount(void)           { return counter; } // get counter at clock_dt rate
+    float getDeltaTime(void)       { return dt; }      // get delta time of simulation
     
     // Functions
     virtual bool update(void);
     
 private:
+    typedef GenericModel Base;
+    
     systemTime systemtime;
     systemTime startTime;
     systemTime lastDynamicTime;
     systemTime lastPrintTime;
     systemTime lastSaveTime;
+    systemTime lastClockDt;
     
     double timeSinceLastDynamics;
     double timeSinceLastPrint;
     double timeSinceLastSave;
+    double timeSinceLastClockDt;
     
     float curTime;
     float runTime;
@@ -50,6 +56,7 @@ private:
     bool print;
     bool save;
     bool dynamics;
+    int  counter;
 };
 
 #endif /* Time_hpp */
