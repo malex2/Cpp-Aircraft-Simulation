@@ -26,45 +26,47 @@ public:
     
     // Getters
     double*               getPosBody(void)        { return posBody; }   // Lat, Lon, Alt
-    DistanceType<float>*  getPosRelNED(void)      { return posRelNED; } // N, E, D from start in m
+    DistanceType<double>*  getPosRelNED(void)      { return posRelNED; } // N, E, D from start in m
     DistanceType<double>  gethCenter(void)        { return hCenter; }   // Distance above Earth center
-    DistanceType<float>   gethGround(void)        { return hGround; }   // Distance above ground
+    DistanceType<double>   gethGround(void)        { return hGround; }   // Distance above ground
     
-    SpeedType<float>*     getVelBody(void)        { return velBody; }
-    SpeedType<float>*     getVelBodyRelWind(void) { return velBodyRelWind; }
-    SpeedType<float>*     getVelNED(void)         { return velNED; }
-    SpeedType<float>*     getVelNEDRelWind(void)  { return velNEDRelWind; }
-    SpeedType<float>      getSpeed(void)          { return gndVel; }
+    SpeedType<double>*     getVelBody(void)        { return velBody; }
+    SpeedType<double>*     getVelBodyRelWind(void) { return velBodyRelWind; }
+    SpeedType<double>*     getVelNED(void)         { return velNED; }
+    SpeedType<double>*     getVelNEDRelWind(void)  { return velNEDRelWind; }
+    SpeedType<double>      getSpeed(void)          { return gndVel; }
     
-    float*                getAccBody(void)        { return accBody; }
-    float*                getbodyAngularAcc(void) { return bodyAngularAcc; }
+    double*                getAccBody(void)        { return accBody; }
+    double*                getbodyAngularAcc(void) { return bodyAngularAcc; }
     
-    AngleType<float>*     getEulerAngles(void)    { return eulerAngles; }
+    AngleType<double>*     getEulerAngles(void)    { return eulerAngles; }
     
-    AngleRateType<float>* getEulerRates(void)     { return eulerRates; }
-    AngleRateType<float>* getBodyRates(void)      { return bodyRates; }
+    AngleRateType<double>* getEulerRates(void)     { return eulerRates; }
+    AngleRateType<double>* getBodyRates(void)      { return bodyRates; }
     
-    float*                get_q_B_NED(void)       { return q_B_NED; }
-    float*                get_q_B_LL(void)        { return q_B_LL; }
+    double*                get_q_B_NED(void)       { return q_B_NED; }
+    double*                get_q_B_LL(void)        { return q_B_LL; }
     
-    float                 getMass(void)           { return mass; }
+    double                 getMass(void)           { return mass; }
+    
+    // Setters
+    void setEulerAngles(AngleType<double>* angles_in);
+    
+    void setSpeed(SpeedType<double> vel_in);
     
 private:
     
     // Classes
-    class RotateFrame     *pRotate;
-    class AeroModel       *pAero;
-    class PropulsionModel *pProp;
-    class AtmosphereModel *pAtmo;
-    class GroundModel     *pGnd;
-    class Time            *pTime;
+    class RotateFrame         *pRotate;
+    class AtmosphereModel     *pAtmo;
+    class Time                *pTime;
     
     double posBody[3];                 // Lat (rad), Lon (rad), Alt (m)
-    float posBodyPrint[3];             // Lat (deg), Lon (deg), Alt (ft)
-    DistanceType<float> posRelNED[3];  // N, E, D distance from start
+    double posBodyPrint[3];             // Lat (deg), Lon (deg), Alt (ft)
+    DistanceType<double> posRelNED[3];  // N, E, D distance from start
     DistanceType<double> hCenter;      // Distance of CG above Earth center
-    DistanceType<float> hGround;       // Distance of CG above ground
-    DistanceType<float> elevation;     // Height above mean sea level (MSL) of ground
+    DistanceType<double> hGround;       // Distance of CG above ground
+    DistanceType<double> elevation;     // Height above mean sea level (MSL) of ground
     
     //  --------------------- Aircraft            ---     ---
     //            |                                |       |
@@ -80,33 +82,33 @@ private:
     //            |                                        |
     //  --------------------- Earth Center                ---
     
-    SpeedType<float> velBody[3];
-    SpeedType<float> velBodyRelWind[3];
-    SpeedType<float> velNED[3];
-    SpeedType<float> velNEDRelWind[3];
-    SpeedType<float> gndVel;
+    SpeedType<double> velBody[3];
+    SpeedType<double> velBodyRelWind[3];
+    SpeedType<double> velNED[3];
+    SpeedType<double> velNEDRelWind[3];
+    SpeedType<double> gndVel;
     
     double dPosBody[3]; // Lat rate, Lon rate, Alt rate
-    float accBody[3];
+    double accBody[3];
     
-    AngleType<float> eulerAngles[3];
-    float q_B_NED[4];
-    float q_B_LL[4];
-    float q_B_NED_dot[4];
+    AngleType<double> eulerAngles[3];
+    double q_B_NED[4];
+    double q_B_LL[4];
+    double q_B_NED_dot[4];
     
-    AngleRateType<float> bodyRates[3];
-    AngleRateType<float> eulerRates[3];
-    float bodyAngularAcc[3];
+    AngleRateType<double> bodyRates[3];
+    AngleRateType<double> eulerRates[3];
+    double bodyAngularAcc[3];
     
-    float inertia[3][3];
-    float mass;
+    double inertia[3][3];
+    double mass;
     
     // print variables
-    AngleType<float> eulerAnglesDeg[3];
-    AngleType<float> eulerCheckDeg[3];
-    AngleRateType<float> bodyRatesDeg[3];
-    AngleRateType<float> eulerRatesDeg[3];
-    float hGroundft;
+    AngleType<double> eulerAnglesDeg[3];
+    AngleType<double> eulerCheckDeg[3];
+    AngleRateType<double> bodyRatesDeg[3];
+    AngleRateType<double> eulerRatesDeg[3];
+    double hGroundft;
 };
 
 #endif /* DynamicsModel_hpp */

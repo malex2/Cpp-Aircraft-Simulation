@@ -17,10 +17,7 @@
 DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
 {
     pRotate = NULL;
-    pAero   = NULL;
-    pProp   = NULL;
     pAtmo   = NULL;
-    pGnd    = NULL;
     pTime   = NULL;
     
     pMap = pMapInit;
@@ -54,6 +51,10 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     pMap->addLogVar("SumXLL", &LLForce[0], printSavePlot, 3);
     pMap->addLogVar("SumYLL", &LLForce[1], savePlot, 2);
     pMap->addLogVar("SumZLL", &LLForce[2], printSavePlot, 3);
+ 
+    pMap->addLogVar("SumMX", &bodyMoment[0], savePlot, 2);
+    pMap->addLogVar("SumMY", &bodyMoment[1], savePlot, 2);
+    pMap->addLogVar("SumMZ", &bodyMoment[2], savePlot, 2);
     
     // Initialize Angles
     util.setUnitClassArray(eulerAngles, eulerAngles_init, degrees, 3);
@@ -63,7 +64,7 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     util.setArray(q_B_NED_dot, quaternion_init2, 3);
     
     // Extract yaw and copmute q_B_LL
-    float temp1[3], tempQuat[4];
+    double temp1[3], tempQuat[4];
     util.setArray(temp1, zero_init, 3);
     temp1[2] = -eulerAngles[2].deg(); // -yaw
     util.eulerToQuaternion(tempQuat, temp1); // -yaw in quaternion
@@ -135,10 +136,7 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
 void DynamicsModel::initialize(void)
 {
     pRotate = (RotateFrame*) pMap->getModel("RotateFrame");
-    //pAero = (AeroModel*) pMap->getModel("AeroModel");
-    //pProp = (PropulsionModel*) pMap->getModel("PropulsionModel");
     pAtmo = (AtmosphereModel*) pMap->getModel("AtmosphereModel");
-    //pGnd  = (GroundModel*) pMap->getModel("GroundModel");
     pTime   = (Time*) pMap->getModel("Time");
     
     // Body frame dynamics
@@ -160,6 +158,7 @@ void DynamicsModel::initialize(void)
 
 bool DynamicsModel::update(void)
 {
+    if (debugFlag) { printf("Dynamics Model Update:\n"); }
     // Setup print variables
     util.setUnitClassUnit(eulerAnglesDeg, radians, 3);
     util.setUnitClassUnit(eulerCheckDeg, radians, 3);
@@ -180,11 +179,12 @@ bool DynamicsModel::update(void)
         for(iForceModel curForceModel = pMap->getFirstModel(forceModel); curForceModel != pMap->getModelEnd(forceModel); curForceModel++)
         {
             std::string curModelName = pMap->getModelName(curForceModel);
-            
             if( curModelName.compare("DynamicsModel") != 0 )
             {
                 util.vAdd(bodyForce, bodyForce, pMap->getForceModel(curForceModel)->getForce(), 3);
                 util.vAdd(bodyMoment, bodyMoment, pMap->getForceModel(curForceModel)->getMoment(), 3);
+                if (debugFlag) { util.print(pMap->getForceModel(curForceModel)->getForce(), 3, curModelName); }
+                if (debugFlag) { util.print(pMap->getForceModel(curForceModel)->getMoment(), 3, curModelName); }
             }
         }
     }
@@ -192,10 +192,10 @@ bool DynamicsModel::update(void)
     pRotate->bodyToLL(LLForce, bodyForce);
     
     // Update body acceleration
-    float temp1[3];
-    float temp2[3];
-    float tempQuat[4];
-    AngleType<float> eulerCheck[3];
+    double temp1[3];
+    double temp2[3];
+    double tempQuat[4];
+    AngleType<double> eulerCheck[3];
     util.setUnitClassUnit(eulerCheck, radians, 3);
     
     // accBody = (F - bodyRates x m*velBody) / mass
@@ -230,7 +230,7 @@ bool DynamicsModel::update(void)
     util.vecToQuat(tempQuat, bodyRates);
     util.quaternionProduct(q_B_NED_dot, q_B_NED, tempQuat);
     util.setArray(tempQuat, q_B_NED_dot, 4);
-    util.vgain(tempQuat, 0.5f, 4);
+    util.vgain(tempQuat, 0.5, 4);
     util.vgain(tempQuat, dt, 4);
     util.vAdd(q_B_NED, q_B_NED, tempQuat, 4);
     util.unitVector(q_B_NED, 4);
@@ -291,7 +291,6 @@ bool DynamicsModel::update(void)
     
     if (debugFlag)
     {
-        printf("Dynamics Model Update:\n");
         util.print(bodyForce, 3, "bodyForce:");
         util.print(accBody, 3, "accBody:");
         util.print(velBody, 3, "velBody:");
@@ -312,4 +311,31 @@ bool DynamicsModel::update(void)
         return false;
     }
     else { return true; }
+}
+
+// Setters
+void DynamicsModel::setEulerAngles(AngleType<double>* angles_in)
+{
+    for (int i = 0; i < 3; i++)
+    {
+        eulerAngles[i].val = angles_in[i].rad();
+    }
+    util.eulerToQuaternion(q_B_NED, eulerAngles);
+    pRotate->update();
+}
+
+void DynamicsModel::setSpeed(SpeedType<double> vel_in)
+{
+    SpeedType<double> velLL[3]
+    {
+        SpeedType<double>(0,metersPerSecond),
+        SpeedType<double>(0,metersPerSecond),
+        SpeedType<double>(0,metersPerSecond)
+    };
+    gndVel.val = vel_in.mps();
+    
+    velLL[0].val = gndVel.val;
+    
+    pRotate->LLToBody(velBody, velLL);
+    pRotate->NEDToBody(velNED, velBody);
 }

@@ -17,15 +17,16 @@
 #include <fstream>
 
 #include "aircraft_simulation_types.h"
+#include "utilities.hpp"
 
-#define RealTime
+//#define RealTime
 
 // Time
-const float runTime_init          = 300;
-const float printInterval_init    = 1;
-const float saveInterval_init     = 0.1;
-const float dynamicsInterval_init = 0.001;
-const float clock_dt              = 0.001; // time interval when not in real time mode
+const double runTime_init          = 60;
+const double printInterval_init    = 0.1;
+const double saveInterval_init     = 0.01;
+const double dynamicsInterval_init = 0.001;
+const double clock_dt              = 0.001; // time interval when not in real time mode
 
 // Print options
 const bool saveOutput  = true;
@@ -34,63 +35,79 @@ const bool plotOutput  = false;
 const std::string savefile = "output.csv";
 
 // Initial States
-const float velNED_init[3]  = {0, 0, 0};
-const float posBody_init[3] = {28.5997222, -81.3394444, 0.3}; // deg, deg, ft
-const float eulerAngles_init[3] = {0, 6.507, 0}; // 6.507
-const float eulerRates_init[3]  = {0, 0, 0};
-const float actuators_init[4]   = {0.0, 0.0, 0.0, 0.0}; //{de,da,dr,dT}
-const inputModeType inputMode_init = keyboard;
+const double velNED_init[3]  = {0, 0, 0};
+const double posBody_init[3] = {28.5997222, -81.3394444, 3.0}; // deg, deg, ft
+const double eulerAngles_init[3] = {0, 0.0, 0}; // {0, 6.507, 0};
+const double eulerRates_init[3]  = {0, 0, 0};
+const double actuators_init[4]   = {0.0, 0.0, 0.0, 0.0}; //{de,da,dr,dT}
+const int inputMode_init = 2; // 0 - external, 1 - keyboard, 2 - table
+
+// Trim
+// Uses initial position above
+// Uses initial heading from above
+const bool trim = false;
+
+static SpeedType<double> trimSpeed(0.0,metersPerSecond); // Ground speed
+static AngleType<double> trimRoll(0, degrees);         // Roll/bank angle
+static AngleType<double> trimGamma(0, degrees);        // Climb angle
 
 // Aircraft Constants
-const float mass_init = 0.372;// Weight = 4.2 N = 1 lb
-const float inertia_init[3][3] = {
+/*
+const double mass_init = 0.372;// Weight = 4.2 N = 1 lb
+const double inertia_init[3][3] = {
     {0.00081 , 0.0    , -0.00114 },
     {0.0     , 0.00602, 0.0      },
     {-0.00114, 0.0    , 0.00643  }};
-
-/*
-const float inertia_init[3][3] = {
-    {3  , 0.0, 0},
-    {0.0  , 3, 0.0  },
-    {0, 0.0, 3  }};
 */
+// Quadcopter Constants
+const double mass_init = 0.5;// Weight = 4.9 N
+const double inertia_init[3][3] = {
+    {0.0000907 , 0.0      , 0.0        },
+    {0.0       , 0.0005005, 0.0        },
+    {0.0       , 0.0      , 0.0005422  }};
+
 // Reference Frames
-const float imuFrame_init[3] = {0, 0, 0};
+const double imuFrame_init[3] = {0, 0, 0};
 
 // Test Modes
 const bool testRotations = false; // Test rotation matrices given known vectors and rotations
 const bool testDynamics  = false; // Generate desired dynamics and test propogation from inital conditions
 const bool testGround    = false; // Generate desired body forces for ground to react to
-const float testForceDynamics[3]  = {0, 0, 0};
-const float testMomentDynamics[3] = {0, 0, 0};
-const float testForceGround[3]  = {0.0, 0.0, 0};
+const double testForceDynamics[3]  = {0, 0, 0};
+const double testMomentDynamics[3] = {0, 0, 0};
+const double testForceGround[3]  = {0.0, 0.0, 0};
 
-const float zero_init[3] = {0, 0, 0};
-const float quaternion_init[4] = {1, 0, 0, 0};
-const float quaternion_init2[4] = {0, 0, 0, 0};
-const float identityMatrix[3][3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+const double zero_init[3]         = {0, 0, 0};
+const double quaternion_init[4]   = {1, 0, 0, 0};
+const double quaternion_init2[4]  = {0, 0, 0, 0};
+const double identityMatrix[3][3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
 
 // World constants
-const float elevation_init = 0;
-const float Rearth = 6371e+3;
-const float GM     = 3.9857e+14;
-const float zeroTolerance = 0.01;
+const double elevation_init = 0;
+const double Rearth = 6371e+3;
+const double GM     = 3.9857e+14;
+const double zeroTolerance = 0.01;
+const double Vref = 10.0;
+
+// Quadcopter Geometry
+const double quadTopArea = 0.16;
 
 // Aircraft Geometry
-const float span  = 0.52;
-const float meanChord = 0.13;
-const float wingArea = span*meanChord;
-const float AR = span/meanChord;
+const double span  = 0.52;
+const double meanChord = 0.13;
+const double wingArea = span*meanChord;
+const double AR = span/meanChord;
+const double e  = 0.8;
 
 // Stop Conditions
-const float maxPitch = 95;
-const float minPitch = -95;
-const float maxGroundPitch = 85;
-const float minGroundPitch = -45;
-const float maxGroundRoll = 45;
-const float minGroundRoll = -45;
-const float minAlpha = -250;
-const float maxAlpha = 250;
+const double maxPitch = 95;
+const double minPitch = -95;
+const double maxGroundPitch = 85;
+const double minGroundPitch = -45;
+const double maxGroundRoll = 45;
+const double minGroundRoll = -45;
+const double minAlpha = -250;
+const double maxAlpha = 250;
 
 // Typedefs
 #ifdef RealTime
@@ -156,107 +173,107 @@ const char *savefile = "output.csv"; // /Users/alexandermclean/Documents/Cpp-Air
 const bool saveOutput = true;
 
 // Aircraft constants
-float mass             = 3;
-float inertia[4]       = {0.1,0.2,0.3,0.002};
+double mass             = 3;
+double inertia[4]       = {0.1,0.2,0.3,0.002};
 
-float throttle         = 0.4; // 0 - 1
-float maxThrust        = 10;
-float actuators[3]     = {-6,0,0}; //{de,da,dr}
+double throttle         = 0.4; // 0 - 1
+double maxThrust        = 10;
+double actuators[3]     = {-6,0,0}; //{de,da,dr}
 
 // Trim
 bool trim = true;
-float Vtrim = 25;
-float altTrim = 100;
-float climbTrim = 0;
-float rollTrim = 0;
+double Vtrim = 25;
+double altTrim = 100;
+double climbTrim = 0;
+double rollTrim = 0;
 
 // World constants
-float elevation        = 0;
+double elevation        = 0;
 
 // Initial conditions
-float xInitial         = 0;
-float yInitial         = 0;
-float zInitial         = -100;
-float altInitial       = -zInitial;
+double xInitial         = 0;
+double yInitial         = 0;
+double zInitial         = -100;
+double altInitial       = -zInitial;
 
-float xdotInitial      = 20;
-float ydotInitial      = 0;
-float zdotInitial      = 0;
+double xdotInitial      = 20;
+double ydotInitial      = 0;
+double zdotInitial      = 0;
 
-float phiInitial       = 0;
-float thetaInitial     = 10;
-float psiInitial       = 0;
+double phiInitial       = 0;
+double thetaInitial     = 10;
+double psiInitial       = 0;
 
-float phidotInitial    = 0;
-float thetadotInitial  = 0;
-float psidotInitial    = 0;
+double phidotInitial    = 0;
+double thetadotInitial  = 0;
+double psidotInitial    = 0;
 
 // World
-float posNED[3]        = {xInitial,yInitial,zInitial};
-float velNED[3]        = {xdotInitial,ydotInitial,zdotInitial};
-float attitude[3]      = {phiInitial,thetaInitial,psiInitial};
-float omega[3]         = {phidotInitial,thetadotInitial,psidotInitial};
+double posNED[3]        = {xInitial,yInitial,zInitial};
+double velNED[3]        = {xdotInitial,ydotInitial,zdotInitial};
+double attitude[3]      = {phiInitial,thetaInitial,psiInitial};
+double omega[3]         = {phidotInitial,thetadotInitial,psidotInitial};
 
 // Body
-float velBody[3];
-float pqr[3];
+double velBody[3];
+double pqr[3];
 
 // Truth
-float xTruth           = xInitial;
-float yTruth           = yInitial;
-float zTruth           = zInitial;
-float altTruth         = altInitial;
+double xTruth           = xInitial;
+double yTruth           = yInitial;
+double zTruth           = zInitial;
+double altTruth         = altInitial;
 
-float xdotTruth        = xdotInitial;
-float ydotTruth        = ydotInitial;
-float zdotTruth        = zdotInitial;
+double xdotTruth        = xdotInitial;
+double ydotTruth        = ydotInitial;
+double zdotTruth        = zdotInitial;
 
-float phiTruth         = phiInitial;
-float thetaTruth       = thetaInitial;
-float psiTruth         = psiInitial;
+double phiTruth         = phiInitial;
+double thetaTruth       = thetaInitial;
+double psiTruth         = psiInitial;
 
-float phidotTruth      = phidotInitial;
-float thetadotTruth    = thetadotInitial;
-float psidotTruth      = psidotInitial;
+double phidotTruth      = phidotInitial;
+double thetadotTruth    = thetadotInitial;
+double psidotTruth      = psidotInitial;
 
 // Navigation
-float xNav             = xInitial;
-float yNav             = yInitial;
-float zNav             = zInitial;
-float altNav           = altInitial;
+double xNav             = xInitial;
+double yNav             = yInitial;
+double zNav             = zInitial;
+double altNav           = altInitial;
 
-float xdotNav          = xdotInitial;
-float ydotNav          = ydotInitial;
-float zdotNav          = zdotInitial;
+double xdotNav          = xdotInitial;
+double ydotNav          = ydotInitial;
+double zdotNav          = zdotInitial;
 
-float phiNav           = phiInitial;
-float thetaNav         = thetaInitial;
-float psiNav           = psiInitial;
+double phiNav           = phiInitial;
+double thetaNav         = thetaInitial;
+double psiNav           = psiInitial;
 
-float phidotNav        = phidotInitial;
-float thetadotNav      = thetadotInitial;
-float psidotNav        = psidotInitial;
+double phidotNav        = phidotInitial;
+double thetadotNav      = thetadotInitial;
+double psidotNav        = psidotInitial;
 
 // Aero variables
-float alpha;
-float beta;
-float u,v,w;
-float p,q,r;
+double alpha;
+double beta;
+double u,v,w;
+double p,q,r;
 
 // Forces and Moments
-float FaeroWind[3];
-float FaeroBody[3];
-float MaeroBody[3];
+double FaeroWind[3];
+double FaeroBody[3];
+double MaeroBody[3];
 
-float FgroundBody[3];
-float MgroundBody[3];
+double FgroundBody[3];
+double MgroundBody[3];
 
-float FgravityNED[3];
-float FgravityBody[3];
-float MgravityBody[3];
+double FgravityNED[3];
+double FgravityBody[3];
+double MgravityBody[3];
 
-float sumForce[3];
-float sumMoment[3];
+double sumForce[3];
+double sumMoment[3];
 
 // Functions
 void updateAeroAngles();
@@ -264,7 +281,7 @@ void updateBodyStates();
 void updateWorldStates();
 
 // Constants
-const float rad2deg = 180/M_PI;
-const float deg2rad = M_PI/180;
+const double rad2deg = 180/M_PI;
+const double deg2rad = M_PI/180;
 */
 #endif // InitialConditions_h

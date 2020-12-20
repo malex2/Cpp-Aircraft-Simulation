@@ -10,9 +10,15 @@
 #define aircraft_simulation_types_h
 
 // Controller input mode
-enum inputModeType {none, keyboard, serial};
+//enum inputModeType {none, keyboard, serial, table};
 
-// Actuators
-enum actuatorTyoe  {de, da, dr, dT, nActuators};
+// Actuator types
+//enum actuatorType  {de, da, dr, dT};
+
+// Aero types
+enum coeffType {iCd, iCL, iCX, iCY, iCZ, iCl, iCm, iCn, nCoeff};
+enum coeffDervType {constant, du, dalpha, dbeta, dbp, dbq, dbr, delevator, daileron, drudder, dthrottle, nDeriv};
+
+// Atmosphere types
 
 #endif /* aircraft_simulation_types_h */

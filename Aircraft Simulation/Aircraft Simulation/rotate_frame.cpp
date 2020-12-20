@@ -29,13 +29,15 @@ RotateFrame::RotateFrame(ModelMap *pMapInit, bool debugFlagIn)
     util.setUnitClassUnit(imuFrame, radians, 3);
     
     // Body rotations
-    util.setArray(q_B_NED, quaternion_init, 4);
-    util.setArray(q_NED_B, quaternion_init, 4);
+    util.setUnitClassArray(eulerAngles, eulerAngles_init, degrees, 3);
+    
+    util.eulerToQuaternion(q_B_NED, eulerAngles);
+    util.quaternionConjugate(q_NED_B, q_B_NED);
     util.setArray(q_B_LL, quaternion_init, 4);
     util.setArray(q_LL_B, quaternion_init, 4);
     
-    util.setMatrix(*R_B_NED, *identityMatrix, 3, 3);
-    util.setMatrix(*R_NED_B, *identityMatrix, 3, 3);
+    util.setupRotation(*R_B_NED, eulerAngles);
+    util.mtran(*R_NED_B, *R_B_NED, 3, 3);
     util.setMatrix(*R_B_LL, *identityMatrix, 3, 3);
     util.setMatrix(*R_LL_B, *identityMatrix, 3, 3);
     
@@ -44,8 +46,8 @@ RotateFrame::RotateFrame(ModelMap *pMapInit, bool debugFlagIn)
     util.setMatrix(*R_W_B, *identityMatrix, 3, 3);
     
     // Angular rate transformations
-    util.setMatrix(*L_B_E, *identityMatrix, 3, 3);
-    util.setMatrix(*L_E_B, *identityMatrix, 3, 3);
+    util.setupEulerRateToBodyRate(*L_B_E, eulerAngles);
+    util.setupBodyRateToEulerRate(*L_E_B, eulerAngles);
     
     debugFlag = debugFlagIn;
     
@@ -76,7 +78,7 @@ void RotateFrame::initialize()
     util.setArray(q_B_LL, pDyn->get_q_B_LL(), 4);
     util.quaternionConjugate(q_LL_B, q_B_LL);
     
-    float eulerLL[3];
+    double eulerLL[3];
     util.setArray(eulerLL, pDyn->getEulerAngles(), 3 );
     eulerLL[2] = 0;
     util.setupRotation(*R_B_LL, eulerLL);
@@ -102,7 +104,7 @@ void RotateFrame::initialize()
 
 bool RotateFrame::update(void)
 {
-    float eulerLL[3];
+    double eulerLL[3];
     
     // Update NED to Body rotation from dynamics model
     util.setArray(q_B_NED, pDyn->get_q_B_NED(), 4);
@@ -116,7 +118,7 @@ bool RotateFrame::update(void)
     util.quaternionConjugate(q_LL_B, q_B_LL);
     
     util.setArray(eulerLL, pDyn->getEulerAngles(), 3);
-    util.vgain(eulerLL, (float)(1/util.deg2rad), 3);
+    util.vgain(eulerLL, (double)(1/util.deg2rad), 3);
     
     eulerLL[2] = 0;
     util.setupRotation(*R_B_LL, eulerLL);
@@ -142,7 +144,7 @@ bool RotateFrame::update(void)
 }
 
 // NED
-void RotateFrame::bodyToNED(float *NEDFrame, float *bodyFrame)
+void RotateFrame::bodyToNED(double *NEDFrame, double *bodyFrame)
 {
     util.quaternionTransformation(NEDFrame, q_NED_B, bodyFrame);
 }
@@ -153,7 +155,7 @@ void RotateFrame::bodyToNED(unitType<valType> *NEDFrame, unitType<valType> *body
     util.quaternionTransformation(NEDFrame, q_NED_B, bodyFrame);
 }
 
-void RotateFrame::NEDToBody(float *bodyFrame, float *NEDFrame)
+void RotateFrame::NEDToBody(double *bodyFrame, double *NEDFrame)
 {
     util.quaternionTransformation(bodyFrame, q_B_NED, NEDFrame);
 }
@@ -165,7 +167,7 @@ void RotateFrame::NEDToBody(unitType<valType> *bodyFrame, unitType<valType> *NED
 }
 
 // Local Level
-void RotateFrame::bodyToLL(float *LLFrame, float *bodyFrame)
+void RotateFrame::bodyToLL(double *LLFrame, double *bodyFrame)
 {
     util.quaternionTransformation(LLFrame, q_LL_B, bodyFrame);
     //util.mmult(LLFrame, *R_LL_B, bodyFrame, 3, 3);
@@ -178,7 +180,7 @@ void RotateFrame::bodyToLL(unitType<valType> *LLFrame, unitType<valType> *bodyFr
     //util.mmult(LLFrame, *R_LL_B, bodyFrame, 3, 3);
 }
 
-void RotateFrame::LLToBody(float *bodyFrame, float *LLFrame)
+void RotateFrame::LLToBody(double *bodyFrame, double *LLFrame)
 {
     util.quaternionTransformation(bodyFrame, q_B_LL, LLFrame);
     //util.mmult(bodyFrame, *R_B_LL, LLFrame, 3, 3);
@@ -192,47 +194,47 @@ void RotateFrame::LLToBody(unitType<valType> *bodyFrame, unitType<valType> *LLFr
 }
 
 // Sensors
-void RotateFrame::imuToBody(float *bodyFrame, float *imuFrame)
+void RotateFrame::imuToBody(double *bodyFrame, double *imuFrame)
 {
     util.mmult(bodyFrame, *T_B_imu, imuFrame, 3, 3);
 }
 
-void RotateFrame::bodyToImu(float *imuFrame, float *bodyFrame)
+void RotateFrame::bodyToImu(double *imuFrame, double *bodyFrame)
 {
     util.mmult(imuFrame, *T_imu_B, bodyFrame, 3, 3);
 }
 
 // Wind
-void RotateFrame::windToBody(float *bodyFrame, float *windFrame)
+void RotateFrame::windToBody(double *bodyFrame, double *windFrame)
 {
     util.mmult(bodyFrame, *R_B_W, windFrame, 3, 3);
 }
 
-void RotateFrame::bodyToWind(float *windFrame, float *bodyFrame)
+void RotateFrame::bodyToWind(double *windFrame, double *bodyFrame)
 {
     util.mmult(windFrame, *R_W_B, bodyFrame, 3, 3);
 }
 
 // Angle Rates
-void RotateFrame::eulerRateToBodyRate(AngleRateType<float> *bodyRates, AngleRateType<float> *eulerRates)
+void RotateFrame::eulerRateToBodyRate(AngleRateType<double> *bodyRates, AngleRateType<double> *eulerRates)
 {
     util.mmult(bodyRates, *L_B_E, eulerRates, 3, 3);
 }
 
-void RotateFrame::bodyRateToEulerRate(AngleRateType<float> *eulerRates, AngleRateType<float> *bodyRates)
+void RotateFrame::bodyRateToEulerRate(AngleRateType<double> *eulerRates, AngleRateType<double> *bodyRates)
 {
     util.mmult(eulerRates, *L_E_B, bodyRates, 3, 3);
 }
 
 // Template Definitions
-template void RotateFrame::bodyToNED(DistanceType<float>*, DistanceType<float>*);
-template void RotateFrame::bodyToNED(SpeedType<float>*, SpeedType<float>*);
+template void RotateFrame::bodyToNED(DistanceType<double>*, DistanceType<double>*);
+template void RotateFrame::bodyToNED(SpeedType<double>*, SpeedType<double>*);
 
-template void RotateFrame::NEDToBody(DistanceType<float>*, DistanceType<float>*);
-template void RotateFrame::NEDToBody(SpeedType<float>*, SpeedType<float>*);
+template void RotateFrame::NEDToBody(DistanceType<double>*, DistanceType<double>*);
+template void RotateFrame::NEDToBody(SpeedType<double>*, SpeedType<double>*);
 
-template void RotateFrame::bodyToLL(DistanceType<float>*, DistanceType<float>*);
-template void RotateFrame::bodyToLL(SpeedType<float>*, SpeedType<float>*);
+template void RotateFrame::bodyToLL(DistanceType<double>*, DistanceType<double>*);
+template void RotateFrame::bodyToLL(SpeedType<double>*, SpeedType<double>*);
 
-template void RotateFrame::LLToBody(DistanceType<float>*, DistanceType<float>*);
-template void RotateFrame::LLToBody(SpeedType<float>*, SpeedType<float>*);
+template void RotateFrame::LLToBody(DistanceType<double>*, DistanceType<double>*);
+template void RotateFrame::LLToBody(SpeedType<double>*, SpeedType<double>*);

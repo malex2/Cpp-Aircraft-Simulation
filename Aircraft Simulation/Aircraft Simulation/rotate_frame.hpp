@@ -24,34 +24,34 @@ public:
     virtual bool update(void);
     
     // NED
-    void bodyToNED(float *NEDFrame, float *bodyFrame);
+    void bodyToNED(double *NEDFrame, double *bodyFrame);
     template<typename valType, template<typename T> class unitType>
     void bodyToNED(unitType<valType> *NEDFrame, unitType<valType> *bodyFrame);
     
-    void NEDToBody(float *bodyFrame, float *NEDFrame);
+    void NEDToBody(double *bodyFrame, double *NEDFrame);
     template<typename valType, template<typename T> class unitType>
     void NEDToBody(unitType<valType> *bodyFrame, unitType<valType> *NEDFrame);
  
     // Local Level
-    void bodyToLL(float *LLFrame, float *bodyFrame);
+    void bodyToLL(double *LLFrame, double *bodyFrame);
     template<typename valType, template<typename T> class unitType>
     void bodyToLL(unitType<valType> *LLFrame, unitType<valType> *bodyFrame);
     
-    void LLToBody(float *bodyFrame, float *LLFrame);
+    void LLToBody(double *bodyFrame, double *LLFrame);
     template<typename valType, template<typename T> class unitType>
     void LLToBody(unitType<valType> *bodyFrame, unitType<valType> *LLFrame);
     
     // Sensors
-    void imuToBody(float *bodyFrame, float *imuFrame);
-    void bodyToImu(float *imuFrame, float *bodyFrame);
+    void imuToBody(double *bodyFrame, double *imuFrame);
+    void bodyToImu(double *imuFrame, double *bodyFrame);
     
     // Wind
-    void windToBody(float *bodyFrame, float *windFrame);
-    void bodyToWind(float *windFrame, float *bodyFrame);
+    void windToBody(double *bodyFrame, double *windFrame);
+    void bodyToWind(double *windFrame, double *bodyFrame);
     
     // Angle Rates
-    void eulerRateToBodyRate(AngleRateType<float> *bodyRates, AngleRateType<float> *eulerRates);
-    void bodyRateToEulerRate(AngleRateType<float> *eulerRates, AngleRateType<float> *bodyRates);
+    void eulerRateToBodyRate(AngleRateType<double> *bodyRates, AngleRateType<double> *eulerRates);
+    void bodyRateToEulerRate(AngleRateType<double> *eulerRates, AngleRateType<double> *bodyRates);
 
 private:
     
@@ -60,30 +60,30 @@ private:
     class AeroModelBase *pAero;
     
     // Variables
-    AngleType<float> imuFrame[3];
-    AngleType<float> aeroEuler[3];
-    AngleType<float> eulerAngles[3];
+    AngleType<double> imuFrame[3];
+    AngleType<double> aeroEuler[3];
+    AngleType<double> eulerAngles[3];
     
-    float q_B_NED[4];     // NED to body rotation
-    float q_NED_B[4];     // Body to NED rotation
+    double q_B_NED[4];     // NED to body rotation
+    double q_NED_B[4];     // Body to NED rotation
     
-    float R_B_NED[3][3]; // NED to body matrix (for reference)
-    float R_NED_B[3][3]; // Body to NED matrix (for reference)
+    double R_B_NED[3][3]; // NED to body matrix (for reference)
+    double R_NED_B[3][3]; // Body to NED matrix (for reference)
     
-    float q_B_LL[4];     // NED to body rotation
-    float q_LL_B[4];     // Body to NED rotation
+    double q_B_LL[4];     // NED to body rotation
+    double q_LL_B[4];     // Body to NED rotation
     
-    float R_B_LL[3][3];  // LL to body (for reference)
-    float R_LL_B[3][3];  // Body to LL (for reference)
+    double R_B_LL[3][3];  // LL to body (for reference)
+    double R_LL_B[3][3];  // Body to LL (for reference)
     
-    float T_B_imu[3][3]; // IMU to body matrix
-    float T_imu_B[3][3]; // Body to IMU matrix
+    double T_B_imu[3][3]; // IMU to body matrix
+    double T_imu_B[3][3]; // Body to IMU matrix
     
-    float R_B_W[3][3]; // Wind to body matrix
-    float R_W_B[3][3]; // Body to wind matrix
+    double R_B_W[3][3]; // Wind to body matrix
+    double R_W_B[3][3]; // Body to wind matrix
     
-    float L_B_E[3][3]; // Euler rates to body rates
-    float L_E_B[3][3]; // Body rates to Euler rates
+    double L_B_E[3][3]; // Euler rates to body rates
+    double L_E_B[3][3]; // Body rates to Euler rates
 };
 
 #endif /* RotateFrame_hpp */

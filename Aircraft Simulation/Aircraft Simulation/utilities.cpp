@@ -81,7 +81,6 @@ void Delay::delayValue(TempType *value, TempType newValue)
                 std::cout << " to "<< newValue;
                 std::cout << " (delay: " << sDelay << "s)" << std::endl;
             }
-            
         }
         else
         {
@@ -111,7 +110,20 @@ void Delay::delayValue(TempType *value, TempType newValue)
     }
 }
 
+
 /* -------------------- General -------------------- */
+template<typename TempType>
+void Utilities::print(TempType *array, int arrayLength, std::string name)
+{
+   std::cout << name << std::endl;
+    
+    for (int i = 0; i < arrayLength; i++)
+    {
+        std::cout << array[i] << " ";
+    }
+    std::cout << std::endl << std::endl;
+}
+
 template<typename TempType>
 void Utilities::print(TempType *array, int arrayLength)
 {
@@ -653,7 +665,7 @@ TempType Utilities::interpolate(TempType *xvec, TempType *yvec, TempType x, int 
     
         // (y - y1) = m(x - x1)
         slope = (y2 - y1)/(x2 - x1);
-        y  = slope * (x - x1) + y1;
+        y = slope * (x - x1) + y1;
     }
     
     return y;
@@ -1110,7 +1122,7 @@ void Utilities::quaternionTransformation(TempType *w, TempType *quaternion, Temp
     // k3 = 2*q0
     k3 = 2*q0;
     Utilities::crossProduct(cross_q_v, q, v);
-    
+
     for (int i = 0; i < 3; i++)
     {
         w[i] = k1*v[i] + k2*q[i] + k3*cross_q_v[i];
@@ -1120,7 +1132,7 @@ void Utilities::quaternionTransformation(TempType *w, TempType *quaternion, Temp
 template<typename valType, template<typename T> class unitType>
 void Utilities::quaternionTransformation(unitType<valType> *wUnit, valType *quaternion, unitType<valType> *vUnit)
 {
-    float v[3], w[3];
+    valType v[3], w[3];
     Utilities::setArray(v, vUnit, 3);
     Utilities::quaternionTransformation(w, quaternion, v);
     Utilities::setUnitClassArray(wUnit, w, wUnit[0].getUnit(), 3);
@@ -1142,6 +1154,7 @@ void Utilities::eulerToQuaternion(TempType *q, TempType *euler)
     q[2] = cr2*sp2*cy2 + sr2*cp2*sy2;
     q[3] = cr2*cp2*sy2 - sr2*sp2*cy2;
     
+    for (int i = 0; i < 4; i++) { if (fabs(q[i]) < Utilities::zeroTolerance) q[i] = 0.0; }
     Utilities::unitVector(q, 4);
 }
 
@@ -1198,6 +1211,10 @@ void Utilities::quaternionToEuler(AngleType<valType> *euler, valType *q)
 }
 
 /* --------------------  Template Definitions -------------------- */
+template void Utilities::print(int*, int , std::string);
+template void Utilities::print(float*, int , std::string);
+template void Utilities::print(double*, int , std::string);
+
 template void Utilities::print(int* , int);
 template void Utilities::print(float* , int);
 template void Utilities::print(double* , int);
@@ -1227,24 +1244,28 @@ template void Utilities::print(AngleType<float>* , int);
 template void Utilities::print(AngleType<double>* , int);
 
 template void Utilities::print(AngleType<float>*, AngleListType, int);
+template void Utilities::print(AngleType<double>*, AngleListType, int);
 
 template void Utilities::print(AngleType<int>* , int, const char*);
 template void Utilities::print(AngleType<float>* , int, const char*);
 template void Utilities::print(AngleType<double>* , int, const char*);
 
 template void Utilities::print(AngleType<float>*, AngleListType, int, const char*);
+template void Utilities::print(AngleType<double>*, AngleListType, int, const char*);
 
 template void Utilities::print(AngleRateType<int>* , int);
 template void Utilities::print(AngleRateType<float>* , int);
 template void Utilities::print(AngleRateType<double>* , int);
 
 template void Utilities::print(AngleRateType<float>*, AngleRateListType, int);
+template void Utilities::print(AngleRateType<double>*, AngleRateListType, int);
 
 template void Utilities::print(AngleRateType<int>* , int, const char*);
 template void Utilities::print(AngleRateType<float>* , int, const char*);
 template void Utilities::print(AngleRateType<double>* , int, const char*);
 
 template void Utilities::print(AngleRateType<float>*, AngleRateListType, int, const char*);
+template void Utilities::print(AngleRateType<double>*, AngleRateListType, int, const char*);
 
 template void Utilities::print(int*, int, int);
 template void Utilities::print(float*, int, int);
@@ -1259,6 +1280,7 @@ template void Utilities::initArray(int*, int, int);
 template void Utilities::initArray(float*, float, int);
 
 template void Utilities::setArray(float*, float*, int);
+template void Utilities::setArray(double*, double*, int);
 
 template void Utilities::setArray(float*, const float*, int);
 template void Utilities::setArray(double*, const double*, int);
@@ -1268,34 +1290,62 @@ template void Utilities::setArray(float*, SpeedType<float>*, int);
 template void Utilities::setArray(float*, AngleType<float>*, int);
 template void Utilities::setArray(float*, AngleRateType<float>*, int);
 
+template void Utilities::setArray(double*, DistanceType<double>*, int);
+template void Utilities::setArray(double*, SpeedType<double>*, int);
+template void Utilities::setArray(double*, AngleType<double>*, int);
+template void Utilities::setArray(double*, AngleRateType<double>*, int);
+
 template void Utilities::setArray(DistanceType<float>*, DistanceType<float>*, int);
 template void Utilities::setArray(SpeedType<float>*, SpeedType<float>*, int);
 template void Utilities::setArray(AngleType<float>*, AngleType<float>*, int);
 template void Utilities::setArray(AngleRateType<float>*, AngleRateType<float>*, int);
 
+template void Utilities::setArray(DistanceType<double>*, DistanceType<double>*, int);
+template void Utilities::setArray(SpeedType<double>*, SpeedType<double>*, int);
+template void Utilities::setArray(AngleType<double>*, AngleType<double>*, int);
+template void Utilities::setArray(AngleRateType<double>*, AngleRateType<double>*, int);
+
 template void Utilities::setUnitClassUnit(AngleType<float>*, AngleListType, int);
 template void Utilities::setUnitClassArray(AngleType<float>*, float*, AngleListType ,int);
 template void Utilities::setUnitClassArray(AngleType<float>*, const float*, AngleListType ,int);
 
+template void Utilities::setUnitClassUnit(AngleType<double>*, AngleListType, int);
+template void Utilities::setUnitClassArray(AngleType<double>*, double*, AngleListType ,int);
+template void Utilities::setUnitClassArray(AngleType<double>*, const double*, AngleListType ,int);
+
 template void Utilities::setUnitClassUnit(DistanceType<float>*, DistanceListType, int);
 template void Utilities::setUnitClassArray(DistanceType<float>*, float*, DistanceListType ,int);
 template void Utilities::setUnitClassArray(DistanceType<float>*, const float*, DistanceListType ,int);
+
+template void Utilities::setUnitClassUnit(DistanceType<double>*, DistanceListType, int);
+template void Utilities::setUnitClassArray(DistanceType<double>*, double*, DistanceListType ,int);
 template void Utilities::setUnitClassArray(DistanceType<double>*, const double*, DistanceListType ,int);
 
 template void Utilities::setUnitClassUnit(SpeedType<float>*, SpeedListType, int);
 template void Utilities::setUnitClassArray(SpeedType<float>*, float*, SpeedListType ,int);
 template void Utilities::setUnitClassArray(SpeedType<float>*, const float*, SpeedListType ,int);
 
+template void Utilities::setUnitClassUnit(SpeedType<double>*, SpeedListType, int);
+template void Utilities::setUnitClassArray(SpeedType<double>*, double*, SpeedListType ,int);
+template void Utilities::setUnitClassArray(SpeedType<double>*, const double*, SpeedListType ,int);
+
 template void Utilities::setUnitClassUnit(AngleRateType<float>*, AngleRateListType, int);
 template void Utilities::setUnitClassArray(AngleRateType<float>*, float*, AngleRateListType ,int);
 template void Utilities::setUnitClassArray(AngleRateType<float>*, const float*, AngleRateListType ,int);
 
+template void Utilities::setUnitClassUnit(AngleRateType<double>*, AngleRateListType, int);
+template void Utilities::setUnitClassArray(AngleRateType<double>*, double*, AngleRateListType ,int);
+template void Utilities::setUnitClassArray(AngleRateType<double>*, const double*, AngleRateListType ,int);
+
 template void Utilities::initMatrix(float*, float, int, int);
+template void Utilities::initMatrix(double*, double, int, int);
 
 template void Utilities::setMatrix(float*, const float*, int, int);
+template void Utilities::setMatrix(double*, const double*, int, int);
 
 template void Delay::delayValue(bool *value, bool newValue);
 template void Delay::delayValue(float *value, float newValue);
+template void Delay::delayValue(double *value, double newValue);
 
 template int Utilities::max(int, int);
 template float Utilities::max(float, float);
@@ -1322,17 +1372,26 @@ template float Utilities::stdev(float*, int);
 template double Utilities::stdev(double*, int);
 
 template void Utilities::vAdd(float*, float*, float*, int);
+template void Utilities::vAdd(double*, double*, double*, int);
 
 template void Utilities::vAdd(DistanceType<float>*, DistanceType<float>*, float*, int);
 template void Utilities::vAdd(SpeedType<float>*, SpeedType<float>*, float*, int);
 template void Utilities::vAdd(AngleType<float>*, AngleType<float>*, float*, int);
 template void Utilities::vAdd(AngleRateType<float>*, AngleRateType<float>*, float*, int);
 
+template void Utilities::vAdd(DistanceType<double>*, DistanceType<double>*, double*, int);
+template void Utilities::vAdd(SpeedType<double>*, SpeedType<double>*, double*, int);
+template void Utilities::vAdd(AngleType<double>*, AngleType<double>*, double*, int);
+template void Utilities::vAdd(AngleRateType<double>*, AngleRateType<double>*, double*, int);
+
 template void Utilities::vAdd(SpeedType<float>*, SpeedType<float>*, SpeedType<float>*, int);
+template void Utilities::vAdd(SpeedType<double>*, SpeedType<double>*, SpeedType<double>*, int);
 
 template void Utilities::vSubtract(float*, float*, float*, int);
+template void Utilities::vSubtract(double*, double*, double*, int);
 
 template void Utilities::vSubtract(SpeedType<float>*, SpeedType<float>*, SpeedType<float>*, int);
+template void Utilities::vSubtract(SpeedType<double>*, SpeedType<double>*, SpeedType<double>*, int);
 
 template void Utilities::crossProduct(int*, int*, int*);
 template void Utilities::crossProduct(float*, float*, float*);
@@ -1341,7 +1400,11 @@ template void Utilities::crossProduct(double*, double*, double*);
 template void Utilities::crossProduct(float*, DistanceType<float>*, float*);
 template void Utilities::crossProduct(float*, AngleRateType<float>*, float*);
 
+template void Utilities::crossProduct(double*, DistanceType<double>*, double*);
+template void Utilities::crossProduct(double*, AngleRateType<double>*, double*);
+
 template void Utilities::crossProduct(SpeedType<float>*, AngleRateType<float>*, DistanceType<float>*);
+template void Utilities::crossProduct(SpeedType<double>*, AngleRateType<double>*, DistanceType<double>*);
 
 template int Utilities::dotProduct(int* , int* , int);
 template float Utilities::dotProduct(float* , float* , int);
@@ -1354,6 +1417,10 @@ template double Utilities::mag(double* , int);
 template float Utilities::mag(DistanceType<float> *vec, int n);
 template float Utilities::mag(SpeedType<float> *vec, int n);
 template float Utilities::mag(AngleRateType<float> *vec, int n);
+
+template double Utilities::mag(DistanceType<double> *vec, int n);
+template double Utilities::mag(SpeedType<double> *vec, int n);
+template double Utilities::mag(AngleRateType<double> *vec, int n);
 
 template void Utilities::unitVector(int* , int);
 template void Utilities::unitVector(float* , int);
@@ -1374,10 +1441,15 @@ template void Utilities::mmult(float* , float* , float* , int, int);
 template void Utilities::mmult(double* , double* , double* , int, int);
 
 template void Utilities::mmult(float* ,float* ,AngleRateType<float>* , int, int);
+template void Utilities::mmult(double* ,double* ,AngleRateType<double>* , int, int);
 
 template void Utilities::mmult(DistanceType<float>* ,float* ,DistanceType<float>* , int, int);
 template void Utilities::mmult(SpeedType<float>* ,float* ,SpeedType<float>* , int, int);
 template void Utilities::mmult(AngleRateType<float>* ,float* ,AngleRateType<float>* , int, int);
+
+template void Utilities::mmult(DistanceType<double>* ,double* ,DistanceType<double>* , int, int);
+template void Utilities::mmult(SpeedType<double>* ,double* ,SpeedType<double>* , int, int);
+template void Utilities::mmult(AngleRateType<double>* ,double* ,AngleRateType<double>* , int, int);
 
 template void Utilities::mmult(int*, int* , int, int, int* , int, int);
 template void Utilities::mmult(float*, float* , int, int, float* , int, int);
@@ -1430,9 +1502,17 @@ template void Utilities::quatToVec(DistanceType<float>*, float*);
 template void Utilities::quatToVec(SpeedType<float>*, float*);
 template void Utilities::quatToVec(AngleRateType<float>*, float*);
 
+template void Utilities::quatToVec(DistanceType<double>*, double*);
+template void Utilities::quatToVec(SpeedType<double>*, double*);
+template void Utilities::quatToVec(AngleRateType<double>*, double*);
+
 template void Utilities::vecToQuat(float*, DistanceType<float>*);
 template void Utilities::vecToQuat(float*, SpeedType<float>*);
 template void Utilities::vecToQuat(float*, AngleRateType<float>*);
+
+template void Utilities::vecToQuat(double*, DistanceType<double>*);
+template void Utilities::vecToQuat(double*, SpeedType<double>*);
+template void Utilities::vecToQuat(double*, AngleRateType<double>*);
 
 template void Utilities::vecToQuat(int* , int*);
 template void Utilities::vecToQuat(float* , float*);
@@ -1456,6 +1536,9 @@ template void Utilities::quaternionTransformation(double* , double* , double*);
 
 template void Utilities::quaternionTransformation(DistanceType<float>*, float*, DistanceType<float>*);
 template void Utilities::quaternionTransformation(SpeedType<float>*, float*, SpeedType<float>*);
+
+template void Utilities::quaternionTransformation(DistanceType<double>*, double*, DistanceType<double>*);
+template void Utilities::quaternionTransformation(SpeedType<double>*, double*, SpeedType<double>*);
 
 template void Utilities::eulerToQuaternion(int* , int*);
 template void Utilities::eulerToQuaternion(float* , float*);

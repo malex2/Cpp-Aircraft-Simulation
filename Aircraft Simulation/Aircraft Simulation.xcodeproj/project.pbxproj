@@ -17,6 +17,7 @@
 		1E565087248D600300EB0E51 /* rotate_frame.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E565086248D600300EB0E51 /* rotate_frame.cpp */; };
 		1E56508A248D819F00EB0E51 /* dynamics_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E565088248D819F00EB0E51 /* dynamics_model.cpp */; };
 		1E99A4A322DFE684008BFEF8 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E99A4A222DFE684008BFEF8 /* main.cpp */; };
+		1EB22CBB24D4C5C400F50BF9 /* performance.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB22CB924D4C5C400F50BF9 /* performance.cpp */; };
 		1ECCA32A249FA96D00820C69 /* ground_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ECCA328249FA96D00820C69 /* ground_model.cpp */; };
 		1EED09AD24A91A07007DC0C3 /* propulsion_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EED09AB24A91A07007DC0C3 /* propulsion_model.cpp */; };
 		1EED09B024A974DA007DC0C3 /* aero_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EED09AF24A974DA007DC0C3 /* aero_model.cpp */; };
@@ -56,6 +57,8 @@
 		1E565089248D819F00EB0E51 /* dynamics_model.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = dynamics_model.hpp; sourceTree = "<group>"; };
 		1E99A49F22DFE684008BFEF8 /* Aircraft Simulation */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "compiled.mach-o.executable"; path = "Aircraft Simulation"; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E99A4A222DFE684008BFEF8 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		1EB22CB924D4C5C400F50BF9 /* performance.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = performance.cpp; sourceTree = "<group>"; };
+		1EB22CBA24D4C5C400F50BF9 /* performance.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = performance.hpp; sourceTree = "<group>"; };
 		1EB8FEF924B36CE200A72E56 /* aircraft_simulation_types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = aircraft_simulation_types.h; sourceTree = "<group>"; };
 		1ECCA328249FA96D00820C69 /* ground_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ground_model.cpp; sourceTree = "<group>"; };
 		1ECCA329249FA96D00820C69 /* ground_model.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ground_model.hpp; sourceTree = "<group>"; };
@@ -96,6 +99,8 @@
 			isa = PBXGroup;
 			children = (
 				1E99A4A222DFE684008BFEF8 /* main.cpp */,
+				1EB22CB924D4C5C400F50BF9 /* performance.cpp */,
+				1EB22CBA24D4C5C400F50BF9 /* performance.hpp */,
 				1EED09AB24A91A07007DC0C3 /* propulsion_model.cpp */,
 				1EED09AC24A91A07007DC0C3 /* propulsion_model.hpp */,
 				1EED09AF24A974DA007DC0C3 /* aero_model.cpp */,
@@ -184,6 +189,7 @@
 			files = (
 				1E3D1D5624951E240025A1CD /* model_mapping.cpp in Sources */,
 				1E17D5612495989C00338B14 /* data_logger.cpp in Sources */,
+				1EB22CBB24D4C5C400F50BF9 /* performance.cpp in Sources */,
 				1E56508A248D819F00EB0E51 /* dynamics_model.cpp in Sources */,
 				1E29E0DE24A7989B00A8C31A /* atmosphere_model.cpp in Sources */,
 				1E565084248D5FDE00EB0E51 /* utilities.cpp in Sources */,

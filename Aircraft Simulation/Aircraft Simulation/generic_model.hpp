@@ -24,7 +24,7 @@ protected:
     
     bool debugFlag;
     
-    float dt, prevTime, time;
+    double dt, prevTime, time;
     int counter;
     
     virtual void updateDt(Time* pTime);
@@ -42,17 +42,18 @@ public:
 class GenericForceModel : public GenericModel {
 protected:
     // Forces and moments
-    float LLForce[3];
-    float bodyForce[3];
-    float bodyMoment[3];
+    double LLForce[3];
+    double bodyForce[3];
+    double bodyMoment[3];
     
 public:
     // Constructor
     GenericForceModel();
     
     // Return forces and moments
-    float* getForce(void) { return bodyForce; }
-    float* getMoment(void) { return bodyMoment; }
+    double* getForce(void)   { return bodyForce; }
+    double* getLLForce(void) { return LLForce; }
+    double* getMoment(void)  { return bodyMoment; }
 };
 
 // Example class

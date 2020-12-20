@@ -17,6 +17,9 @@
 
 #include "aero_model.hpp"
 
+// **********************************************************************
+// Aerodynamic Model Base
+// **********************************************************************
 AeroModelBase::AeroModelBase(ModelMap *pMapInit, bool debugFlagIn)
 {
     pDyn    = NULL;
@@ -44,6 +47,7 @@ AeroModelBase::AeroModelBase(ModelMap *pMapInit, bool debugFlagIn)
     
     alphaPrint = 0.0;
     betaPrint  = 0.0;
+    refArea    = 0.0;
     
     for (int i = 0; i < nCoeff; i ++) { for (int j = 0; j < nDeriv; j++) { aeroMatrix[i][j] = 0.0; } }
     for (int i = 0; i < nCoeff; i ++) { coeffs[i] = 0.0; }
@@ -66,13 +70,13 @@ AeroModelBase::AeroModelBase(ModelMap *pMapInit, bool debugFlagIn)
 
 void AeroModelBase::initialize(void)
 {
-    pDyn    = (DynamicsModel*)   pMap->getModel("DynamicsModel");
-    pRotate = (RotateFrame*)     pMap->getModel("RotateFrame");
-    pProp   = (PropulsionModel*) pMap->getModel("PropulsionModel");
-    pAct    = (ActuatorModel*)   pMap->getModel("ActuatorModel");
-    pAtmo   = (AtmosphereModel*) pMap->getModel("AtmosphereModel");
-    pTime   = (Time*)            pMap->getModel("Time");
-    pGnd    = (GroundModel*)     pMap->getModel("GroundModel");
+    pDyn    = (DynamicsModel*)       pMap->getModel("DynamicsModel");
+    pRotate = (RotateFrame*)         pMap->getModel("RotateFrame");
+    pProp   = (PropulsionModelBase*) pMap->getModel("PropulsionModel");
+    pAct    = (ActuatorModelBase*)   pMap->getModel("ActuatorModel");
+    pAtmo   = (AtmosphereModel*)     pMap->getModel("AtmosphereModel");
+    pTime   = (Time*)                pMap->getModel("Time");
+    pGnd    = (GroundModel*)         pMap->getModel("GroundModel");
     
     updateAeroAngles();
 }
@@ -95,13 +99,14 @@ bool AeroModelBase::update(void)
 
 void AeroModelBase::updateAeroAngles(void)
 {
-    SpeedType<float>* velBody = pDyn->getVelBodyRelWind();
+    SpeedType<double>* velBody = pDyn->getVelBodyRelWind();
     
-    float V = util.mag(velBody, 3);
+    double V = util.mag(velBody, 3);
+
+    // Anlge of Attack
+    alpha.val = atan2(velBody[2].val, velBody[0].val);
     
-    if ( velBody[0].val <= zeroTolerance) { alpha.val = 0; }
-    else {  alpha.val = atan(velBody[2].val/velBody[0].val); }
-    
+    // Side Slip
     if (V <= zeroTolerance) { beta.val = 0; }
     else { beta.val = asin(velBody[1].mps()/V); }
     
@@ -120,17 +125,15 @@ void AeroModelBase::updateAeroCoeffs(void)
 void AeroModelBase::updateAeroForces(void)
 {
     // Get values from other models
-    SpeedType<float>*    velBody = pDyn->getVelBodyRelWind();
-    AngleRateType<float>* omega  = pDyn->getBodyRates();
-    float V = pDyn->getSpeed().mps();
-    float q = pAtmo->getAir()[dynPress];
-    float* actuators = pAct->getActuators();
-    
+    AngleRateType<double>* omega  = pDyn->getBodyRates();
+    double V = pDyn->getSpeed().mps();
+    double q = pAtmo->getAir()[AtmosphereModel::dynPress];
+    double* actuators = pAct->getActuators();
     
     // Calculations
-    float qS  = q*wingArea;
-    float b2v = span/(2*V);
-    float c2v = meanChord/(2*V);
+    double qS  = q*refArea;
+    double b2v = span/(2*V);
+    double c2v = meanChord/(2*V);
     
     // Setup Aero Matrix
     // [ Cd ]   [ Cdo  Cdu Cda Cdb Cdp Cdq Cdr Cdde Cdda Cddr CddT ]   [ 1      ]
@@ -163,30 +166,32 @@ void AeroModelBase::updateAeroForces(void)
     if ( V >= zeroTolerance)
     {
         // Setup inputs vector
+        inputs[constant] = 1;
+        
         // uhat
-        inputs[1] = velBody[1].mps()/V;
+        inputs[du] = V/Vref;
     
         // alpha, beta
-        inputs[2] = alpha.rad();
-        inputs[3] = beta.rad();
+        inputs[dalpha] = alpha.rad();
+        inputs[dbeta] = beta.rad();
     
         // phat, qhat, rhat
-        inputs[4] = omega[0].rps()*b2v; // p*b/(2*V)
-        inputs[5] = omega[1].rps()*c2v; // q*c/(2*V)
-        inputs[6] = omega[2].rps()*b2v; // r*b/(2*V)
+        inputs[dbp] = omega[0].rps()*b2v; // p*b/(2*V)
+        inputs[dbq] = omega[1].rps()*c2v; // q*c/(2*V)
+        inputs[dbr] = omega[2].rps()*b2v; // r*b/(2*V)
     
         // de, da, dr, dT
-        inputs[7] = actuators[de]*util.deg2rad;
-        inputs[8] = actuators[da]*util.deg2rad;
-        inputs[9] = actuators[2]*util.deg2rad;
-        inputs[10] = pProp->getThrottle();
+        inputs[delevator] = actuators[RCActuatorModel::de]*util.deg2rad;
+        inputs[daileron]  = actuators[RCActuatorModel::da]*util.deg2rad;
+        inputs[drudder]   = actuators[RCActuatorModel::dr]*util.deg2rad;
+        inputs[dthrottle] = actuators[RCActuatorModel::dT];
     
         // Compute coefficients
         util.mmult(coeffs, *aeroMatrix, inputs, 8, 11);
     
         // Lift and drag coefficients to body frame
-        float liftDragWind[3] = {coeffs[0], 0, coeffs[1]};
-        float liftDragBody[3];
+        double liftDragWind[3] = {coeffs[0], 0, coeffs[1]};
+        double liftDragBody[3];
         pRotate->windToBody(liftDragBody, liftDragWind);
     
         // CX, CY, CZ
@@ -210,68 +215,69 @@ void AeroModelBase::updateAeroForces(void)
     
         // Aero Forces
         pRotate->bodyToWind(aeroForce, bodyForce);
-        util.vgain(aeroForce, -1.0f, 3);
+        util.vgain(aeroForce, -1.0, 3);
     }
 }
 
+// **********************************************************************
+// Simple RC Aerodynamic Model
+// **********************************************************************
 SimpleRCAeroModel::SimpleRCAeroModel(ModelMap *pMapInit, bool debugFlagIn) : AeroModelBase(pMapInit, debugFlagIn)
 {
+    refArea = wingArea;
+    
     dCd_dCL  = 0; // computed dynamically
-    Cdarray[constant]  = 0.04;       // Cdo
-    Cdarray[dalpha]    = 0.0;        // Cda  computed dynamically
-    Cdarray[dq]        = 0.0;        // Cdq  computed dynamically
-    Cdarray[delevator] = 0.0;        // Cdde computed dynamically
+    Cdarray[constant]  = 0.04;        // Cdo
+    Cdarray[dalpha]    = 0.0;         // Cda  computed dynamically
+    Cdarray[dbq]       = 0.0;         // Cdq  computed dynamically
+    Cdarray[delevator] = 0.0;         // Cdde computed dynamically
     
-    CLarray[constant]  = 0.31;       // CLo
-    CLarray[dalpha]    = 4.2072;     // CLa
-    CLarray[dq]        = 6.7408;     // CLq
-    CLarray[delevator] = 0.50583;    // CLde
+    CLarray[constant]  = 0.31;        // CLo
+    CLarray[dalpha]    = 4.2072;      // CLa
+    CLarray[dbq]       = 6.7408;      // CLq
+    CLarray[delevator] = 0.50583;     // CLde
     
-    Cmarray[constant]  = 0.02221337; // Cmo
-    Cmarray[dalpha]    = -0.82203;   // Cma
-    Cmarray[dq]        = -8.9323;    // Cmq
-    Cmarray[delevator] = -1.1669;    // Cmde
+    Cmarray[constant]  = 0.02221337;  // Cmo
+    Cmarray[dalpha]    = -0.82203;    // Cma
+    Cmarray[dbq]       = -8.9323;     // Cmq
+    Cmarray[delevator] = -1.1669;     // Cmde
     
     CYarray[dbeta]     = -0.35968;    // CYb
-    CYarray[dp]        = -0.00059002; // CYp
-    CYarray[dr]        = 0.40526;     // CYr
+    CYarray[dbp]       = -0.00059002; // CYp
+    CYarray[dbr]       = 0.40526;     // CYr
     CYarray[daileron]  = -0.13034;    // CYda
     CYarray[drudder]   = 0.28305;     // CYdr
     
     Clarray[dbeta]     = -0.04194;    // Clb
-    Clarray[dp]        = -0.39218;    // Clp
-    Clarray[dr]        = 0.15978;     // Clr
+    Clarray[dbp]       = -0.39218;    // Clp
+    Clarray[dbr]       = 0.15978;     // Clr
     Clarray[daileron]  = 0.40029;     // Clda
     Clarray[drudder]   = 0.0033462;   // Cldr
     
-    Cnarray[dbeta]    = 0.18222;      // Cnb
-    Cnarray[dp]       = -0.063944;    // Cnp
-    Cnarray[dr]       = -0.20752;     // Cnr
-    Cnarray[daileron] = 0.065812;     // Cnda
-    Cnarray[drudder]  = -0.15261;     // Cndr
+    Cnarray[dbeta]     = 0.18222;     // Cnb
+    Cnarray[dbp]       = -0.063944;   // Cnp
+    Cnarray[dbr]       = -0.20752;    // Cnr
+    Cnarray[daileron]  = 0.065812;    // Cnda
+    Cnarray[drudder]   = -0.15261;    // Cndr
 }
 
 void SimpleRCAeroModel::updateAeroCoeffs(void)
 {
     // Compute CL
-    float CL;
-    float q = pDyn->getBodyRates()[1].rps();
-    float V = pDyn->getSpeed().mps();
-    
-    CL = CLarray[constant] +
-    CLarray[dalpha]*alpha.rad() +
-    CLarray[dq]*q*meanChord/(2*V) +
-    CLarray[delevator]*actuators_init[0]*util.deg2rad;
+    double CLwing = CLarray[constant] + CLarray[dalpha]*alpha.rad();
     
     // Copmute derivative of Cd w.r.t. CL
-    dCd_dCL = 2*CL/(M_PI*AR);
+    dCd_dCL = 2*CLwing/(M_PI*e*AR);
     
     // Update drag derivatives
     Cdarray[dalpha]    = CLarray[dalpha]    * dCd_dCL;
-    Cdarray[dq]        = CLarray[dq]        * dCd_dCL;
+    Cdarray[dbq]       = CLarray[dbq]       * dCd_dCL;
     Cdarray[delevator] = CLarray[delevator] * dCd_dCL;
 }
 
+// **********************************************************************
+// RC Airplane Aerodynamic Model
+// **********************************************************************
 RCAeroModel::RCAeroModel(ModelMap *pMapInit, bool debugFlagIn) : AeroModelBase(pMapInit, debugFlagIn)
 {
     // Transpose tables
@@ -285,10 +291,10 @@ RCAeroModel::RCAeroModel(ModelMap *pMapInit, bool debugFlagIn) : AeroModelBase(p
 
 void RCAeroModel::updateAeroCoeffs(void)
 {
-    float Re = pAtmo->getRe();
-    float elevator = actuators_init[0];
-    float aileron = actuators_init[1];
-    float rudder = actuators_init[2];
+    double Re = pAtmo->getRe();
+    double elevator = actuators_init[0];
+    double aileron = actuators_init[1];
+    double rudder = actuators_init[2];
     
     // Drag coefficient lookup
     Cdarray[constant] = util.interpolate(reynoldsVec, &AeroTable_Longitudinal[lookupCdo][0], Re, nReynolds);
@@ -296,7 +302,7 @@ void RCAeroModel::updateAeroCoeffs(void)
     // Lift coefficient lookup
     CLarray[constant] = util.interpolate(reynoldsVec, &AeroTable_Longitudinal[lookupCLo][0], Re, nReynolds);
     CLarray[dalpha]   = util.interpolate(reynoldsVec, &AeroTable_Longitudinal[lookupCLa][0], Re, nReynolds);
-    CLarray[dq]       = util.interpolate(reynoldsVec, &AeroTable_Longitudinal[lookupCLq][0], Re, nReynolds);
+    CLarray[dbq]      = util.interpolate(reynoldsVec, &AeroTable_Longitudinal[lookupCLq][0], Re, nReynolds);
     
     // X Force coefficient lookup
     CXarray[du]        = util.interpolate(reynoldsVec, &AeroTable_Longitudinal[lookupCXu][0], Re, nReynolds);
@@ -307,8 +313,8 @@ void RCAeroModel::updateAeroCoeffs(void)
     
     // Y (Side) Force coefficient lookup
     CYarray[dbeta]    = util.interpolate(reynoldsVec, &AeroTable_Lateral[lookupCYb][0], Re, nReynolds);
-    CYarray[dp]       = util.interpolate(reynoldsVec, &AeroTable_Lateral[lookupCYp][0], Re, nReynolds);
-    CYarray[dr]       = util.interpolate(reynoldsVec, &AeroTable_Lateral[lookupCYr][0], Re, nReynolds);
+    CYarray[dbp]      = util.interpolate(reynoldsVec, &AeroTable_Lateral[lookupCYp][0], Re, nReynolds);
+    CYarray[dbr]      = util.interpolate(reynoldsVec, &AeroTable_Lateral[lookupCYr][0], Re, nReynolds);
     CYarray[daileron] = util.interpolate(reynoldsVec, &AeroTable_Control[lookupCYda][0], Re, nReynolds);
     CYarray[drudder]  = util.interpolate(reynoldsVec, &AeroTable_Control[lookupCYdr][0], Re, nReynolds);
     
@@ -320,134 +326,82 @@ void RCAeroModel::updateAeroCoeffs(void)
     
     // Roll Moment coefficient lookup
     Clarray[dbeta]    = util.interpolate(reynoldsVec, &AeroTable_Lateral[lookupClb][0], Re, nReynolds);
-    Clarray[dp]       = util.interpolate(reynoldsVec, &AeroTable_Lateral[lookupClp][0], Re, nReynolds);
-    Clarray[dr]       = util.interpolate(reynoldsVec, &AeroTable_Lateral[lookupClr][0], Re, nReynolds);
+    Clarray[dbp]      = util.interpolate(reynoldsVec, &AeroTable_Lateral[lookupClp][0], Re, nReynolds);
+    Clarray[dbr]      = util.interpolate(reynoldsVec, &AeroTable_Lateral[lookupClr][0], Re, nReynolds);
     Clarray[daileron] = util.interpolate(reynoldsVec, &AeroTable_Control[lookupClda][0], Re, nReynolds);
     Clarray[drudder]  = util.interpolate(reynoldsVec, &AeroTable_Control[lookupCldr][0], Re, nReynolds);
     
     // Pitch Moment coefficient lookup
     Cmarray[constant]  = util.interpolate(reynoldsVec, &AeroTable_Longitudinal[lookupCmo][0], Re, nReynolds);
     Cmarray[dalpha]    = util.interpolate(reynoldsVec, &AeroTable_Longitudinal[lookupCma][0], Re, nReynolds);
-    Cmarray[dq]        = util.interpolate(reynoldsVec, &AeroTable_Longitudinal[lookupCmq][0], Re, nReynolds);
+    Cmarray[dbq]       = util.interpolate(reynoldsVec, &AeroTable_Longitudinal[lookupCmq][0], Re, nReynolds);
     Cmarray[delevator] = util.interpolate(reynoldsVec, &AeroTable_Control[lookupCmde][0], Re, nReynolds);
     Cmarray[daileron]  = util.interpolate(daVec, &aileronTable[lookupCmda][0] , aileron , nDa);
     Cmarray[drudder]   = util.interpolate(drVec, &rudderTable[lookupCmdr][0]  , rudder  , nDr);
     
     // Rudder Moment coefficient lookup
     Cnarray[dbeta]    = util.interpolate(reynoldsVec, &AeroTable_Lateral[lookupCnb][0], Re, nReynolds);
-    Cnarray[dp]       = util.interpolate(reynoldsVec, &AeroTable_Lateral[lookupCnp][0], Re, nReynolds);
-    Cnarray[dr]       = util.interpolate(reynoldsVec, &AeroTable_Lateral[lookupCnr][0], Re, nReynolds);
+    Cnarray[dbp]      = util.interpolate(reynoldsVec, &AeroTable_Lateral[lookupCnp][0], Re, nReynolds);
+    Cnarray[dbr]      = util.interpolate(reynoldsVec, &AeroTable_Lateral[lookupCnr][0], Re, nReynolds);
     Cnarray[daileron] = util.interpolate(reynoldsVec, &AeroTable_Control[lookupCnda][0], Re, nReynolds);
     Cnarray[drudder]  = util.interpolate(reynoldsVec, &AeroTable_Control[lookupCndr][0], Re, nReynolds);
 }
 
-/*
-void AeroModel::rcPlane(float *pqr,float *controls, float *FaeroWind, float *MaeroBody){
-    derad = controls[0]*deg2rad;
-    darad = controls[1]*deg2rad;
-    drrad = controls[2]*deg2rad;
-    
-    p = pqr[0];
-    q = pqr[1];
-    r = pqr[2];
-    
-    alpharad = alpha*deg2rad;
-    betarad = beta*deg2rad;
-    
-    phat = b*p*deg2rad/(2*V);
-    rhat = b*r*deg2rad/(2*V);
-    qhat = cbar*q*deg2rad/(2*V);
-    
-    Cdo = 0.02;
-    
-    CLo = 0.2206;
-    CLa = 5.06;
-    CLde = 0.2865;
-    CLq = 3.98;
-    
-    Cmo = 0.14;
-    Cma = -1.15;
-    Cmde = -0.66;
-    Cmq = -10.14;
-    
-    CYb = -0.4;
-    CYp = 0;
-    CYr = 0;
-    CYda = 0;
-    CYdr = 0.2;
-    
-    Clb = -0.1;
-    Clp = -0.5;
-    Clr = 0.4;
-    Clda = 0.51;
-    Cldr = 0.04;
-
-    Cnb = 0.103;
-    Cnp = -0.3;
-    Cnr = -0.2;
-    Cnda = 0;
-    Cndr = -0.0018;
-
-    
-    Cd = Cdo + CL*CL/(M_PI*AR);
-    CL = CLo + CLa*alpharad + CLq*qhat + CLde*derad;
-    Cm = Cmo + Cma*alpharad + Cmq*qhat + Cmde*derad;
-    CY = CYb*betarad + CYr*rhat + CYp*phat + CYda*darad + CYdr*drrad;
-    Cl = Clb*betarad + Clr*rhat + Clp*phat + Clda*darad + Cldr*drrad;
-    Cn = Cnb*betarad + Cnr*rhat + Cnp*phat + Cnda*darad + Cndr*drrad;
-    
-    qS = 0.5*rho*V*V*S;
-    
-    Lift = qS*CL;
-    Drag = qS*Cd;
-    SideForce = qS*CY;
-    
-    L = qS*b*Cl;
-    M = qS*cbar*Cm;
-    N = qS*b*Cn;
-    
-    FaeroWind[0] = -Drag;
-    FaeroWind[1] = -SideForce;
-    FaeroWind[2] = -Lift;
-    
-    MaeroBody[0] = L;
-    MaeroBody[1] = M;
-    MaeroBody[2] = N;
-}
-
-void AeroModel::Dummy(double curTime, const int size,float *dummyTimes, float *dummyForceMoments, float *FaeroWind, float *MaeroBody){
-    // Get forces    
-    for(int i=0;i<6;i++)
+void AeroModelBase::setAeroEuler(AngleType<double>* angles_in)
+{
+    for (int i = 0; i < 3; i++)
     {
-            for(int j=0;j<size;j++)
-            {
-               if(*(dummyTimes+i*size+j)<=curTime)
-               {
-                   if (i<3) FaeroWind[i]=*(dummyForceMoments+i*size+j);
-                   else     MaeroBody[i-3]=*(dummyForceMoments+i*size+j);
-               }
-            }
+        aeroEuler[i].val = angles_in[i].deg();
     }
+    alpha.val = aeroEuler[1].rad();
+    beta.val  = -aeroEuler[2].rad();
+    pRotate->update();
 }
 
-void AeroModel::Angles(float* velBody){
-    u = velBody[0];
-    v = velBody[1];
-    w = velBody[2];
-    V = sqrt(u*u + v*v + w*w);
-    if (u<=zeroTolerance) alpha = 0;
-    else alpha = atan(w/u)*rad2deg;
+// **********************************************************************
+// Quadcopter Aerodynamic Model
+// **********************************************************************
+QuadcopterAeroModel::QuadcopterAeroModel(ModelMap *pMapInit, bool debugFlagIn) : AeroModelBase(pMapInit, debugFlagIn)
+{
+    cdo = 0.05;
+    refArea = quadTopArea;
     
-    if (v<=zeroTolerance) beta = 0;
-    else beta = asin(v/V)*rad2deg;
+    Cdarray[constant]  = cdo;  // Cdo
+    Cdarray[dalpha]    = 0.0;  // Cda
+    Cdarray[dbq]       = 0.0;  // Cdq
+    Cdarray[delevator] = 0.0;  // Cdde
     
+    CLarray[constant]  = 0.0;  // CLo
+    CLarray[dalpha]    = 0.0;  // CLa
+    CLarray[dbq]       = 0.0;  // CLq
+    CLarray[delevator] = 0.0;  // CLde
+    
+    Cmarray[constant]  = 0.0;  // Cmo
+    Cmarray[dalpha]    = 0.0;  // Cma
+    Cmarray[dbq]       = 0.0;  // Cmq
+    Cmarray[delevator] = 0.0;  // Cmde
+    
+    CYarray[dbeta]     = 0.0;  // CYb
+    CYarray[dbp]       = 0.0;  // CYp
+    CYarray[dbr]       = 0.0;  // CYr
+    CYarray[daileron]  = 0.0;  // CYda
+    CYarray[drudder]   = 0.0;  // CYdr
+    
+    Clarray[dbeta]     = 0.0;  // Clb
+    Clarray[dbp]       = 0.0;  // Clp
+    Clarray[dbr]       = 0.0;  // Clr
+    Clarray[daileron]  = 0.0;  // Clda
+    Clarray[drudder]   = 0.0;  // Cldr
+    
+    Cnarray[dbeta]     = 0.0;  // Cnb
+    Cnarray[dbp]       = 0.0;  // Cnp
+    Cnarray[dbr]       = 0.0;  // Cnr
+    Cnarray[daileron]  = 0.0;  // Cnda
+    Cnarray[drudder]   = 0.0;  // Cndr
 }
 
-float AeroModel::getAlpha(){
-    return alpha;
+void QuadcopterAeroModel::updateAeroCoeffs(void)
+{
+    // Possibily a function of attitude
+    Cdarray[constant]  = cdo;  // Cdo
 }
-
-float AeroModel::getBeta(){
-    return beta;    
-}
-*/

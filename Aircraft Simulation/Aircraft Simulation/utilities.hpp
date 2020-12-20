@@ -45,8 +45,8 @@ typedef enum AngleRateListType
 class UnitConversions {
 public:
     // distance conversions
-    const double in2m  = 1/39.37;  // inches to meters
-    const double ft2m  = 1/3.2808; // feet to meters
+    const double in2m  = 1.0/39.37;  // inches to meters
+    const double ft2m  = 1.0/3.2808; // feet to meters
     const double yd2m  = 0.9144;   // yards to meters
     const double mi2m  = 1609.344; // miles to meters
     const double nmi2m = 1852;     // nautical miles to meters
@@ -73,7 +73,7 @@ class Conversions : public UnitConversions {
     
 public:
 
-    valType  val;
+    valType val;
     
     // Accessors
     void convertUnit(unitType newUnit, bool convertValue = true )
@@ -332,15 +332,14 @@ public:
 };
 
 class MonitorMacInput {
-   
 public:
-    // constructor
+    // Constructor
     MonitorMacInput(void);
     
-    // deconstructor
+    // Deconstructor
     ~MonitorMacInput(void);
     
-    // monitor input
+    // Monitor input
     int monitorInput(void);
     
 private:
@@ -351,7 +350,6 @@ private:
 
 class Delay {
 public:
-    
     // Constructor
     Delay(int *pCounter, float counterRate, float sDelay, bool debug = false);
     
@@ -367,12 +365,12 @@ public:
     void setRate(float inputRate)   { counterRate = inputRate; }
     
 private:
-    // settings
+    // Settings
     int   *pCounter;     // pointer to counter
     float counterRate;   // rate of counter
     float sDelay;        // delay between changes in seconds
     
-    // internal variabls
+    // Internal variables
     bool  timerStarted;  // variable change sensed and time is counting
     bool  changeApplied; // variable change has been applied
     float timer;         // amount of time in current state
@@ -382,12 +380,69 @@ private:
     
 };
 
+class FirstOrderFilter {
+public:
+    // xcmd/x = k/(tau*s + 1)
+    FirstOrderFilter(double x_in = 0.0, double dt_in = 0.0, double tau_in = 0.001, double gain_in = 1.0)
+    {
+        dt   = dt_in;
+        tau  = tau_in;
+        k    = gain_in;
+        
+        xprev = x_in;
+        x     = x_in;
+        xdot  = 0.0;
+        maxrate = std::numeric_limits<double>::infinity();
+    }
+    
+    void setInitialValue(double x_in)   { x = x_in; }
+    void setTimeConstant(double tau_in) { tau = tau_in; }
+    void setGain(double gain_in)        { k = gain_in; }
+    void setDt(double dt_in)            { dt = dt_in; }
+    void setMaxRate(double maxrate_in)  { maxrate = maxrate_in; }
+    
+    void setValue(double xcmd)
+    {
+        xprev = x;
+        if (tau != 0) { xdot  = (k*xcmd - x)/tau; }
+        else          { xdot = 0;}
+        
+        if (xdot > maxrate)  { xdot = maxrate; }
+        if (xdot < -maxrate) { xdot = -maxrate; }
+        
+        x  = xprev + xdot*dt;
+        //std::cout<<xcmd<<std::endl;
+        //std::cout<<x<<"="<<xprev<<"+"<<xdot<<"*"<<dt<<std::endl;
+    }
+    
+    // Getters and Setters
+    
+    double getFilterValue(void) { return x; }
+    double getFilterRate(void)  { return xdot; }
+    
+private:
+    double xprev;
+    double x;
+    double xdot;
+    
+    double dt;
+    double tau;
+    double k;
+    double maxrate;
+};
+
 class Utilities : public UnitConversions {
     
 public:
-    // General
+    // Constants
+    const double zeroTolerance = 0.0001;
+    
+    // Print statements
     template<typename TempType>
     void print(TempType *array, int arrayLength);
+
+    template<typename TempType>
+    void print(TempType *array, int arrayLength, std::string name);
     
     template<typename TempType>
     void print(TempType *array, int arrayLength, const char *name);
@@ -410,6 +465,7 @@ public:
     template<typename TempType>
     void print(TempType *matrix, int nrows, int ncols, const char *name);
     
+    // Array initialization
     template<typename TempType>
     void initArray(TempType *array, TempType val, int arrayLength);
     
@@ -440,6 +496,7 @@ public:
     template<typename TempType>
     void setMatrix(TempType *matrix, const TempType *setMat, int nrow, int ncol);
     
+    // Booleans
     bool any(bool *boolArray, int lengthArray);
     
     bool all(bool *boolArray, int lengthArray);
@@ -605,7 +662,6 @@ public:
     
     template<typename valType>
     void quaternionToEuler(AngleType<valType> *euler, valType *q);
-    
 };
 
 #endif /* utilities_hpp */

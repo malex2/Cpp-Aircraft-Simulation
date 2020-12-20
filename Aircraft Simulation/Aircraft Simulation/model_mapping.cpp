@@ -29,14 +29,14 @@ void ModelMap::addModel(std::string key, GenericModel *pModel, mapType curMap)
     }
 }
 
-void ModelMap::addLogVar(std::string name, float *var, const mapType *mappings, int nMappings)
+void ModelMap::addLogVar(std::string name, double *var, const mapType *mappings, int nMappings)
 {
     for (int curMap = 0; curMap < nMappings; curMap++)
     {
         if (mappings[curMap] == printVar )
         {
             if (debugFlag) { std::cout << "Adding " << iPrintNames << " " << name << " to print list." << std::endl; }
-            printMapping.insert( std::pair<int, float*> (iPrintNames, var) );
+            printMapping.insert( std::pair<int, double*> (iPrintNames, var) );
             printNames.push_back(name);
             iPrintNames++;
         }
@@ -44,7 +44,7 @@ void ModelMap::addLogVar(std::string name, float *var, const mapType *mappings, 
         if (mappings[curMap] == saveVar )
         {
             if (debugFlag) { std::cout << "Adding " << iSaveNames << " " << name << " to save list." << std::endl; }
-            saveMapping.insert( std::pair<int, float*> (iSaveNames, var) );
+            saveMapping.insert( std::pair<int, double*> (iSaveNames, var) );
             saveNames.push_back(name);
             iSaveNames++;
         }
@@ -52,7 +52,7 @@ void ModelMap::addLogVar(std::string name, float *var, const mapType *mappings, 
         if (mappings[curMap] == plotVar )
         {
             if (debugFlag) { std::cout << "Adding " << iPlotNames << " " << name << " to plot list." << std::endl; }
-            plotMapping.insert( std::pair<int, float*> (iPlotNames, var) );
+            plotMapping.insert( std::pair<int, double*> (iPlotNames, var) );
             plotNames.push_back(name);
             iPlotNames++;
         }
@@ -110,7 +110,7 @@ GenericForceModel* ModelMap::getForceModel(iForceModel itr)
     return itr->second;
 }
 
-float* ModelMap::getLogVar(iLog itr)
+double* ModelMap::getLogVar(iLog itr)
 {
     if (debugFlag) std::cout << "Getting Variable: " << itr->first << std::endl;
     return itr->second;

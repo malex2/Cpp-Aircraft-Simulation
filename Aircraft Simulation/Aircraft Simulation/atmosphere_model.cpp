@@ -34,6 +34,7 @@ AtmosphereModel::AtmosphereModel(ModelMap *pMapInit, bool debugFlagIn)
     speedOfSound.convertUnit(metersPerSecond);
     Mach = 0;
     Re   = 0;
+    gravity = 9.81;
     
     air[density]      = 1.225;  // kg/m^3
     air[pressure]     = 101325; // N/m^2 (Pa)
@@ -77,7 +78,7 @@ bool AtmosphereModel::update(void)
 void AtmosphereModel::updateGravity(void)
 {
     double hCenter = pDyn->gethCenter().m();
-    float mass = pDyn->getMass();
+    double mass = pDyn->getMass();
     gravity = -GM/(hCenter*hCenter);
     
     nedForce[2] = -mass*gravity;
@@ -89,7 +90,7 @@ void AtmosphereModel::updateAir(void)
 {
     // altitude and speed
     //double alt = pDyn->getPosBody()[2];
-    float speed = pDyn->getSpeed().mps();
+    double speed = pDyn->getSpeed().mps();
     
     // density
     air[density]      = 1.225;  // kg/m^3

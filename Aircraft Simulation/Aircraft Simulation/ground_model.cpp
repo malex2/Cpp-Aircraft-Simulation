@@ -14,10 +14,12 @@
 
 #include "ground_model.hpp"
 
+// **********************************************************************
+// Contact Point Model
+// **********************************************************************
 int ContactPoint::iContactPoint  = 0;
 int ContactPoint::nContactPoints = 0;
-
-ContactPoint::ContactPoint(ModelMap *pMapInit, float x, float y, float z, float kIn, float zetaIn, float muxStaticIn, float muyStaticIn, float muxDynamicIn, float muyDynamicIn, bool debugFlagIn)
+ContactPoint::ContactPoint(ModelMap *pMapInit, double x, double y, double z, double kIn, double zetaIn, double muxStaticIn, double muyStaticIn, double muxDynamicIn, double muyDynamicIn, bool debugFlagIn)
 {
     pDyn    = NULL;
     pRotate = NULL;
@@ -26,7 +28,7 @@ ContactPoint::ContactPoint(ModelMap *pMapInit, float x, float y, float z, float 
     debugFlag = debugFlagIn;
     
     // position relative to CG
-    float posRelCG_in[3];
+    double posRelCG_in[3];
     posRelCG_in[0] = x;
     posRelCG_in[1] = y;
     posRelCG_in[2] = z;
@@ -60,7 +62,7 @@ void ContactPoint::initialize(void)
     percLoad = 1;
     
     // Damping
-    float m = pDyn->getMass();
+    double m = pDyn->getMass();
     b  = 2*zeta*sqrt(k*m);
 }
 
@@ -68,8 +70,8 @@ bool ContactPoint::update(void)
 {
     iContactPoint++;
     
-    SpeedType<float> velRel[3];
-    SpeedType<float> velBody[3];
+    SpeedType<double> velRel[3];
+    SpeedType<double> velBody[3];
     
     // Update position relative to ground
     pRotate->bodyToLL(posLL, posRelCG);
@@ -89,7 +91,7 @@ bool ContactPoint::update(void)
     
     if (onGround)
     {
-        float m = pDyn->getMass();
+        double m = pDyn->getMass();
         b  = 2*zeta*sqrt(k*m);
         
         // Update normal force (Local Level force in Z direction)
@@ -102,10 +104,10 @@ bool ContactPoint::update(void)
         sumExternalForces();
         
         // Update friction
-        float FxMax = muxStatic*LLForce[2];
+        double FxMax = muxStatic*LLForce[2];
         LLForce[0] = determineFriction(FxMax, LLForceExt[0]*percLoad, velLL[0].val, muxStatic);
         
-        float FyMax = muyStatic*LLForce[2]*percLoad;
+        double FyMax = muyStatic*LLForce[2]*percLoad;
         LLForce[1] = determineFriction(FyMax, LLForceExt[1]*percLoad, velLL[1].val, muyDynamic);
     }
     else
@@ -152,6 +154,7 @@ void ContactPoint::sumExternalForces(void)
             
             if( curModelName.compare("DynamicsModel") != 0 && curModelName.compare("GroundModel") != 0 )
             {
+                if (debugFlag) { util.print(pMap->getForceModel(curForceModel)->getForce(), 3, curModelName); }
                 util.vAdd(bodyForceExt, bodyForceExt, pMap->getForceModel(curForceModel)->getForce(), 3);
             }
         }
@@ -160,17 +163,17 @@ void ContactPoint::sumExternalForces(void)
     pRotate->bodyToLL(LLForceExt, bodyForceExt);
 }
 
-float ContactPoint::determineFriction(float maxFriction, float externalForce, float velocity, float muDynamic)
+double ContactPoint::determineFriction(double maxFriction, double externalForce, double velocity, double muDynamic)
 {
-    float friction = 0;
+    double friction = 0;
     int sgn = 1;
     
     // Friction magnitude
     if ( fabs(velocity) < zeroTolerance ) // Use static friction
     {
         // Friction = External Force until maximum friction reached
-        if (fabsf(externalForce) <= fabsf(maxFriction)) { friction = fabsf(externalForce); }
-        else { friction = fabsf(maxFriction); }
+        if (fabs(externalForce) <= fabs(maxFriction)) { friction = fabs(externalForce); }
+        else { friction = std::abs(maxFriction); }
         
         // Direction opposite force
         if (externalForce > 0) { sgn = -1; }
@@ -179,7 +182,7 @@ float ContactPoint::determineFriction(float maxFriction, float externalForce, fl
     
     else // Use dynamic friction
     {
-        friction = fabsf( muDynamic*LLForce[2] );
+        friction = fabs( muDynamic*LLForce[2] );
         
         // Direction opposite velocity
         if (velocity > 0) { sgn = -1; }
@@ -192,12 +195,19 @@ float ContactPoint::determineFriction(float maxFriction, float externalForce, fl
     return friction;
 }
 
-GroundModel::GroundModel(ModelMap *pMapInit, bool debugFlagIn)
+// **********************************************************************
+// Ground Model Base
+// **********************************************************************
+GroundModelBase::GroundModelBase(ModelMap *pMapInit, bool debugFlagIn)
 {
     pDyn    = NULL;
     pRotate = NULL;
     pTime   = NULL;
     pMap    = pMapInit;
+    
+    debugFlag = debugFlagIn;
+    nContactPoints = 0;
+    util.setArray(LLForce, zero_init, 3);
     
     //pMap->addLogVar("gbxF ", &bodyForce[0], printSavePlot, 3);
     //pMap->addLogVar("gbyF ", &bodyForce[1], printSavePlot, 3);
@@ -211,52 +221,32 @@ GroundModel::GroundModel(ModelMap *pMapInit, bool debugFlagIn)
     pMap->addLogVar("gbyM ", &bodyMoment[1], savePlot, 2);
     pMap->addLogVar("gbzM ", &bodyMoment[2], savePlot, 2);
     
-    util.setArray(LLForce, zero_init, 3);
+    for (int i=0; i<maxContactPoints; i++)
+    {
+        contactPoints[i] = NULL;
+    }
     
-    // Create contact points
-    
-    // Left landing gear
-    contactPoints[0] = new ContactPoint(pMapInit,
-                                       pos1L[0], pos1L[1], pos1L[2],
-                                       k1L, zeta1L,
-                                       mux1L_static, muy1L_static,
-                                       mux1L_dyn, muy1L_dyn,
-                                       debugFlagIn);
-    
-    // Right landing gear
-    contactPoints[1] = new ContactPoint(pMapInit,
-                                  pos1R[0], pos1R[1], pos1R[2],
-                                  k1R, zeta1R,
-                                  mux1R_static, muy1R_static,
-                                  mux1R_dyn, muy1R_dyn,
-                                  debugFlagIn);
-    
-    // Rear landing gear
-    contactPoints[2] = new ContactPoint(pMapInit,
-                                 pos2[0], pos2[1], pos2[2],
-                                 k2, zeta2,
-                                 mux2_static, muy2_static,
-                                 mux2_dyn, muy2_dyn,
-                                 debugFlagIn);
-    
-    std::fill_n(onGround, nContactPoints, false);
-    
-    debugFlag = debugFlagIn;
+    std::fill_n(onGround, maxContactPoints, false);
 }
 
-GroundModel::~GroundModel()
+GroundModelBase::GroundModelBase()
 {
-    for (int i = 0; i < nContactPoints; i++)
+    for (int i = 0; i < maxContactPoints; i++)
     {
-        delete contactPoints[i];
+        if (contactPoints[i] != NULL)
+        {
+            delete contactPoints[i];
+        }
     }
 }
 
-void GroundModel::initialize(void)
+void GroundModelBase::initialize(void)
 {
     pDyn    = (DynamicsModel*) pMap->getModel("DynamicsModel");
     pRotate = (RotateFrame*)   pMap->getModel("RotateFrame");
     pTime   = (Time*)          pMap->getModel("Time");
+    
+    nContactPoints = ContactPoint::nContactPoints;
     
     // Initialize contact points
     for (int i = 0; i < nContactPoints; i++)
@@ -267,12 +257,12 @@ void GroundModel::initialize(void)
     setLoadPercentage();
 }
 
-void GroundModel::setLoadPercentage(void)
+void GroundModelBase::setLoadPercentage(void)
 {
     // Set percent load for each contact point
     // TODO - use least squares for more / less than 3 contact points
-    float A[3][nContactPoints];
-    float b[nContactPoints];
+    double A[3][nContactPoints];
+    double b[nContactPoints];
     for (int i = 0; i < nContactPoints; i++)
     {
         // Determine how much of a load each contact point carries
@@ -285,7 +275,7 @@ void GroundModel::setLoadPercentage(void)
         // yn - y position of nth contact point
         // pNn - percent load of nth contact point
     
-        float pos[3];
+        double pos[3];
         
         util.setArray(pos, contactPoints[i]->getPos(), 3);
         
@@ -301,29 +291,34 @@ void GroundModel::setLoadPercentage(void)
     b[nContactPoints-1] = 1;
     
     // TODO - replace if n == 3 with least squares for any number of contact points
+    double percN[nContactPoints];
     if (nContactPoints == 3)
     {
-        float percN[nContactPoints];
         util.LUdecomp(percN, *A, b, nContactPoints);
-        
-        for(int i = 0; i < nContactPoints; i ++)
-        {
-            contactPoints[i]->setPercentLoad( percN[i] );
-        }
+    }
+    else
+    {
+        for (int i=0; i<nContactPoints; i++) { percN[i] = 1.0/nContactPoints; }
+    }
+    
+    if (debugFlag) util.print(percN,nContactPoints,"Percent Loads:");
+    
+    for(int i = 0; i < nContactPoints; i ++)
+    {
+        contactPoints[i]->setPercentLoad( percN[i] );
     }
 }
 
-bool GroundModel::update(void)
+bool GroundModelBase::update(void)
 {
     bool continueSim = true;
+    bool stop = false;
     
     util.setArray(bodyForce, zero_init, 3);
     util.setArray(bodyMoment, zero_init, 3);
     
     for (int i = 0; i < nContactPoints; i++)
     {
-        if (debugFlag) util.print(&i, 1, "contact point:");
-        
         // Update contact points
         contactPoints[i]->update();
         
@@ -331,22 +326,36 @@ bool GroundModel::update(void)
         onGround[i] = contactPoints[i]->isOnGround();
         
         // Sum forces
+        if (fabs(contactPoints[i]->getLLForce()[0]) > 0.01)
+        {
+            stop = true;
+        }
         util.vAdd(bodyForce, bodyForce, contactPoints[i]->getForce(), 3);
     
         // Sum moments
         util.vAdd(bodyMoment, bodyMoment, contactPoints[i]->getMoment(), 3);
     }
-    
+        
     pRotate->bodyToLL(LLForce, bodyForce);
     
     if (debugFlag) util.print(bodyForce, 3, "Ground Total Body Force:");
     if (debugFlag) util.print(bodyMoment, 3, "Ground Total Body Moment:");
     
-    // Determine if on ground
-    if( util.any(onGround, nContactPoints) )
+    AngleType<double> *eulerAngles = pDyn->getEulerAngles();
+    if (debugFlag) util.print(eulerAngles, degrees, 3, "Euler Angles:");
+    
+    if (stop)
     {
-        AngleType<float> *eulerAngles = pDyn->getEulerAngles();
         
+    }
+    
+    if (util.mag(bodyMoment, 3) > 0.01)
+    {
+        
+    }
+    // Determine if on ground
+    if( isOnGround() )
+    {
         // Determine if in unrecoverable position
         if ( eulerAngles[0].deg() > maxGroundRoll || eulerAngles[0].deg() < minGroundRoll ||
             eulerAngles[1].deg() > maxGroundPitch || eulerAngles[1].deg() < minGroundPitch )
@@ -355,6 +364,83 @@ bool GroundModel::update(void)
             continueSim = false;
         }
     }
-    
     return continueSim;
+}
+
+// **********************************************************************
+// RC Plance Ground Model
+// **********************************************************************
+RCGroundModel::RCGroundModel(ModelMap *pMapInit, bool debugFlagIn) : GroundModelBase(pMapInit, debugFlagIn)
+{
+
+    pMap    = pMapInit;
+    debugFlag = debugFlagIn;
+    
+    // Create contact points
+    // Left landing gear
+    contactPoints[0] = new ContactPoint(pMapInit,
+                                        pos1L[0], pos1L[1], pos1L[2],
+                                        k1L, zeta1L,
+                                        mux1L_static, muy1L_static,
+                                        mux1L_dyn, muy1L_dyn,
+                                        debugFlagIn);
+    
+    // Right landing gear
+    contactPoints[1] = new ContactPoint(pMapInit,
+                                        pos1R[0], pos1R[1], pos1R[2],
+                                        k1R, zeta1R,
+                                        mux1R_static, muy1R_static,
+                                        mux1R_dyn, muy1R_dyn,
+                                        debugFlagIn);
+    
+    // Rear landing gear
+    contactPoints[2] = new ContactPoint(pMapInit,
+                                        pos2[0], pos2[1], pos2[2],
+                                        k2, zeta2,
+                                        mux2_static, muy2_static,
+                                        mux2_dyn, muy2_dyn,
+                                        debugFlagIn);
+}
+
+// **********************************************************************
+// Quadcopter Ground Model
+// **********************************************************************
+QuadcopterGroundModel::QuadcopterGroundModel(ModelMap *pMapInit, bool debugFlagIn) : GroundModelBase(pMapInit, debugFlagIn)
+{
+    
+    pMap = pMapInit;
+    debugFlag = debugFlagIn;
+    
+    // Create contact points
+    // Front left landing gear
+    contactPoints[0] = new ContactPoint(pMapInit,
+                                        pos1[0], pos1[1], pos1[2],
+                                        k1, zeta1,
+                                        mux1_static, muy1_static,
+                                        mux1_dyn, muy1_dyn,
+                                        debugFlagIn);
+    
+    // Front right landing gear
+    contactPoints[1] = new ContactPoint(pMapInit,
+                                        pos2[0], pos2[1], pos2[2],
+                                        k2, zeta2,
+                                        mux2_static, muy2_static,
+                                        mux2_dyn, muy2_dyn,
+                                        debugFlagIn);
+    
+    // Rear right landing gear
+    contactPoints[2] = new ContactPoint(pMapInit,
+                                        pos3[0], pos3[1], pos3[2],
+                                        k3, zeta3,
+                                        mux3_static, muy3_static,
+                                        mux3_dyn, muy3_dyn,
+                                        debugFlagIn);
+    
+    // Rear left landing gear
+    contactPoints[3] = new ContactPoint(pMapInit,
+                                        pos4[0], pos4[1], pos4[2],
+                                        k4, zeta4,
+                                        mux4_static, muy4_static,
+                                        mux4_dyn, muy4_dyn,
+                                        debugFlagIn);
 }

@@ -11,8 +11,6 @@
 
 #include "generic_model.hpp"
 
-enum airValues {density, pressure, dynPress, temp, dynVisc, specificHeat, R};
-
 class AtmosphereModel : public GenericForceModel
 {
 public:
@@ -25,12 +23,16 @@ public:
     // Update obejct states and forces
     virtual bool update(void);
     
+    // Enumeration
+    enum airValues {density, pressure, dynPress, temp, dynVisc, specificHeat, R};
+    
     // Getters
-    SpeedType<float>* getVelWindBody(void) { return velWindBody; }
-    SpeedType<float>* getVelWindNED(void)  { return velWindNED; }
-    float*            getAir(void)         { return air; }
-    float             getRe(void)          { return Re;  }
-    float             getMach(void)        { return Mach; }
+    SpeedType<double>* getVelWindBody(void) { return velWindBody; }
+    SpeedType<double>* getVelWindNED(void)  { return velWindNED; }
+    double             getGravity(void)     { return gravity; }
+    double*            getAir(void)         { return air; }
+    double             getRe(void)          { return Re;  }
+    double             getMach(void)        { return Mach; }
     
 private:
     class DynamicsModel *pDyn;
@@ -43,18 +45,18 @@ private:
     
     void updateWind(void);
     
-    SpeedType<float> velWindNED[3];
-    SpeedType<float> velWindBody[3];
+    SpeedType<double> velWindNED[3];
+    SpeedType<double> velWindBody[3];
     
-    float nedForce[3];
+    double nedForce[3];
     
-    float air[7]; // density, pressure, dynamic pressure, temperature, dynamic viscocity, R;
-    float Re;   // Reynolds number
-    float Mach; // Mach number
-    SpeedType<float> speedOfSound;
+    double air[7]; // density, pressure, dynamic pressure, temperature, dynamic viscocity, R;
+    double Re;   // Reynolds number
+    double Mach; // Mach number
+    SpeedType<double> speedOfSound;
     
     // print variables
-    float gravity;
+    double gravity;
 };
 
 #endif /* Atmosphere_hpp */

@@ -12,12 +12,15 @@
 #include "generic_model.hpp"
 #include "utilities.hpp"
 
+// **********************************************************************
+// Contact Point Model
 // Part of aircraft that can exert force when touching ground
+// **********************************************************************
 class ContactPoint : public GenericForceModel
 {
 public:
     // Constructor
-    ContactPoint(ModelMap *pMapInit, float x, float y, float z, float kIn, float zetaIn, float muxStaticIn, float muyStaticIn, float muxDynamicIn, float muyDynamicIn, bool debugFlagIn = false);
+    ContactPoint(ModelMap *pMapInit, double x, double y, double z, double kIn, double zetaIn, double muxStaticIn, double muyStaticIn, double muxDynamicIn, double muyDynamicIn, bool debugFlagIn = false);
     
     // Initialize class pointers and variables that rely on other classes
     virtual void initialize(void);
@@ -27,60 +30,62 @@ public:
     
     // Getters
     bool                 isOnGround(void) { return onGround; };
-    float*               getLLForce(void) { return LLForce;  };
-    DistanceType<float>* getPos(void)     { return posRelCG; };
+    double*               getLLForce(void) { return LLForce;  };
+    DistanceType<double>* getPos(void)     { return posRelCG; };
     
     // Setters
-    void setPercentLoad (float percLoadIn) { percLoad = percLoadIn; }
+    void setPercentLoad (double percLoadIn) { percLoad = percLoadIn; }
     
+    // Keep track of maximum friction in each direction
+    static int iContactPoint;  // current contact point
+    static int nContactPoints;
 private:
     class DynamicsModel   *pDyn;
     class RotateFrame     *pRotate;
     
     // Internal Functions
     void sumExternalForces(void);
-    float determineFriction(float maxFriction, float externalForce, float velocity, float muDynamic);
+    double determineFriction(double maxFriction, double externalForce, double velocity, double muDynamic);
     
     // States relative to CG in Body frame
-    DistanceType<float> posRelCG[3];
-    SpeedType<float>    velRelCG[3];
+    DistanceType<double> posRelCG[3];
+    SpeedType<double>    velRelCG[3];
     
     // States relative to CG in Local Level frame
-    DistanceType<float> posLL[3];
-    SpeedType<float>    velLL[3];
+    DistanceType<double> posLL[3];
+    SpeedType<double>    velLL[3];
     
     // Height of object above ground
-    DistanceType<float> altGround;
+    DistanceType<double> altGround;
     
     // Dynamics constants
-    float k;           // spring constant
-    float b;           // damping constant
-    float zeta;        // damping ratio
-    float muxStatic;   // x coefficient of static friction
-    float muxDynamic;  // x coefficient of dynamic friction
-    float muyStatic;   // y coefficient of static friction
-    float muyDynamic;  // y coefficient of dynamic friction
-    
-    // Keep track of maximum friction in each direction
-    static int iContactPoint;  // current contact point
-    static int nContactPoints; // total number of contact points
+    double k;           // spring constant
+    double b;           // damping constant
+    double zeta;        // damping ratio
+    double muxStatic;   // x coefficient of static friction
+    double muxDynamic;  // x coefficient of dynamic friction
+    double muyStatic;   // y coefficient of static friction
+    double muyDynamic;  // y coefficient of dynamic friction
     
     // External forces
-    float bodyForceExt[3];
-    float LLForceExt[3];
+    double bodyForceExt[3];
+    double LLForceExt[3];
     
     bool onGround;
-    float percLoad; // percentage of total load this contact point holds
+    double percLoad; // percentage of total load this contact point holds
 };
 
-class GroundModel : public GenericForceModel
+// **********************************************************************
+// Ground Model Base
+// **********************************************************************
+class GroundModelBase : public GenericForceModel
 {
 public:
     // Constructor
-    GroundModel(ModelMap *pMapInit, bool debugFlagIn = false);
+    GroundModelBase(ModelMap *pMapInit, bool debugFlagIn = false);
     
     // Destructor
-    ~GroundModel(void);
+    GroundModelBase(void);
     
     // Initialize class pointers and variables that rely on other classes
     virtual void initialize(void);
@@ -89,17 +94,17 @@ public:
     virtual bool update(void);
     
     // Getters
-    bool isOnGround(void) { return util.any(onGround, nContactPoints); }
-private:
+    virtual bool isOnGround(void) { return util.any(onGround, nContactPoints); }
+protected:
     /*
-    const float cgz = 0.09; // Height of center of gravity above ground when aircraft is on ground (0.3 ft)
-    const float Lg1 = 0.1; // Length of front landing gear
-    const float Lg2 = 0.06; // Length of rear landing gear
-    const float L1 = 0.06; // Distance of front landing gear from CG
-    const float L2 = 0.29; // Distance of rear landing gear from CG
-    const float LL = 0.05; // Distance of left landing gear from CG
-    const float LR = 0.05; // Distance of right landing gear from CG
-    const float thetag = asin((Lg1-Lg2)/(L1+L2))*rad2deg; // Pitch of aircraft on flat ground = 6.56 deg
+    const double cgz = 0.09; // Height of center of gravity above ground when aircraft is on ground (0.3 ft)
+    const double Lg1 = 0.1; // Length of front landing gear
+    const double Lg2 = 0.06; // Length of rear landing gear
+    const double L1 = 0.06; // Distance of front landing gear from CG
+    const double L2 = 0.29; // Distance of rear landing gear from CG
+    const double LL = 0.05; // Distance of left landing gear from CG
+    const double LR = 0.05; // Distance of right landing gear from CG
+    const double thetag = asin((Lg1-Lg2)/(L1+L2))*rad2deg; // Pitch of aircraft on flat ground = 6.56 deg
     */
     
     class DynamicsModel *pDyn;
@@ -107,40 +112,141 @@ private:
     class Time          *pTime;
     
     // Number of contact points
-    static const int nContactPoints = 3;
-    ContactPoint *contactPoints[nContactPoints];
+    int nContactPoints;
+    const static int maxContactPoints = 10;
+    ContactPoint *contactPoints[maxContactPoints];
     
-    bool onGround[nContactPoints];
+    bool onGround[maxContactPoints];
     
     // Functions
     void setLoadPercentage(void);
     
     // Left Front Landing Gear
-    const float k1L    = 10000;
-    const float zeta1L = 1;
-    const float mux1L_static = 0.08; // 0.02-0.08
-    const float mux1L_dyn    = 0.04;
-    const float muy1L_static = 0.5;
-    const float muy1L_dyn    = 0.3;
-    const float pos1L[3]     = {0.06, -0.05, 0.1};
+    const double k1L    = 10000;
+    const double zeta1L = 1;
+    const double mux1L_static = 0.08; // 0.02-0.08
+    const double mux1L_dyn    = 0.04;
+    const double muy1L_static = 0.5;
+    const double muy1L_dyn    = 0.3;
+    const double pos1L[3]     = {0.06, -0.05, 0.1};
     
     // Right Front Landing Gear
-    const float k1R    = 10000;
-    const float zeta1R = 1;
-    const float mux1R_static = 0.08;
-    const float mux1R_dyn    = 0.04;
-    const float muy1R_static = 0.5;
-    const float muy1R_dyn    = 0.3;
-    const float pos1R[3]     = {0.06, 0.05, 0.1};
+    const double k1R    = 10000;
+    const double zeta1R = 1;
+    const double mux1R_static = 0.08;
+    const double mux1R_dyn    = 0.04;
+    const double muy1R_static = 0.5;
+    const double muy1R_dyn    = 0.3;
+    const double pos1R[3]     = {0.06, 0.05, 0.1};
     
     // Rear Landing Gear
-    const float k2     = 10000;
-    const float zeta2  = 1;
-    const float mux2_static = 0.08;
-    const float mux2_dyn    = 0.08;
-    const float muy2_static = 0.5;
-    const float muy2_dyn    = 1.08;
-    const float pos2[3]     = {-0.29, 0, 0.06};
+    const double k2     = 10000;
+    const double zeta2  = 1;
+    const double mux2_static = 0.08;
+    const double mux2_dyn    = 0.08;
+    const double muy2_static = 0.5;
+    const double muy2_dyn    = 1.08;
+    const double pos2[3]     = {-0.29, 0, 0.06};
+};
+
+// **********************************************************************
+// RC Plance Ground Model
+// **********************************************************************
+class RCGroundModel : public GroundModelBase
+{
+public:
+    // Constructor
+    RCGroundModel(ModelMap *pMapInit, bool debugFlagIn = false);
+    
+    // Destructor
+    RCGroundModel(void);
+private:
+    /*
+     const double cgz = 0.09; // Height of center of gravity above ground when aircraft is on ground (0.3 ft)
+     const double Lg1 = 0.1; // Length of front landing gear
+     const double Lg2 = 0.06; // Length of rear landing gear
+     const double L1 = 0.06; // Distance of front landing gear from CG
+     const double L2 = 0.29; // Distance of rear landing gear from CG
+     const double LL = 0.05; // Distance of left landing gear from CG
+     const double LR = 0.05; // Distance of right landing gear from CG
+     const double thetag = asin((Lg1-Lg2)/(L1+L2))*rad2deg; // Pitch of aircraft on flat ground = 6.56 deg
+     */
+    
+    // Left Front Landing Gear
+    const double k1L    = 10000;
+    const double zeta1L = 1;
+    const double mux1L_static = 0.08; // 0.02-0.08
+    const double mux1L_dyn    = 0.04;
+    const double muy1L_static = 0.5;
+    const double muy1L_dyn    = 0.3;
+    const double pos1L[3]     = {0.06, -0.05, 0.1};
+    
+    // Right Front Landing Gear
+    const double k1R    = 10000;
+    const double zeta1R = 1;
+    const double mux1R_static = 0.08;
+    const double mux1R_dyn    = 0.04;
+    const double muy1R_static = 0.5;
+    const double muy1R_dyn    = 0.3;
+    const double pos1R[3]     = {0.06, 0.05, 0.1};
+    
+    // Rear Landing Gear
+    const double k2     = 10000;
+    const double zeta2  = 1;
+    const double mux2_static = 0.08;
+    const double mux2_dyn    = 0.08;
+    const double muy2_static = 0.5;
+    const double muy2_dyn    = 1.08;
+    const double pos2[3]     = {-0.29, 0, 0.06};
+};
+
+// **********************************************************************
+// Quadcopter Ground Model
+// **********************************************************************
+class QuadcopterGroundModel : public GroundModelBase
+{
+public:
+    // Constructor
+    QuadcopterGroundModel(ModelMap *pMapInit, bool debugFlagIn = false);
+    
+    // Destructor
+    QuadcopterGroundModel(void);
+private:
+    // Left Front Landing Gear
+    const double k1    = 10000;
+    const double zeta1 = 1;
+    const double mux1_static = 0.08; // 0.02-0.08
+    const double mux1_dyn    = 0.04;
+    const double muy1_static = 0.08;
+    const double muy1_dyn    = 0.04;
+    const double pos1[3]     = {0.1, -0.1, 0.6};
+    
+    // Right Front Landing Gear
+    const double k2    = 10000;
+    const double zeta2 = 1;
+    const double mux2_static = 0.08;
+    const double mux2_dyn    = 0.04;
+    const double muy2_static = 0.08;
+    const double muy2_dyn    = 0.04;
+    const double pos2[3]     = {0.1, 0.1, 0.6};
+    
+    // Right Rear Landing Gear
+    const double k3     = 10000;
+    const double zeta3  = 1;
+    const double mux3_static = 0.08;
+    const double mux3_dyn    = 0.04;
+    const double muy3_static = 0.08;
+    const double muy3_dyn    = 0.04;
+    const double pos3[3]     = {-0.1, 0.1, 0.6};
+    
+    // Left Rear Landing Gear
+    const double k4     = 10000;
+    const double zeta4  = 1;
+    const double mux4_static = 0.08;
+    const double mux4_dyn    = 0.04;
+    const double muy4_static = 0.08;
+    const double muy4_dyn    = 0.04;
+    const double pos4[3]     = {-0.1, -0.1, 0.6};
 };
 
 #endif /* GroundModel_hpp */
