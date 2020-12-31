@@ -36,7 +36,7 @@ const std::string savefile = "output.csv";
 
 // Initial States
 const double velNED_init[3]  = {0, 0, 0};
-const double posBody_init[3] = {28.5997222, -81.3394444, 3.0}; // deg, deg, ft
+const double posBody_init[3] = {28.5997222, -81.3394444, 1.968}; // deg, deg, ft
 const double eulerAngles_init[3] = {0, 0.0, 0}; // {0, 6.507, 0};
 const double eulerRates_init[3]  = {0, 0, 0};
 const double actuators_init[4]   = {0.0, 0.0, 0.0, 0.0}; //{de,da,dr,dT}

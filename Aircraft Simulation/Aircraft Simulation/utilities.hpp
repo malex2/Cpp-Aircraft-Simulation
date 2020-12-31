@@ -431,6 +431,13 @@ private:
     double maxrate;
 };
 
+class MassUtilities {
+    
+public:
+    //MassUtilities::MassUtilities
+    
+};
+
 class Utilities : public UnitConversions {
     
 public:
@@ -548,6 +555,15 @@ public:
 
     template <typename valType, template<typename T1> class unitType>
     void crossProduct(valType *cross, unitType<valType> *a, valType *b);
+  
+    template <typename valType, template<typename T1> class unitType>
+    void crossProduct(valType *cross, valType *a, unitType<valType> *b);
+  
+    template
+    <typename valType,
+    template<typename T1> class unitType1,
+    template<typename T2> class unitType2>
+    void crossProduct(valType *cross, unitType1<valType> *a, unitType2<valType> *b);
     
     template<typename TempType>
     TempType dotProduct(TempType *a, TempType *b, int n);
@@ -650,6 +666,9 @@ public:
     
     template<typename valType, template<typename T> class unitType>
     void quaternionTransformation(unitType<valType> *result, valType *quaternion, unitType<valType> *v);
+  
+    template<typename valType, template<typename T> class unitType>
+    void quaternionTransformation(valType *result, valType *quaternion, unitType<valType> *v);
     
     template<typename TempType>
     void eulerToQuaternion(TempType *q, TempType *euler);

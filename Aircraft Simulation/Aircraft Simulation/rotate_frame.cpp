@@ -12,6 +12,7 @@
 #include "initial_conditions.hpp"
 #include "dynamics_model.hpp"
 #include "aero_model.hpp"
+#include "imu_model.hpp"
 #include "model_mapping.hpp"
 
 #include "rotate_frame.hpp"
@@ -20,6 +21,7 @@ RotateFrame::RotateFrame(ModelMap *pMapInit, bool debugFlagIn)
 {
     pDyn  = NULL;
     pAero = NULL;
+    pIMU  = NULL;
     pMap  = pMapInit;
     
     // IMU frame
@@ -64,33 +66,11 @@ RotateFrame::RotateFrame(ModelMap *pMapInit, bool debugFlagIn)
 
 void RotateFrame::initialize()
 {
-    pDyn = (DynamicsModel*) pMap->getModel("DynamicsModel");
+    pDyn  = (DynamicsModel*) pMap->getModel("DynamicsModel");
     pAero = (AeroModelBase*) pMap->getModel("AeroModel");
+    pIMU  = (IMUModelBase*)  pMap->getModel("IMUModel");
     
-    // Update NED to Body rotation from dynamics model
-    util.setArray(q_B_NED, pDyn->get_q_B_NED(), 4);
-    util.quaternionConjugate(q_NED_B, q_B_NED);
-    
-    util.setupRotation(*R_B_NED, pDyn->getEulerAngles() );
-    util.mtran(*R_NED_B, *R_B_NED, 3, 3);
-    
-    // Update Local Level to Body rotation
-    util.setArray(q_B_LL, pDyn->get_q_B_LL(), 4);
-    util.quaternionConjugate(q_LL_B, q_B_LL);
-    
-    double eulerLL[3];
-    util.setArray(eulerLL, pDyn->getEulerAngles(), 3 );
-    eulerLL[2] = 0;
-    util.setupRotation(*R_B_LL, eulerLL);
-    util.mtran(*R_LL_B, *R_B_LL, 3, 3);
-    
-    // Update wind to body rotation from aero model
-    util.setupRotation(*R_B_W, pAero->getAeroEuler() );
-    util.mtran(*R_W_B, *R_B_W, 3, 3);
-    
-    // Update angle rate matrices
-    util.setupEulerRateToBodyRate(*L_B_E, pDyn->getEulerAngles() );
-    util.setupBodyRateToEulerRate(*L_E_B, pDyn->getEulerAngles() );
+    updateRotations();
     
     if (debugFlag)
     {
@@ -104,8 +84,22 @@ void RotateFrame::initialize()
 
 bool RotateFrame::update(void)
 {
-    double eulerLL[3];
+    updateRotations();
     
+    if (debugFlag)
+    {
+        printf("Rotate Frame Update:\n");
+        util.print(q_B_NED,4,"q_B_NED:");
+        util.print(*R_B_NED,3,3,"R_B_NED:");
+        util.print(*R_B_W,3,3,"R_B_W:");
+        util.print(*T_B_imu,3,3,"R_B_IMU:");
+        util.print(*L_B_E,3,3,"L_B_E:");
+    }
+    return true;
+}
+
+void RotateFrame::updateRotations(void)
+{
     // Update NED to Body rotation from dynamics model
     util.setArray(q_B_NED, pDyn->get_q_B_NED(), 4);
     util.quaternionConjugate(q_NED_B, q_B_NED);
@@ -117,9 +111,7 @@ bool RotateFrame::update(void)
     util.setArray(q_B_LL, pDyn->get_q_B_LL(), 4);
     util.quaternionConjugate(q_LL_B, q_B_LL);
     
-    util.setArray(eulerLL, pDyn->getEulerAngles(), 3);
-    util.vgain(eulerLL, (double)(1/util.deg2rad), 3);
-    
+    util.setArray(eulerLL, pDyn->getEulerAngles(), 3 );
     eulerLL[2] = 0;
     util.setupRotation(*R_B_LL, eulerLL);
     util.mtran(*R_LL_B, *R_B_LL, 3, 3);
@@ -128,19 +120,13 @@ bool RotateFrame::update(void)
     util.setupRotation(*R_B_W, pAero->getAeroEuler() );
     util.mtran(*R_W_B, *R_B_W, 3, 3);
     
+    // Update IMU rotation matrices
+    util.setupRotation(*T_imu_B, pIMU->getIMUEuler() );
+    util.mtran(*T_B_imu, *T_imu_B, 3, 3);
+    
     // Update angle rate matrices
     util.setupEulerRateToBodyRate(*L_B_E, pDyn->getEulerAngles() );
     util.setupBodyRateToEulerRate(*L_E_B, pDyn->getEulerAngles() );
-    
-    if (debugFlag)
-    {
-        printf("Rotate Frame Update:\n");
-        util.print(q_B_NED,4,"q_B_NED:");
-        util.print(*R_B_NED,3,3,"R_B_NED:");
-        util.print(*R_B_W,3,3,"R_B_W:");
-        util.print(*L_B_E,3,3,"L_B_E:");
-    }
-    return true;
 }
 
 // NED
@@ -199,7 +185,19 @@ void RotateFrame::imuToBody(double *bodyFrame, double *imuFrame)
     util.mmult(bodyFrame, *T_B_imu, imuFrame, 3, 3);
 }
 
+template<typename valType, template<typename T> class unitType>
+void RotateFrame::imuToBody(unitType<valType> *bodyFrame, unitType<valType> *imuFrame)
+{
+    util.mmult(bodyFrame, *T_B_imu, imuFrame, 3, 3);
+}
+
 void RotateFrame::bodyToImu(double *imuFrame, double *bodyFrame)
+{
+    util.mmult(imuFrame, *T_imu_B, bodyFrame, 3, 3);
+}
+
+template<typename valType, template<typename T> class unitType>
+void RotateFrame::bodyToImu(valType *imuFrame, unitType<valType>  *bodyFrame)
 {
     util.mmult(imuFrame, *T_imu_B, bodyFrame, 3, 3);
 }
@@ -238,3 +236,7 @@ template void RotateFrame::bodyToLL(SpeedType<double>*, SpeedType<double>*);
 
 template void RotateFrame::LLToBody(DistanceType<double>*, DistanceType<double>*);
 template void RotateFrame::LLToBody(SpeedType<double>*, SpeedType<double>*);
+
+template void RotateFrame::imuToBody(AngleRateType<double>*, AngleRateType<double>*);
+template void RotateFrame::bodyToImu(double*, AngleRateType<double>*);
+template void RotateFrame::bodyToImu(double*, SpeedType<double>*);

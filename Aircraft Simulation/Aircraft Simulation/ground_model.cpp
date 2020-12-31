@@ -312,7 +312,6 @@ void GroundModelBase::setLoadPercentage(void)
 bool GroundModelBase::update(void)
 {
     bool continueSim = true;
-    bool stop = false;
     
     util.setArray(bodyForce, zero_init, 3);
     util.setArray(bodyMoment, zero_init, 3);
@@ -326,10 +325,6 @@ bool GroundModelBase::update(void)
         onGround[i] = contactPoints[i]->isOnGround();
         
         // Sum forces
-        if (fabs(contactPoints[i]->getLLForce()[0]) > 0.01)
-        {
-            stop = true;
-        }
         util.vAdd(bodyForce, bodyForce, contactPoints[i]->getForce(), 3);
     
         // Sum moments
@@ -343,16 +338,7 @@ bool GroundModelBase::update(void)
     
     AngleType<double> *eulerAngles = pDyn->getEulerAngles();
     if (debugFlag) util.print(eulerAngles, degrees, 3, "Euler Angles:");
-    
-    if (stop)
-    {
-        
-    }
-    
-    if (util.mag(bodyMoment, 3) > 0.01)
-    {
-        
-    }
+
     // Determine if on ground
     if( isOnGround() )
     {

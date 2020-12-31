@@ -25,9 +25,9 @@ public:
     virtual bool update(void);
     
     // Getters
-    double*               getPosBody(void)        { return posBody; }   // Lat, Lon, Alt
+    double*                getPosBody(void)        { return posBody; }   // Lat, Lon, Alt
     DistanceType<double>*  getPosRelNED(void)      { return posRelNED; } // N, E, D from start in m
-    DistanceType<double>  gethCenter(void)        { return hCenter; }   // Distance above Earth center
+    DistanceType<double>   gethCenter(void)        { return hCenter; }   // Distance above Earth center
     DistanceType<double>   gethGround(void)        { return hGround; }   // Distance above ground
     
     SpeedType<double>*     getVelBody(void)        { return velBody; }

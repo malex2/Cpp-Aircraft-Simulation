@@ -548,6 +548,25 @@ void Utilities::crossProduct(unitType1<valType> *cross, unitType2<valType> *a, u
     cross[2].val = a[0].val*b[1].val  - a[1].val*b[0].val;
 }
 
+template <typename valType, template<typename T1> class unitType>
+void Utilities::crossProduct(valType *cross, valType *a, unitType<valType> *b)
+{
+    *(cross+0) = a[1]*b[2].val - a[2]*b[1].val;
+    *(cross+1) = a[2]*b[0].val - a[0]*b[2].val;
+    *(cross+2) = a[0]*b[1].val - a[1]*b[0].val;
+}
+
+template
+<typename valType,
+template<typename T1> class unitType1,
+template<typename T2> class unitType2>
+void Utilities::crossProduct(valType *cross, unitType1<valType> *a, unitType2<valType> *b)
+{
+    cross[0] = a[1].val*b[2].val  - a[2].val*b[1].val;
+    cross[1] = a[2].val*b[0].val  - a[0].val*b[2].val;
+    cross[2] = a[0].val*b[1].val  - a[1].val*b[0].val;
+}
+
 template<typename TempType>
 TempType Utilities::dotProduct(TempType *a, TempType *b, int n)
 {
@@ -1138,6 +1157,14 @@ void Utilities::quaternionTransformation(unitType<valType> *wUnit, valType *quat
     Utilities::setUnitClassArray(wUnit, w, wUnit[0].getUnit(), 3);
 }
 
+template<typename valType, template<typename T> class unitType>
+void Utilities::quaternionTransformation(valType *w, valType *quaternion, unitType<valType> *vUnit)
+{
+    valType v[3];
+    Utilities::setArray(v, vUnit, 3);
+    Utilities::quaternionTransformation(w, quaternion, v);
+}
+
 template<typename TempType>
 void Utilities::eulerToQuaternion(TempType *q, TempType *euler)
 {
@@ -1278,6 +1305,7 @@ template void Utilities::print(double*, int, int, const char*);
 template void Utilities::initArray(bool*, bool, int);
 template void Utilities::initArray(int*, int, int);
 template void Utilities::initArray(float*, float, int);
+template void Utilities::initArray(double*, double, int);
 
 template void Utilities::setArray(float*, float*, int);
 template void Utilities::setArray(double*, double*, int);
@@ -1406,6 +1434,11 @@ template void Utilities::crossProduct(double*, AngleRateType<double>*, double*);
 template void Utilities::crossProduct(SpeedType<float>*, AngleRateType<float>*, DistanceType<float>*);
 template void Utilities::crossProduct(SpeedType<double>*, AngleRateType<double>*, DistanceType<double>*);
 
+template void Utilities::crossProduct(double*, double*, DistanceType<double>*);
+
+template void Utilities::crossProduct(double*, SpeedType<double>*, DistanceType<double>*);
+template void Utilities::crossProduct(double*, SpeedType<double>*, AngleRateType<double>*);
+
 template int Utilities::dotProduct(int* , int* , int);
 template float Utilities::dotProduct(float* , float* , int);
 template double Utilities::dotProduct(double* , double* , int);
@@ -1442,6 +1475,8 @@ template void Utilities::mmult(double* , double* , double* , int, int);
 
 template void Utilities::mmult(float* ,float* ,AngleRateType<float>* , int, int);
 template void Utilities::mmult(double* ,double* ,AngleRateType<double>* , int, int);
+
+template void Utilities::mmult(double* ,double* ,SpeedType<double>* , int, int);
 
 template void Utilities::mmult(DistanceType<float>* ,float* ,DistanceType<float>* , int, int);
 template void Utilities::mmult(SpeedType<float>* ,float* ,SpeedType<float>* , int, int);
@@ -1539,6 +1574,8 @@ template void Utilities::quaternionTransformation(SpeedType<float>*, float*, Spe
 
 template void Utilities::quaternionTransformation(DistanceType<double>*, double*, DistanceType<double>*);
 template void Utilities::quaternionTransformation(SpeedType<double>*, double*, SpeedType<double>*);
+
+template void Utilities::quaternionTransformation(double *w, double *quaternion, AngleRateType<double> *vUnit);
 
 template void Utilities::eulerToQuaternion(int* , int*);
 template void Utilities::eulerToQuaternion(float* , float*);

@@ -23,6 +23,8 @@ public:
     // Update rotations
     virtual bool update(void);
     
+    void updateRotations(void);
+    
     // NED
     void bodyToNED(double *NEDFrame, double *bodyFrame);
     template<typename valType, template<typename T> class unitType>
@@ -43,7 +45,12 @@ public:
     
     // Sensors
     void imuToBody(double *bodyFrame, double *imuFrame);
+    template<typename valType, template<typename T> class unitType>
+    void imuToBody(unitType<valType> *bodyFrame, unitType<valType> *imuFrame);
+    
     void bodyToImu(double *imuFrame, double *bodyFrame);
+    template<typename valType, template<typename T> class unitType>
+    void bodyToImu(valType *imuFrame, unitType<valType>  *bodyFrame);
     
     // Wind
     void windToBody(double *bodyFrame, double *windFrame);
@@ -58,11 +65,13 @@ private:
     // Classes
     class DynamicsModel *pDyn;
     class AeroModelBase *pAero;
+    class IMUModelBase  *pIMU;
     
     // Variables
     AngleType<double> imuFrame[3];
     AngleType<double> aeroEuler[3];
     AngleType<double> eulerAngles[3];
+    double eulerLL[3];
     
     double q_B_NED[4];     // NED to body rotation
     double q_NED_B[4];     // Body to NED rotation

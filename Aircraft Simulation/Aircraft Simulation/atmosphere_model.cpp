@@ -79,9 +79,9 @@ void AtmosphereModel::updateGravity(void)
 {
     double hCenter = pDyn->gethCenter().m();
     double mass = pDyn->getMass();
-    gravity = -GM/(hCenter*hCenter);
+    gravity = GM/(hCenter*hCenter);
     
-    nedForce[2] = -mass*gravity;
+    nedForce[2] = mass*gravity;
     
     pRotate->NEDToBody(bodyForce, nedForce);
 }
