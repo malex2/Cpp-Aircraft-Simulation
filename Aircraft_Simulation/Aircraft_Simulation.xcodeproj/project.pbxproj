@@ -1,0 +1,382 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 50;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1E06A2762494733C00DD8972 /* generic_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E06A2742494733C00DD8972 /* generic_model.cpp */; };
+		1E17D5612495989C00338B14 /* data_logger.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E17D5602495989C00338B14 /* data_logger.cpp */; };
+		1E23C68B24B2AFC800EC4335 /* actuator_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E23C68924B2AFC800EC4335 /* actuator_model.cpp */; };
+		1E29E0DE24A7989B00A8C31A /* atmosphere_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E29E0DC24A7989A00A8C31A /* atmosphere_model.cpp */; };
+		1E3009FB259CC79000F8494A /* mass_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3009F9259CC79000F8494A /* mass_model.cpp */; };
+		1E3009FE259CE43D00F8494A /* flight_software.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3009FC259CE43D00F8494A /* flight_software.cpp */; };
+		1E3D1D5624951E240025A1CD /* model_mapping.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3D1D5424951E240025A1CD /* model_mapping.cpp */; };
+		1E565081248D4EE200EB0E51 /* time.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E565080248D4EE200EB0E51 /* time.cpp */; };
+		1E565084248D5FDE00EB0E51 /* utilities.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E565082248D5FDE00EB0E51 /* utilities.cpp */; };
+		1E565087248D600300EB0E51 /* rotate_frame.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E565086248D600300EB0E51 /* rotate_frame.cpp */; };
+		1E56508A248D819F00EB0E51 /* dynamics_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E565088248D819F00EB0E51 /* dynamics_model.cpp */; };
+		1E99A4A322DFE684008BFEF8 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E99A4A222DFE684008BFEF8 /* main.cpp */; };
+		1EB22CBB24D4C5C400F50BF9 /* performance.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB22CB924D4C5C400F50BF9 /* performance.cpp */; };
+		1ECCA32A249FA96D00820C69 /* ground_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ECCA328249FA96D00820C69 /* ground_model.cpp */; };
+		1EED09AD24A91A07007DC0C3 /* propulsion_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EED09AB24A91A07007DC0C3 /* propulsion_model.cpp */; };
+		1EED09B024A974DA007DC0C3 /* aero_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EED09AF24A974DA007DC0C3 /* aero_model.cpp */; };
+		1EFAAF41259A1A5D007AEE56 /* imu_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFAAF3F259A1A5D007AEE56 /* imu_model.cpp */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		1E99A49D22DFE684008BFEF8 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		1E06A2742494733C00DD8972 /* generic_model.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = generic_model.cpp; sourceTree = "<group>"; };
+		1E06A2752494733C00DD8972 /* generic_model.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = generic_model.hpp; sourceTree = "<group>"; };
+		1E17D55F2495989C00338B14 /* data_logger.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = data_logger.hpp; sourceTree = "<group>"; };
+		1E17D5602495989C00338B14 /* data_logger.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = data_logger.cpp; sourceTree = "<group>"; };
+		1E23C68924B2AFC800EC4335 /* actuator_model.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = actuator_model.cpp; sourceTree = "<group>"; };
+		1E23C68A24B2AFC800EC4335 /* actuator_model.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = actuator_model.hpp; sourceTree = "<group>"; };
+		1E29E0DC24A7989A00A8C31A /* atmosphere_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = atmosphere_model.cpp; sourceTree = "<group>"; };
+		1E29E0DD24A7989B00A8C31A /* atmosphere_model.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = atmosphere_model.hpp; sourceTree = "<group>"; };
+		1E3009F9259CC79000F8494A /* mass_model.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = mass_model.cpp; sourceTree = "<group>"; };
+		1E3009FA259CC79000F8494A /* mass_model.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = mass_model.hpp; sourceTree = "<group>"; };
+		1E3009FC259CE43D00F8494A /* flight_software.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = flight_software.cpp; path = ../quadcopter_controller/flight_software.cpp; sourceTree = SOURCE_ROOT; };
+		1E3009FD259CE43D00F8494A /* flight_software.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = flight_software.hpp; path = ../quadcopter_controller/flight_software.hpp; sourceTree = SOURCE_ROOT; };
+		1E3D1D5424951E240025A1CD /* model_mapping.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = model_mapping.cpp; sourceTree = "<group>"; };
+		1E3D1D5524951E240025A1CD /* model_mapping.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = model_mapping.hpp; sourceTree = "<group>"; };
+		1E56507C248D4DCE00EB0E51 /* initial_conditions.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = initial_conditions.hpp; sourceTree = "<group>"; };
+		1E56507D248D4E3A00EB0E51 /* time.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = time.hpp; sourceTree = "<group>"; };
+		1E565080248D4EE200EB0E51 /* time.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = time.cpp; path = "/Users/alexandermclean/Documents/Cpp-Aircraft-Simulation/Aircraft_Simulation/Aircraft_Simulation/time.cpp"; sourceTree = "<absolute>"; };
+		1E565082248D5FDE00EB0E51 /* utilities.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = utilities.cpp; sourceTree = "<group>"; };
+		1E565083248D5FDE00EB0E51 /* utilities.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = utilities.hpp; sourceTree = "<group>"; };
+		1E565085248D600300EB0E51 /* rotate_frame.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = rotate_frame.hpp; sourceTree = "<group>"; };
+		1E565086248D600300EB0E51 /* rotate_frame.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = rotate_frame.cpp; sourceTree = "<group>"; };
+		1E565088248D819F00EB0E51 /* dynamics_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = dynamics_model.cpp; sourceTree = "<group>"; };
+		1E565089248D819F00EB0E51 /* dynamics_model.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = dynamics_model.hpp; sourceTree = "<group>"; };
+		1E99A49F22DFE684008BFEF8 /* Aircraft_Simulation */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Aircraft_Simulation; sourceTree = BUILT_PRODUCTS_DIR; };
+		1E99A4A222DFE684008BFEF8 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		1EB22CB924D4C5C400F50BF9 /* performance.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = performance.cpp; sourceTree = "<group>"; };
+		1EB22CBA24D4C5C400F50BF9 /* performance.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = performance.hpp; sourceTree = "<group>"; };
+		1EB8FEF924B36CE200A72E56 /* aircraft_simulation_types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = aircraft_simulation_types.h; sourceTree = "<group>"; };
+		1ECCA328249FA96D00820C69 /* ground_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ground_model.cpp; sourceTree = "<group>"; };
+		1ECCA329249FA96D00820C69 /* ground_model.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ground_model.hpp; sourceTree = "<group>"; };
+		1EED09AB24A91A07007DC0C3 /* propulsion_model.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = propulsion_model.cpp; sourceTree = "<group>"; };
+		1EED09AC24A91A07007DC0C3 /* propulsion_model.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = propulsion_model.hpp; sourceTree = "<group>"; };
+		1EED09AE24A974DA007DC0C3 /* aero_model.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = aero_model.hpp; sourceTree = "<group>"; };
+		1EED09AF24A974DA007DC0C3 /* aero_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = aero_model.cpp; sourceTree = "<group>"; };
+		1EFAAF3F259A1A5D007AEE56 /* imu_model.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = imu_model.cpp; sourceTree = "<group>"; };
+		1EFAAF40259A1A5D007AEE56 /* imu_model.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = imu_model.hpp; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		1E99A49C22DFE684008BFEF8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1E99A49622DFE684008BFEF8 = {
+			isa = PBXGroup;
+			children = (
+				1E99A4A122DFE684008BFEF8 /* Aircraft_Simulation */,
+				1E99A4A022DFE684008BFEF8 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		1E99A4A022DFE684008BFEF8 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1E99A49F22DFE684008BFEF8 /* Aircraft_Simulation */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		1E99A4A122DFE684008BFEF8 /* Aircraft_Simulation */ = {
+			isa = PBXGroup;
+			children = (
+				1E99A4A222DFE684008BFEF8 /* main.cpp */,
+				1E3009FC259CE43D00F8494A /* flight_software.cpp */,
+				1E3009FD259CE43D00F8494A /* flight_software.hpp */,
+				1EB22CB924D4C5C400F50BF9 /* performance.cpp */,
+				1EB22CBA24D4C5C400F50BF9 /* performance.hpp */,
+				1EFAAF3F259A1A5D007AEE56 /* imu_model.cpp */,
+				1EFAAF40259A1A5D007AEE56 /* imu_model.hpp */,
+				1EED09AB24A91A07007DC0C3 /* propulsion_model.cpp */,
+				1EED09AC24A91A07007DC0C3 /* propulsion_model.hpp */,
+				1EED09AF24A974DA007DC0C3 /* aero_model.cpp */,
+				1EED09AE24A974DA007DC0C3 /* aero_model.hpp */,
+				1E23C68924B2AFC800EC4335 /* actuator_model.cpp */,
+				1E23C68A24B2AFC800EC4335 /* actuator_model.hpp */,
+				1E29E0DC24A7989A00A8C31A /* atmosphere_model.cpp */,
+				1E29E0DD24A7989B00A8C31A /* atmosphere_model.hpp */,
+				1ECCA328249FA96D00820C69 /* ground_model.cpp */,
+				1ECCA329249FA96D00820C69 /* ground_model.hpp */,
+				1E565088248D819F00EB0E51 /* dynamics_model.cpp */,
+				1E565089248D819F00EB0E51 /* dynamics_model.hpp */,
+				1E565086248D600300EB0E51 /* rotate_frame.cpp */,
+				1E565085248D600300EB0E51 /* rotate_frame.hpp */,
+				1E06A2742494733C00DD8972 /* generic_model.cpp */,
+				1E06A2752494733C00DD8972 /* generic_model.hpp */,
+				1E3D1D5424951E240025A1CD /* model_mapping.cpp */,
+				1E3D1D5524951E240025A1CD /* model_mapping.hpp */,
+				1E17D5602495989C00338B14 /* data_logger.cpp */,
+				1E17D55F2495989C00338B14 /* data_logger.hpp */,
+				1E565080248D4EE200EB0E51 /* time.cpp */,
+				1E56507D248D4E3A00EB0E51 /* time.hpp */,
+				1E565082248D5FDE00EB0E51 /* utilities.cpp */,
+				1E565083248D5FDE00EB0E51 /* utilities.hpp */,
+				1E56507C248D4DCE00EB0E51 /* initial_conditions.hpp */,
+				1E3009F9259CC79000F8494A /* mass_model.cpp */,
+				1E3009FA259CC79000F8494A /* mass_model.hpp */,
+				1EB8FEF924B36CE200A72E56 /* aircraft_simulation_types.h */,
+			);
+			path = Aircraft_Simulation;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		1E99A49E22DFE684008BFEF8 /* Aircraft_Simulation */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1E99A4A622DFE684008BFEF8 /* Build configuration list for PBXNativeTarget "Aircraft_Simulation" */;
+			buildPhases = (
+				1E99A49B22DFE684008BFEF8 /* Sources */,
+				1E99A49C22DFE684008BFEF8 /* Frameworks */,
+				1E99A49D22DFE684008BFEF8 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Aircraft_Simulation;
+			productName = "Aircraft Simulation";
+			productReference = 1E99A49F22DFE684008BFEF8 /* Aircraft_Simulation */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		1E99A49722DFE684008BFEF8 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 1010;
+				ORGANIZATIONNAME = "Alexander McLean";
+				TargetAttributes = {
+					1E99A49E22DFE684008BFEF8 = {
+						CreatedOnToolsVersion = 10.1;
+					};
+				};
+			};
+			buildConfigurationList = 1E99A49A22DFE684008BFEF8 /* Build configuration list for PBXProject "Aircraft_Simulation" */;
+			compatibilityVersion = "Xcode 9.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 1E99A49622DFE684008BFEF8;
+			productRefGroup = 1E99A4A022DFE684008BFEF8 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				1E99A49E22DFE684008BFEF8 /* Aircraft_Simulation */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		1E99A49B22DFE684008BFEF8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1E3D1D5624951E240025A1CD /* model_mapping.cpp in Sources */,
+				1E17D5612495989C00338B14 /* data_logger.cpp in Sources */,
+				1EB22CBB24D4C5C400F50BF9 /* performance.cpp in Sources */,
+				1E3009FB259CC79000F8494A /* mass_model.cpp in Sources */,
+				1E56508A248D819F00EB0E51 /* dynamics_model.cpp in Sources */,
+				1E29E0DE24A7989B00A8C31A /* atmosphere_model.cpp in Sources */,
+				1EFAAF41259A1A5D007AEE56 /* imu_model.cpp in Sources */,
+				1E565084248D5FDE00EB0E51 /* utilities.cpp in Sources */,
+				1E06A2762494733C00DD8972 /* generic_model.cpp in Sources */,
+				1EED09B024A974DA007DC0C3 /* aero_model.cpp in Sources */,
+				1E565081248D4EE200EB0E51 /* time.cpp in Sources */,
+				1E3009FE259CE43D00F8494A /* flight_software.cpp in Sources */,
+				1ECCA32A249FA96D00820C69 /* ground_model.cpp in Sources */,
+				1E23C68B24B2AFC800EC4335 /* actuator_model.cpp in Sources */,
+				1E565087248D600300EB0E51 /* rotate_frame.cpp in Sources */,
+				1E99A4A322DFE684008BFEF8 /* main.cpp in Sources */,
+				1EED09AD24A91A07007DC0C3 /* propulsion_model.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		1E99A4A422DFE684008BFEF8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				"FRAMEWORK_SEARCH_PATHS[arch=*]" = "";
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				"HEADER_SEARCH_PATHS[arch=*]" = /Users/alexandermclean/anaconda/include/python2.7;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		1E99A4A522DFE684008BFEF8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				"HEADER_SEARCH_PATHS[arch=*]" = /Users/alexandermclean/anaconda/include/python2.7;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		1E99A4A722DFE684008BFEF8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		1E99A4A822DFE684008BFEF8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1E99A49A22DFE684008BFEF8 /* Build configuration list for PBXProject "Aircraft_Simulation" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1E99A4A422DFE684008BFEF8 /* Debug */,
+				1E99A4A522DFE684008BFEF8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1E99A4A622DFE684008BFEF8 /* Build configuration list for PBXNativeTarget "Aircraft_Simulation" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1E99A4A722DFE684008BFEF8 /* Debug */,
+				1E99A4A822DFE684008BFEF8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 1E99A49722DFE684008BFEF8 /* Project object */;
+}
