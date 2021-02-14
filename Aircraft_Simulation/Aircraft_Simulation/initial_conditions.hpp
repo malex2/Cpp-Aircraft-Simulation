@@ -40,7 +40,7 @@ const double posBody_init[3] = {28.5997222, -81.3394444, 1.968}; // deg, deg, ft
 const double eulerAngles_init[3] = {0, 0.0, 0}; // {0, 6.507, 0};
 const double eulerRates_init[3]  = {0, 0, 0};
 const double actuators_init[4]   = {0.0, 0.0, 0.0, 0.0}; //{de,da,dr,dT}
-const int inputMode_init = 2; // 0 - external, 1 - keyboard, 2 - table
+const int inputMode_init = 0; // 0 - external, 1 - keyboard, 2 - table
 
 // Trim
 // Uses initial position above

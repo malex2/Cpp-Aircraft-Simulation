@@ -1,11 +1,9 @@
 #include "flight_software.hpp"
 
 void setup() {
-  // put your setup code here, to run once:
-
+  // See initialize() in flight_software.cpp
 }
 
 void loop() {
   mainFlightSoftware();
-
 }

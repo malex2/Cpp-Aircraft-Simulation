@@ -40,6 +40,26 @@ void atittudeFilter(double* attitude, double* acc, double* gyro);
 // Set each throttle value
 void attitudeControl(double* attitude);
 
+class DiscreteCommand {
+public:
+    DiscreteCommand();
+    
+    void setup(double minIncr, double minCmd, double maxCmd);
+    void setCommand(double desiredCommand);
+    double value() { return command; }
+private:
+    double minCmd;
+    double maxCmd;
+    double minIncr;
+    
+    double command;
+    double commandOption;
+    bool increasing;
+    int lengthArray;
+    
+    void updateCommandOption(int index);
+};
+
 // Initialization Functions
 void initialize(void);
 void initializeVariables(void);
@@ -89,7 +109,7 @@ private:
     
     channelType channel;
     unsigned long pwm;
-    unsigned long value;
+    double value;
     double minValue;
     double maxValue;
     bool foundChannel;
@@ -98,14 +118,14 @@ private:
     static const int lengthTable = 4;
     
     double signalTimes[nChannels][lengthTable] = {
-        {0, 5, 7, 10},
-        {0, 5, 7, 10},
-        {0, 5, 7, 10},
-        {0, 5, 7, 10}
+        {0, 5, 15, 20},
+        {0, 5, 15, 20},
+        {0, 5, 15, 20},
+        {0, 5, 15, 20}
     };
     
     double signalValues[nChannels][lengthTable] = {
-        {0, 20, 20, 20}, // Throttle (%)
+        {0, 100, 100, 60}, // Throttle (%), 0-100
         {0, 0 , 5 , -5}, // Aileron  (deg)
         {0, 0 , 0 , 0 }, // Pitch    (deg)
         {0, 0 , 0 , 0 }  // Yaw      (deg)
@@ -155,6 +175,9 @@ public:
     void attach(int pinIn);
     
     void writeMicroseconds(unsigned long pwm);
+    
+    double read();
+    
 private:
     // Types
     enum motorNumberType {T1, T2, T3, T4, nMotors};

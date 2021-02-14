@@ -81,6 +81,11 @@ Servo T2esc;
 Servo T3esc;
 Servo T4esc;
 
+double T1PWMprint;
+double T2PWMprint;
+double T3PWMprint;
+double T4PWMprint;
+
 unsigned long T1PWM;
 unsigned long T2PWM;
 unsigned long T3PWM;
@@ -101,7 +106,7 @@ class Time*          pTime = 0;
 class DynamicsModel* pDyn  = 0;
 class ModelMap*      pMap  = 0;
 
-// Sensitivity
+// IMU Sensitivity
 enum accSensitivityType  {accSensitivity_2g, accSensitivity_4g, accSensitivity_8g, accSensitivity_16g, nAccSensitivity};
 enum gyroSensitivityType {gyroSensitivity_250dps, gyroSensitivity_500dps, gyroSensitivity_1000dps, gyroSensitivity_2000dps, nGyroSensitivity};
 
@@ -170,9 +175,22 @@ double bodyRateMag;
 double attitudeFilterDt;
 
 // Attitude Keeping
-double desiredAttitude[3]; // roll, pitch, yawRate
-double desiredAttitudeDeg[3];
+double rollCmdRaw;
+double pitchCmdRaw;
+double bodyZrateCmdRaw;
 
+DiscreteCommand rollCmd;
+DiscreteCommand pitchCmd;
+DiscreteCommand bodyZrateCmd;
+
+double rollCmdDeg;
+double pitchCmdDeg;
+double bodyZrateCmdDps;
+
+double minDegree; // minimum change in command degree
+double minDps;    // minimum change in command rate
+
+double throttlePrint;
 unsigned long throttle;
 unsigned long droll;
 unsigned long dpitch;
@@ -181,7 +199,7 @@ unsigned long dyaw;
 const double MAXROLL     = 20 * deg2rad; // rad
 const double MAXPITCH    = 20 * deg2rad; // rad
 const double MAXYAWRATE  = 45 * deg2rad; // rad/s
-const unsigned long MAXTHROTTLE = 0.85 * PWMMAX; // PWM
+const unsigned long MAXTHROTTLE = (PWMMAX-PWMMIN)*1.85; // PWM
 
 // Errors
 double attitudeError[3];
@@ -217,13 +235,15 @@ void initialize(void)
     maxFilterAcc    = 1.05;
     minFilterAcc    = 0.95;
     bodyRateThresh  = 1.0;
+    minDegree       = 0.5;
+    minDps          = 1.0;
     controlAttitude = false;
-    useIMU          = false;
-    printCalibration = true;
+    useIMU          = true;
+    printCalibration = false;
     printIMU        = false;
     printIMUcal     = false;
     printAngles     = false;
-    printPulseIn    = true;
+    printPulseIn    = false;
     eventStartTimes[imuWarmup] = 1.0;
     routineDelays[hz50] = 0.02;
     routineDelays[hz100] = 0.01;
@@ -550,29 +570,15 @@ void attitudeControl(double* attitude)
     unsigned long yawPWM      = yawChannel.getPwm();
     
     throttle = mapToValue(throttlePWM, PWMMIN, PWMMAX, PWMMIN, MAXTHROTTLE);
-    desiredAttitude[0] = mapToValue(rollPWM, PWMMIN, PWMMAX, -MAXROLL, MAXROLL);      // Roll (rad)
-    desiredAttitude[1] = mapToValue(pitchPWM, PWMMIN, PWMMAX, -MAXPITCH, MAXPITCH);   // Pitch (rad)
-    desiredAttitude[2] = mapToValue(yawPWM, PWMMIN, PWMMAX, -MAXYAWRATE, MAXYAWRATE); // Yaw Rate (rad/s)
+    rollCmdRaw = mapToValue(rollPWM, PWMMIN, PWMMAX, -MAXROLL, MAXROLL);      // Roll (rad)
+    pitchCmdRaw = mapToValue(pitchPWM, PWMMIN, PWMMAX, -MAXPITCH, MAXPITCH);   // Pitch (rad)
+    bodyZrateCmdRaw = mapToValue(yawPWM, PWMMIN, PWMMAX, -MAXYAWRATE, MAXYAWRATE); // Yaw Rate (rad/s)
   
-    // House Keeping
-    for (int i=0; i<3; i++)
-    {
-        desiredAttitudeDeg[i] = desiredAttitude[i] / deg2rad;
-    }
+    // Discretize Commands
+    rollCmd.setCommand( rollCmdRaw );
+    pitchCmd.setCommand( pitchCmdRaw );
+    bodyZrateCmd.setCommand( bodyZrateCmdRaw );
     
-    if (printPulseIn && performRoutine[printRoutine])
-    {
-        display("Commands: ");
-        display(throttle);
-        display(" ");
-        display(desiredAttitudeDeg[0]);
-        display(" ");
-        display(desiredAttitudeDeg[1]);
-        display(" ");
-        display(desiredAttitudeDeg[2]);
-        display("\n");
-    }
-
     // Controller
     if (controlAttitude)
     {
@@ -594,7 +600,91 @@ void attitudeControl(double* attitude)
     T2esc.writeMicroseconds(T2PWM);
     T3esc.writeMicroseconds(T3PWM);
     T4esc.writeMicroseconds(T4PWM);
+    
+    // House Keeping
+    throttlePrint = static_cast<double> (throttle);
+    T1PWMprint = static_cast<double> (T1PWM);
+    T2PWMprint = static_cast<double> (T2PWM);
+    T3PWMprint = static_cast<double> (T3PWM);
+    T4PWMprint = static_cast<double> (T4PWM);
+    
+    rollCmdDeg = rollCmd.value() / deg2rad;
+    pitchCmdDeg = pitchCmd.value() / deg2rad;
+    bodyZrateCmdDps = bodyZrateCmd.value() / deg2rad;
+    
+    if (printPulseIn && performRoutine[printRoutine])
+    {
+        display("Commands: ");
+        display(throttle);
+        display(" ");
+        display(rollCmdDeg);
+        display(" ");
+        display(pitchCmdDeg);
+        display(" ");
+        display(bodyZrateCmdDps);
+        display("\n");
+    }
 
+}
+
+DiscreteCommand::DiscreteCommand()
+{
+    command = 0.0;
+    lengthArray = 0;
+    increasing = true;
+    
+    minCmd = 0.0;
+    maxCmd = 0.0;
+    minIncr = 0.0;
+}
+
+void DiscreteCommand::setup(double minIncrIn, double minCmdIn, double maxCmdIn)
+{
+    minCmd = minCmdIn;
+    maxCmd = maxCmdIn;
+    minIncr = minIncrIn;
+    lengthArray = (maxCmd - minCmd) / minIncr;
+}
+
+void DiscreteCommand::setCommand(double desiredCommand)
+{
+    if (minCmd == maxCmd)
+    {
+        display("Warning: command not setup!\n");
+        return;
+    }
+    
+    // Determine increasing/decreasing
+    if (desiredCommand >= command) { increasing = true; }
+    else { increasing = false; }
+    
+    if (increasing)
+    {
+        for (int i=0; i<lengthArray; i++)
+        {
+            updateCommandOption(i);
+            if ( desiredCommand >= commandOption )
+            {
+                command = commandOption;
+            }
+        }
+    }
+    else
+    {
+        for (int i=lengthArray-1; i>-1; i--)
+        {
+            updateCommandOption(i);
+            if ( desiredCommand <= commandOption )
+            {
+                command = commandOption;
+            }
+        }
+    }
+}
+
+void DiscreteCommand::updateCommandOption(int index)
+{
+    commandOption = minCmd + minIncr*index;
 }
 
 // **********************************************************************
@@ -605,9 +695,10 @@ void getSimulationModels(void)
 # ifdef SIMULATION
     if(pMap)
     {
-        pIMU  = (IMUModelBase*)  pMap->getModel("IMUModel");
-        pTime = (Time*)          pMap->getModel("Time");
-        pDyn  = (DynamicsModel*) pMap->getModel("DynamicsModel");
+        pIMU  = (IMUModelBase*)      pMap->getModel("IMUModel");
+        pAct  = (ActuatorModelBase*) pMap->getModel("ActuatorModel");
+        pTime = (Time*)              pMap->getModel("Time");
+        pDyn  = (DynamicsModel*)     pMap->getModel("DynamicsModel");
     }
     else
     {
@@ -650,10 +741,10 @@ void flightSoftware_setMapPointer(ModelMap* pMapInit)
     //pMap->addLogVar("FS Gyro X Bias", &gyroBias[0], savePlot, 2);
     //pMap->addLogVar("FS Gyro Y Bias", &gyroBias[1], savePlot, 2);
     //pMap->addLogVar("FS Gyro Z Bias", &gyroBias[2], savePlot, 2);
-    
-    //pMap->addLogVar("FS Roll Cmd" , &desiredAttitude[0], savePlot, 2);
-    //pMap->addLogVar("FS Pitch Cmd", &desiredAttitude[1], savePlot, 2);
-    //pMap->addLogVar("FS Yaw Cmd"  , &desiredAttitude[2], savePlot, 2);
+    pMap->addLogVar("FS Throttle Cmd", &throttlePrint, savePlot, 2);
+    pMap->addLogVar("FS Roll Cmd" , &rollCmdDeg, savePlot, 2);
+    pMap->addLogVar("FS Pitch Cmd", &pitchCmdDeg, savePlot, 2);
+    pMap->addLogVar("FS Yaw Cmd"  , &bodyZrateCmdDps, savePlot, 2);
     
     pMap->addLogVar("FS Roll" , &attitudeDeg[0], printSavePlot, 3);
     pMap->addLogVar("FS Pitch", &attitudeDeg[1], printSavePlot, 3);
@@ -662,6 +753,12 @@ void flightSoftware_setMapPointer(ModelMap* pMapInit)
     pMap->addLogVar("FS Roll Error"  , &attitudeError[0], savePlot, 2);
     pMap->addLogVar("FS Pitch Error"  , &attitudeError[1], savePlot, 2);
     pMap->addLogVar("FS Yaw Error"  , &attitudeError[2], savePlot, 2);
+    
+    pMap->addLogVar("FS T1PWM"  , &T1PWMprint, savePlot, 2);
+    pMap->addLogVar("FS T2PWM"  , &T2PWMprint, savePlot, 2);
+    pMap->addLogVar("FS T3PWM"  , &T3PWMprint, savePlot, 2);
+    pMap->addLogVar("FS T4PWM"  , &T4PWMprint, savePlot, 2);
+    
 #endif
 }
 
@@ -722,7 +819,7 @@ PwmIn::PwmIn()
     minValues[PITCH]    = -MAXPITCH;
     minValues[YAWRATE]  = -MAXYAWRATE;
     
-    maxValues[THROTTLE] = MAXTHROTTLE;
+    maxValues[THROTTLE] = 100.0;
     maxValues[ROLL]     = MAXROLL;
     maxValues[PITCH]    = MAXPITCH;
     maxValues[YAWRATE]  = MAXYAWRATE;
@@ -735,6 +832,15 @@ PwmIn::PwmIn()
     value    = minValue;
     pTable   = NULL;
     foundChannel = false;
+    
+    // Table To Radians
+    for (int iCh = ROLL; iCh != nChannels; iCh++)
+    {
+        for (int col = 0; col < lengthTable; col++)
+        {
+            signalValues[iCh][col] *= deg2rad;
+        }
+    }
 }
 
 void PwmIn::attach(int pinIn)
@@ -772,12 +878,25 @@ unsigned long PwmIn::getPwm()
     
     for (int i=0; i<pTable->tableLength; i++)
     {
-        if( pTime->getSimTime() >= pTable->pTableTimes[i] )
+        /*
+        display("Time: ");
+        display( getTime() );
+        display(" Table Time: ");
+        display( pTable->pTableTimes[i] );
+        display(" Table Value: ");
+        display( pTable->pTableValues[i] );
+        display("\n");
+        */
+        if( getTime() >= pTable->pTableTimes[i] )
         {
             value = pTable->pTableValues[i];
         }
     }
-    
+    /*
+    display(" Value: ");
+    display( value );
+    display("\n");
+    */
     pwm = mapToPwm(value, minValue, maxValue, PWMMIN, PWMMAX);
     
     return pwm;
@@ -814,7 +933,7 @@ void PwmIn::attach(int pinIn)
     // Increment Pins
     nPins++;
 }
-int PwmIn::getPwm()
+unsigned long PwmIn::getPwm()
 {
     if (thisPinLoc != -1) { return pwm[thisPinLoc]; }
     
@@ -885,11 +1004,16 @@ void Servo::attach(int pinIn)
 
 void Servo::writeMicroseconds(unsigned long pwm)
 {
-    if (foundMotor)
+    throttle = mapToValue(pwm, PWMMIN, PWMMAX, 0.0, 1.0);
+    if (pAct && foundMotor)
     {
-        throttle = mapToValue(pwm, PWMMIN, PWMMAX, 0.0, 1.0);
         pAct->setCommands(throttle, motorNumber);
     }
+}
+
+double Servo::read()
+{
+    return throttle;
 }
 
 #endif
@@ -901,17 +1025,36 @@ double mapToValue(unsigned long pwm, unsigned long pwmMin, unsigned long pwmMax,
     return slope*(pwm-pwmMin) + valueMin;
 }
 
+unsigned long mapToValue(unsigned long pwm, unsigned long pwmMin, unsigned long pwmMax, unsigned long valueMin, unsigned long valueMax)
+{
+    // y - y1 = m * (x - x1)
+    double slope = 1.0*(valueMax-valueMin) / (pwmMax-pwmMin);
+    return slope*(pwm-pwmMin) + valueMin;
+}
+
 unsigned long mapToPwm(double value, double valueMin, double valueMax, unsigned long pwmMin, unsigned long pwmMax)
 {
     // y - y1 = m * (x - x1)
-    long slope = (pwmMax-pwmMin) / static_cast<long>(valueMax-valueMin);
+    double slope = (pwmMax-pwmMin) / (valueMax-valueMin);
     return slope*(value-valueMin) + pwmMin;
 }
 
 unsigned long limit(unsigned long pwm, unsigned long pwmMin, unsigned long pwmMax)
 {
-    if (pwm < pwmMin) { return pwmMin; }
-    if (pwm > pwmMax) { return pwmMax; }
+    if (pwm < pwmMin)
+    {
+        display("Warning: pwm below limit ");
+        display(pwm);
+        display("\n");
+        return pwmMin;
+    }
+    if (pwm > pwmMax)
+    {
+        display("Warning: pwm above limit ");
+        display(pwm);
+        display("\n");
+        return pwmMax;
+    }
     return pwm;
 }
 
@@ -968,7 +1111,7 @@ void setupArduino(void)
     LSBdps = gyroSensitivityLSB[gyroSensitivity];
     gyroSensitivityWrite = sensitivityByte[gyroSensitivity];
     
-    LSBg   = accSensitivityLSB[accSensitivity];
+    LSBg = accSensitivityLSB[accSensitivity];
     accSensitivityWrite = sensitivityByte[accSensitivity];
     
     // PWM In
@@ -987,6 +1130,11 @@ void setupArduino(void)
     T1esc.writeMicroseconds(PWMMIN);
     T1esc.writeMicroseconds(PWMMIN);
     T1esc.writeMicroseconds(PWMMIN);
+    
+    // Commands
+    rollCmd.setup(minDegree*deg2rad, -MAXROLL, MAXROLL);
+    pitchCmd.setup(minDegree*deg2rad, -MAXPITCH, MAXPITCH);
+    bodyZrateCmd.setup(minDps*deg2rad, -MAXYAWRATE, MAXYAWRATE);
     
 #ifdef SIMULATION
     if (pIMU)
