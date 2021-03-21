@@ -611,6 +611,8 @@ void Utilities::unitVector(TempType *vec, int n)
     // Get magnitude
     TempType mag = Utilities::mag(vec, n);
     
+    if (mag == 0) return;
+    
     // Make vec a unit vector
     for (int i = 0; i < n; i++)
     {
@@ -1027,6 +1029,18 @@ void Utilities::setupBodyRateToEulerRate(valType *L, AngleType<valType> *eulerAn
 }
 
 /* -------------------- Quaternion Math -------------------- */
+template<typename TempType>
+void Utilities::initQuaternion(TempType *q, TempType angle, TempType *axis)
+{
+    TempType c2 = cos(angle * Utilities::deg2rad / 2);
+    TempType s2 = sin(angle * Utilities::deg2rad / 2);
+    
+    q[0] = c2;
+    q[1] = axis[0]*s2;
+    q[2] = axis[1]*s2;
+    q[3] = axis[2]*s2;
+}
+
 template<typename TempType>
 void Utilities::quatToVec(TempType *vec, TempType *q)
 {
@@ -1528,6 +1542,9 @@ template void Utilities::setupBodyRateToEulerRate(double* , double*);
 template void Utilities::setupBodyRateToEulerRate(int* , AngleType<int>*);
 template void Utilities::setupBodyRateToEulerRate(float* , AngleType<float>*);
 template void Utilities::setupBodyRateToEulerRate(double* , AngleType<double>*);
+
+template void Utilities::initQuaternion(float *q, float angle, float *axis);
+template void Utilities::initQuaternion(double *q, double angle, double *axis);
 
 template void Utilities::quatToVec(int* , int*);
 template void Utilities::quatToVec(float* , float*);

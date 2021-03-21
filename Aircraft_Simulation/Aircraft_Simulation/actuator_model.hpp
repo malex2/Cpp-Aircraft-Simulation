@@ -43,8 +43,18 @@ public:
     virtual double* getActuators(void) { return positions; }
     
     // Setters
-    virtual void setCommands(double* commands_in) { util.setArray(commands, commands_in, maxActuators); }
-    virtual void setCommands(double command_in, int index) { commands[index] = command_in; }
+    virtual void setCommands(double* commands_in)
+    {
+        if (inputMode_init == 0) {
+            util.setArray(commands, commands_in, maxActuators);
+        }
+    }
+    virtual void setCommands(double command_in, int index)
+    {
+        if (inputMode_init == 0) {
+            commands[index] = command_in;
+        }
+    }
     
     bool continueArray[maxActuators];
     

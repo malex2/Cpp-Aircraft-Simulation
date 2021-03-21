@@ -66,6 +66,7 @@ public:
     // angle rate conversions
     const double dps2rps = deg2rad;
     const double rpm2rps = 2*M_PI/60;
+    
 };
 
 template<typename unitType, typename valType>
@@ -640,6 +641,9 @@ public:
     void setupBodyRateToEulerRate(valType *L, AngleType<valType> *euler_angles);
     
     // Quaternion math
+    template<typename TempType>
+    void initQuaternion(TempType *q, TempType angle, TempType *axis);
+    
     template<typename TempType>
     void quatToVec(TempType *vec, TempType *q);
     

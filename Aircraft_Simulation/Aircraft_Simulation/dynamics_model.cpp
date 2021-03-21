@@ -229,7 +229,25 @@ bool DynamicsModel::update(void)
     util.setArray(temp2, eulerRates, 3);
     util.vgain(temp2, dt, 3);
     util.vAdd(eulerCheck, eulerAngles, temp2, 3);
+    /*
+    // Way 2: q = q*dq, dq = quaterion(omega*dt, bodyRates/omega)
+    double angle;
+    double bodyRatesUnit[3];
+    static double q_B_NED2[4] = {1,0,0,0};
+    static bool set2 = false;
+    double dQ[4] = {1,0,0,0};
+    double eulerAngles2[3] = {0,0,0};
+    double eulerError2[3];
+    if (!set2) { util.setArray(q_B_NED2, q_B_NED, 4); set2 = true; }
     
+    angle = util.mag(bodyRates, 3) / util.deg2rad * dt;
+    util.setArray(bodyRatesUnit, bodyRates, 3);
+    util.unitVector(bodyRatesUnit, 3);
+    util.initQuaternion(dQ, angle, bodyRatesUnit);
+    util.quaternionProduct(q_B_NED2, q_B_NED2, dQ);
+    util.unitVector(q_B_NED2,4);
+    util.quaternionToEuler(eulerAngles2, q_B_NED2);
+    */
     // Update body orientation  (qdot = 0.5 * q * [0 wx wy wz])
     util.vecToQuat(tempQuat, bodyRates);
     util.quaternionProduct(q_B_NED_dot, q_B_NED, tempQuat);
@@ -240,7 +258,56 @@ bool DynamicsModel::update(void)
     util.unitVector(q_B_NED, 4);
     
     util.quaternionToEuler(eulerAngles, q_B_NED);
+    /*for (int i=0; i<3; i++) { eulerError2[i] = eulerAngles[i].deg() - eulerAngles2[i]; }
     
+    // Way 3:
+    static int counter = 0;
+    int countRate = 20;
+    static double q_B_NED3[4] = {1,0,0,0};
+    static bool set3 = false;
+    static double dAngles[3] = {0,0,0};
+    double dAnglesUnit[3];
+    if (!set3) { util.setArray(q_B_NED3, q_B_NED, 4); set3 = true; }
+    for (int i=0; i<3; i++) { dAngles[i] += bodyRates[i].dps()*dt; }
+    
+    if (counter % countRate == 0)
+    {
+        double angle;
+        double dQ[4] = {1,0,0,0};
+        double eulerAngles3[3] = {0,0,0};
+        double eulerError3[3] = {0,0,0};
+        
+        angle = util.mag(dAngles, 3);
+        util.setArray(dAnglesUnit, dAngles, 3);
+        util.unitVector(dAnglesUnit, 3);
+        util.initQuaternion(dQ, angle, dAnglesUnit);
+        util.quaternionProduct(q_B_NED3, q_B_NED3, dQ);
+        util.unitVector(q_B_NED3, 4);
+        util.quaternionToEuler(eulerAngles3, q_B_NED3);
+        
+        std::cout << "Time: " << pTime->getSimTime() << " " << counter << std::endl;
+        util.print(q_B_NED, 4, "q_B_NED:");
+        util.print(q_B_NED3, 4, "q_B_NED3:");
+        
+        util.print(dAngles, 3, "dAngles:");
+        util.print(eulerAngles, degrees, 3, "eulerAngles:");
+        util.print(eulerAngles3, 3, "eulerAngles3:");
+        
+        for (int i=0; i<3; i++) { dAngles[i] = 0.0; }
+        
+        for (int i=0; i<3; i++) { eulerError3[i] = eulerAngles[i].deg() - eulerAngles3[i]; }
+        util.print(eulerError3, 3, "eulerError3:");
+        
+        
+        util.print(q_B_NED, 4, "q_B_NED:");
+        util.print(q_B_NED2, 4, "q_B_NED2:");
+        
+        util.print(eulerAngles, degrees, 3, "eulerAngles:");
+        util.print(eulerAngles2, 3, "eulerAngles2:");
+        util.print(eulerError2, 3, "eulerError2:");
+    }
+    counter++;
+    */
     // Extract yaw and copmute q_B_LL
     util.setArray(temp1, zero_init, 3);
     temp1[2] = -eulerAngles[2].deg(); // -yaw

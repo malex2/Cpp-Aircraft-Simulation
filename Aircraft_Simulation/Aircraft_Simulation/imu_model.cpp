@@ -152,6 +152,7 @@ bool IMUModelBase::update(void)
     magnetometerModel();
     
     imuReady = true;
+    
     // Convert to raw
     if (debugFlag)
     {

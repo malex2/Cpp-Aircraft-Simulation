@@ -49,7 +49,7 @@ public :
     // Get pointer from itr
     GenericModel*      getModel(iModel itr);
     GenericForceModel* getForceModel(iForceModel itr);
-    double*             getLogVar(iLog itr);
+    double*            getLogVar(iLog itr);
     
     // Get first key in model
     iModel      getFirstModel(void)           { return modelMapping.begin(); }
