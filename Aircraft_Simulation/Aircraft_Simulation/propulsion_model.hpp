@@ -82,7 +82,7 @@ private:
     double throttle[4];
     double engineRPM[4];
     const double riseTimes[4] = {0.1, 0.1, 0.1, 0.1};
-    const double maxThrust = 3.5;
+    const double maxThrust = 4.22; // 430g (12v) - 621g / 4.22N - 6.12N @12V
     const double maxRPM = 6440;
     const int directions[4] = {-1,1,-1,1};
     const double locations[4][3] ={

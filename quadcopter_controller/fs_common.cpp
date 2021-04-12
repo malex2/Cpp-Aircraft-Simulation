@@ -49,14 +49,14 @@ unsigned long limit(unsigned long pwm, unsigned long pwmMin, unsigned long pwmMa
 {
     if (pwm < pwmMin)
     {
-        display("Warning: pwm below limit ");
+        display("Warning (limit): pwm below limit ");
         display(pwm);
         display("\n");
         return pwmMin;
     }
     if (pwm > pwmMax)
     {
-        display("Warning: pwm above limit ");
+        display("Warning (limit): pwm above limit ");
         display(pwm);
         display("\n");
         return pwmMax;
@@ -103,10 +103,12 @@ void display(TempType val)
 #endif
 }
 
+template void display(const char*);
 template void display(String);
 template void display(int);
 template void display(float);
 template void display(double);
+template void display(unsigned long);
 
 void FsCommon_setSimulationModels(ModelMap* pMap)
 {

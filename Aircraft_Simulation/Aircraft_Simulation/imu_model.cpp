@@ -74,6 +74,7 @@ IMUModelBase::IMUModelBase(ModelMap *pMapInit, bool debugFlagIn)
     util.initArray(gravityNED, 0.0, 3);
     util.initArray(gravityBody, 0.0, 3);
     util.initArray(gravityIMU, 0.0, 3);
+    util.initArray(accIMUnoGravity, 0.0, 3);
     util.initArray(accIMU, 0.0, 3);
     
     util.initArray(magNED, 0.0, 3);
@@ -89,35 +90,42 @@ IMUModelBase::IMUModelBase(ModelMap *pMapInit, bool debugFlagIn)
     
     debugFlag = debugFlagIn;
     
-    pMap->addLogVar("IMU gyro x Error (deg/s)", &gyroError[0], savePlot, 2);
-    pMap->addLogVar("IMU gyro y Error (deg/s)", &gyroError[1], savePlot, 2);
-    pMap->addLogVar("IMU gyro z Error (deg/s)", &gyroError[2], savePlot, 2);
-    pMap->addLogVar("IMU acc x Error (g)", &accError[0], savePlot, 2);
-    pMap->addLogVar("IMU acc y Error (g)", &accError[1], savePlot, 2);
-    pMap->addLogVar("IMU acc z Error (g)", &accError[2], savePlot, 2);
-    pMap->addLogVar("IMU mag x Error (uT)", &magError[0], savePlot, 2);
-    pMap->addLogVar("IMU mag y Error (uT)", &magError[1], savePlot, 2);
-    pMap->addLogVar("IMU mag z Error (uT)", &magError[2], savePlot, 2);
+    //pMap->addLogVar("IMU gyro x Error (deg/s)", &gyroError[0], savePlot, 2);
+    //pMap->addLogVar("IMU gyro y Error (deg/s)", &gyroError[1], savePlot, 2);
+    //pMap->addLogVar("IMU gyro z Error (deg/s)", &gyroError[2], savePlot, 2);
+    //pMap->addLogVar("IMU acc x Error (g)", &accError[0], savePlot, 2);
+    //pMap->addLogVar("IMU acc y Error (g)", &accError[1], savePlot, 2);
+    //pMap->addLogVar("IMU acc z Error (g)", &accError[2], savePlot, 2);
+    //pMap->addLogVar("IMU mag x Error (uT)", &magError[0], savePlot, 2);
+    //pMap->addLogVar("IMU mag y Error (uT)", &magError[1], savePlot, 2);
+    //pMap->addLogVar("IMU mag z Error (uT)", &magError[2], savePlot, 2);
     
-    pMap->addLogVar("IMU gyro x (deg/s)", &gyroInUnits[0], savePlot, 2);
-    pMap->addLogVar("IMU gyro y (deg/s)", &gyroInUnits[1], savePlot, 2);
-    pMap->addLogVar("IMU gyro z (deg/s)", &gyroInUnits[2], savePlot, 2);
-    pMap->addLogVar("IMU acc x (g)", &accInUnits[0], savePlot, 2);
-    pMap->addLogVar("IMU acc y (g)", &accInUnits[1], savePlot, 2);
-    pMap->addLogVar("IMU acc z (g)", &accInUnits[2], savePlot, 2);
-    pMap->addLogVar("IMU mag x (uT)", &magInUnits[0], savePlot, 2);
-    pMap->addLogVar("IMU mag y (uT)", &magInUnits[1], savePlot, 2);
-    pMap->addLogVar("IMU mag z (uT)", &magInUnits[2], savePlot, 2);
+    //pMap->addLogVar("IMU gyro x (deg/s)", &gyroInUnits[0], savePlot, 2);
+    //pMap->addLogVar("IMU gyro y (deg/s)", &gyroInUnits[1], savePlot, 2);
+    //pMap->addLogVar("IMU gyro z (deg/s)", &gyroInUnits[2], savePlot, 2);
+    //pMap->addLogVar("IMU acc x (g)", &accInUnits[0], savePlot, 2);
+    //pMap->addLogVar("IMU acc y (g)", &accInUnits[1], savePlot, 2);
+    //pMap->addLogVar("IMU acc z (g)", &accInUnits[2], savePlot, 2);
+    //pMap->addLogVar("IMU tangential acc x (g)", &accTangentBody[0], savePlot, 2);
+    //pMap->addLogVar("IMU tangential acc y (g)", &accTangentBody[1], savePlot, 2);
+    //pMap->addLogVar("IMU tangential acc z (g)", &accTangentBody[2], savePlot, 2);
+    //pMap->addLogVar("IMU normal acc x (g)", &accNormalBody[0], savePlot, 2);
+    //pMap->addLogVar("IMU normal acc y (g)", &accNormalBody[1], savePlot, 2);
+    //pMap->addLogVar("IMU normal acc z (g)", &accNormalBody[2], savePlot, 2);
     
-    pMap->addLogVar("IMU gyro x (raw)", &gyroSensor[0], savePlot, 2);
-    pMap->addLogVar("IMU gyro y (raw)", &gyroSensor[1], savePlot, 2);
-    pMap->addLogVar("IMU gyro z (raw)", &gyroSensor[2], savePlot, 2);
-    pMap->addLogVar("IMU acc x (raw)", &accSensor[0], savePlot, 2);
-    pMap->addLogVar("IMU acc y (raw)", &accSensor[1], savePlot, 2);
-    pMap->addLogVar("IMU acc z (raw)", &accSensor[2], savePlot, 2);
-    pMap->addLogVar("IMU mag x (raw)", &magSensor[0], savePlot, 2);
-    pMap->addLogVar("IMU mag y (raw)", &magSensor[1], savePlot, 2);
-    pMap->addLogVar("IMU mag z (raw)", &magSensor[2], savePlot, 2);
+    //pMap->addLogVar("IMU mag x (uT)", &magInUnits[0], savePlot, 2);
+    //pMap->addLogVar("IMU mag y (uT)", &magInUnits[1], savePlot, 2);
+    //pMap->addLogVar("IMU mag z (uT)", &magInUnits[2], savePlot, 2);
+    
+    //pMap->addLogVar("IMU gyro x (raw)", &gyroSensor[0], savePlot, 2);
+    //pMap->addLogVar("IMU gyro y (raw)", &gyroSensor[1], savePlot, 2);
+    //pMap->addLogVar("IMU gyro z (raw)", &gyroSensor[2], savePlot, 2);
+    //pMap->addLogVar("IMU acc x (raw)", &accSensor[0], savePlot, 2);
+    //pMap->addLogVar("IMU acc y (raw)", &accSensor[1], savePlot, 2);
+    //pMap->addLogVar("IMU acc z (raw)", &accSensor[2], savePlot, 2);
+    //pMap->addLogVar("IMU mag x (raw)", &magSensor[0], savePlot, 2);
+    //pMap->addLogVar("IMU mag y (raw)", &magSensor[1], savePlot, 2);
+    //pMap->addLogVar("IMU mag z (raw)", &magSensor[2], savePlot, 2);
 }
 
 void IMUModelBase::initialize(void)
@@ -232,10 +240,10 @@ void IMUModelBase::accelerometerModel(void)
     
     // IMU Acceleration
     // Acceleration in IMU frame
-    pRotate->bodyToImu(accIMU, accTotalBody);
+    pRotate->bodyToImu(accIMUnoGravity, accTotalBody);
     
     // Add gravity
-    util.vAdd(accIMU, accIMU, gravityIMU, 3);
+    util.vAdd(accIMU, accIMUnoGravity, gravityIMU, 3);
     
     // Acceleration in g's
     util.vgain(accIMU, 1/refGravity, 3);
@@ -319,16 +327,16 @@ QuadcopterIMUModel::QuadcopterIMUModel(ModelMap *pMapInit, bool debugFlagIn) : I
     gyroBias[0] = 0.02;
     gyroBias[1] = -0.08;
     gyroBias[2] = 0.05;
-    gyroNoiseMax[0] = 0.15;
-    gyroNoiseMax[1] = 0.35;
-    gyroNoiseMax[2] = 0.15;
+    //gyroNoiseMax[0] = 0.15;
+    //gyroNoiseMax[1] = 0.35;
+    //gyroNoiseMax[2] = 0.15;
     
     accBias[0] = 0.01;
     accBias[1] = -0.03;
     accBias[2] = 0.08;
-    accNoiseMax[0] = 0.02;
-    accNoiseMax[1] = 0.02;
-    accNoiseMax[2] = 0.02;
+    //accNoiseMax[0] = 0.02;
+    //accNoiseMax[1] = 0.02;
+    //accNoiseMax[2] = 0.02;
 
     magBias[0] = 1.0;
     magBias[1] = -2.0;

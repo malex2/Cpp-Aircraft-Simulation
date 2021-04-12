@@ -59,8 +59,10 @@ protected:
     // _InUnit = _IMU + _Error
     // _Sensor = _InUnit / LSB;
     
+    // Example:
     // accInUnits = accIMU + accError
     // accIMU = accInUnits / LSBg
+    
     // Noise
     double noise[3];
     
@@ -99,10 +101,8 @@ protected:
     double inclination;
     
     // IMU processing variables
-    //double gyroBody[3];
     double gyroIMU[3];
     
-    //double accBody[3];
     double accTangentBody[3];
     double accNormalBody[3];
     SpeedType<double> velNormalBody[3];
@@ -111,6 +111,7 @@ protected:
     double gravityNED[3];
     double gravityBody[3];
     double gravityIMU[3];
+    double accIMUnoGravity[3];
     double accIMU[3];
     
     double magNED[3];

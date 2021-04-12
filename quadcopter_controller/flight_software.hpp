@@ -24,7 +24,7 @@ class ModelMap;
 // Initialization Functions
 void initialize();
 void initializeVariables();
-void getSimulationModels();
+void getModels();
 void setPrintVariables();
 void setup();
 
@@ -33,9 +33,6 @@ bool mainFlightSoftware();
 
 // Setters
 void flightSoftware_setMapPointer(ModelMap* pMapInit);
-
-// Errors
-void computeErrors();
 
 // Interrupts
 

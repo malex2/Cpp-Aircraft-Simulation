@@ -49,7 +49,8 @@ private:
     SpeedType<double> velWindBody[3];
     
     double nedForce[3];
-    
+    double bodyGravity[3];
+    double nedGravity[3];
     double air[7]; // density, pressure, dynamic pressure, temperature, dynamic viscocity, R;
     double Re;   // Reynolds number
     double Mach; // Mach number

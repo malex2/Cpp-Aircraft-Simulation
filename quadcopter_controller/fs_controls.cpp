@@ -30,6 +30,7 @@ double yawRateCmdIn;
 // Command Constraints
 double minDegree; // minimum change in command degree
 double minDps;    // minimum change in command rate
+double dPWMmax;
 
 // IMU data
 IMUtype *controls_pIMUdata = 0;
@@ -42,6 +43,7 @@ void FsControls_setup()
     // Variables
     minDegree = 0.5;
     minDps    = 1.0;
+    dPWMmax   = 0.05*(PWMMAX - PWMMIN);
     
     rollCmdIn = 0.0;
     pitchCmdIn = 0.0;
@@ -104,10 +106,10 @@ void setMotors()
     ControlType* ctrl = &controlData;
     
     // Convert commands to PWM
-    ctrl->rollPWM  = mapToPwm(ctrl->dRoll  , -MAXROLL, MAXROLL, PWMMIN, PWMMAX);
-    ctrl->pitchPWM = mapToPwm(ctrl->dPitch, -MAXPITCH, MAXPITCH, PWMMIN, PWMMAX);
-    ctrl->yawPWM   = mapToPwm(ctrl->dYawRate, -MAXYAWRATE, MAXYAWRATE, PWMMIN, PWMMAX);
-    ctrl->throttlePWM = mapToPwm(ctrl->throttleCmd, 0, MAXTHROTTLE, PWMMIN, PWMMAX);
+    ctrl->rollPWM  = mapToPwm(ctrl->dRoll  , -MAXROLL, MAXROLL, -dPWMmax, dPWMmax);
+    ctrl->pitchPWM = mapToPwm(ctrl->dPitch, -MAXPITCH, MAXPITCH, -dPWMmax, dPWMmax);
+    ctrl->yawPWM   = mapToPwm(ctrl->dYawRate, -MAXYAWRATE, MAXYAWRATE, -dPWMmax, dPWMmax);
+    ctrl->throttlePWM = mapToPwm(ctrl->throttleCmd, 0, 100, PWMMIN, PWMMAX);
     
     // Limit PWM
     ctrl->T1PWM = limit(ctrl->throttlePWM - ctrl->rollPWM + ctrl->pitchPWM + ctrl->yawPWM, PWMMIN, PWMMAX);

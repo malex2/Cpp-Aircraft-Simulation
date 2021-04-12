@@ -32,6 +32,7 @@ SimulationWire::SimulationWire()
         deviceAwake[iDevice] = false;
     }
     
+    print = false;
 }
 
 void SimulationWire::begin()
@@ -45,11 +46,11 @@ void SimulationWire::beginTransmission(int deviceIn)
     
     for (int iDevice = MPU6050; iDevice != nDevices; iDevice++)
     {
-        if (!foundDevice && address == devices[iDevice])
+        if (!foundDevice && deviceIn == devices[iDevice])
         {
             device = static_cast<deviceType> (iDevice);
             foundDevice = true;
-            std::cout << "Device found: " << device << std::endl;
+            if (print) { std::cout << "Device found: " << device << std::endl; }
         }
     }
 }
@@ -60,7 +61,7 @@ void SimulationWire::write(int info)
     
     if (!foundDevice)
     {
-        std::cout << "Writing before address set!" << std::endl;
+        if (print) { std::cout << "Writing before address set!" << std::endl; }
         return;
     }
     
@@ -68,12 +69,12 @@ void SimulationWire::write(int info)
     {
         address = info;
         addressLatch = true;
-        std::cout << "Address change: " << address << std::endl;
+        if (print) { std::cout << "Address change: " << address << std::endl; }
         return;
     }
     else
     {
-        std::cout << "Writing to address " << address << ": " << info << std::endl;
+        if (print) { std::cout << "Writing to address " << address << ": " << info << std::endl; }
     }
     
     switch (device) {
@@ -108,10 +109,12 @@ byte SimulationWire::read()
     
     int val = buffer[iBuffer];
     iBuffer++;
+    if (iBuffer == bufferSize) { clearBuffer(); }
+    
     return val;
 }
 
-void SimulationWire::requestFrom(int address, int numBytes, bool end)
+void SimulationWire::requestFrom(int device2, int numBytes, bool end)
 {
     if (!active) { return; }
     
@@ -124,50 +127,49 @@ void SimulationWire::requestFrom(int address, int numBytes, bool end)
             
             if(address == ACC_OUT)
             {
-                int rawGyro[3] = {0,0,0};
-                int rawAcc[3]  = {0,0,0};
-                int rawTemp    = 0;
+                short rawGyro[3] = {0,0,0};
+                short rawAcc[3]  = {0,0,0};
+                short rawTemp    = 0;
                 
                 if (pIMU)
                 {
                     for (int i=0; i<3; i++)
                     {
-                        rawGyro[i] = static_cast<int> ( pIMU->getGyroscope()[i] );
-                        rawAcc[i]  = static_cast<int> ( pIMU->getAccelerometer()[i] );
+                        rawGyro[i] = static_cast<short> ( pIMU->getGyroscope()[i] );
+                        rawAcc[i]  = static_cast<short> ( pIMU->getAccelerometer()[i] );
                     }
                 }
                 
                 if (pAtmo)
                 {
                     double tempC = pAtmo->getAir()[AtmosphereModel::temp] - 273.15;
-                    rawTemp = static_cast<int> ( (tempC - 36.53) * 349 );
+                    rawTemp = static_cast<short> ( (tempC - 36.53) * 349 );
                 }
                 
-                buffer[0] = (byte) (rawAcc[0] & 0xFF);
-                buffer[1] = (byte) ((rawAcc[0] >> 8) & 0xFF);
-                buffer[2] = (byte) (rawAcc[1] & 0xFF);
-                buffer[3] = (byte) ((rawAcc[1] >> 8) & 0xFF);
-                buffer[4] = (byte) (rawAcc[2] & 0xFF);
-                buffer[5] = (byte) ((rawAcc[2] >> 8) & 0xFF);
+                buffer[0] = (byte) ((rawAcc[0] >> 8) & 0xFF);
+                buffer[1] = (byte) (rawAcc[0] & 0xFF);
+                buffer[2] = (byte) ((rawAcc[1] >> 8) & 0xFF);
+                buffer[3] = (byte) (rawAcc[1] & 0xFF);
+                buffer[4] = (byte) ((rawAcc[2] >> 8) & 0xFF);
+                buffer[5] = (byte) (rawAcc[2] & 0xFF);
                 
-                buffer[6] = (byte) (rawTemp & 0xFF);
-                buffer[7] = (byte) ((rawTemp >> 8) & 0xFF);
+                buffer[6] = (byte) ((rawTemp >> 8) & 0xFF);
+                buffer[7] = (byte) (rawTemp & 0xFF);
                 
-                buffer[8] = (byte) (rawGyro[0] & 0xFF);
-                buffer[9] = (byte) ((rawGyro[0] >> 8) & 0xFF);
-                buffer[10] = (byte) (rawGyro[1] & 0xFF);
-                buffer[11] = (byte) ((rawGyro[1] >> 8) & 0xFF);
-                buffer[12] = (byte) (rawGyro[2] & 0xFF);
-                buffer[13] = (byte) ((rawGyro[2] >> 8) & 0xFF);
+                buffer[8] = (byte) ((rawGyro[0] >> 8) & 0xFF);
+                buffer[9] = (byte) (rawGyro[0] & 0xFF);
+                buffer[10] = (byte) ((rawGyro[1] >> 8) & 0xFF);
+                buffer[11] = (byte) (rawGyro[1] & 0xFF);
+                buffer[12] = (byte) ((rawGyro[2] >> 8) & 0xFF);
+                buffer[13] = (byte) (rawGyro[2] & 0xFF);
                 
                 bufferSize = 14;
                 
                 // check
-                int check = buffer[4] << 8 | buffer[5];
-                std::cout << "Buffer check: ";
-                std::cout << rawAcc[2]  << " ";
-                std::cout << check << std::endl;
-                
+                //int check = buffer[4] << 8 | buffer[5];
+                //std::cout << "Buffer check: ";
+                //std::cout << rawAcc[2]  << " ";
+                //std::cout << check << std::endl;
             }
             break;
     }
@@ -184,10 +186,10 @@ void SimulationWire::endTransmission(bool restart)
     
     if (restart)
     {
+        if (print) { std::cout << "Device released: " << device << std::endl; }
         device = nDevices;
         foundDevice = false;
         addressLatch = false;
-        std::cout << "Device released: " << device << std::endl;
     }
 }
 
@@ -225,8 +227,9 @@ double SimulationWire::MPU6050_accByteToLSB(int byte)
     return LSBg;
 }
 
-void SimulationWire::wire_setSimulationModels(ModelMap* pMap)
+void SimulationWire::wire_setSimulationModels(ModelMap* pMap, bool print_wire)
 {
+    print = print_wire;
     if (pMap)
     {
         pIMU  = (IMUModelBase*)    pMap->getModel("IMUModel");

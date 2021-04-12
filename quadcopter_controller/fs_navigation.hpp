@@ -24,6 +24,38 @@ struct SensorErrorType {
     double variance;
     
     SensorErrorType() : sum(0), mean(0), max(-999), min(999), std(0), sumSqr(0), variance(0) {}
+    
+    void printMean()
+    {
+        display("mean: ");
+        display(mean);
+        display("\n");
+    }
+    
+    void print()
+    {
+        display("sum: ");
+        display(sum);
+        
+        display(", mean: ");
+        display(mean);
+        
+        display(", max: ");
+        display(max);
+        
+        display(", min: ");
+        display(min);
+        
+        display(", std: ");
+        display(std);
+        
+        display(", sumSqr: ");
+        display(sumSqr);
+        
+        display(", variance: ");
+        display(variance);
+        display("\n");
+    }
 };
 
 struct NavType {
@@ -33,6 +65,9 @@ struct NavType {
     
     double velBody[3];
     double accelBody[3];
+    double accelIMUBody[3];
+    double gravityNED[3];
+    double gravityBody[3];
     double gravity;
     
     double dVelocity[3];
@@ -73,7 +108,10 @@ struct NavType {
             position[i]    = 0.0;
             velNED[i]      = 0.0;
             velBody[i]     = 0.0;
+            accelIMUBody[i] = 0.0;
             accelBody[i]   = 0.0;
+            gravityNED[i]  = 0.0;
+            gravityBody[i] = 0.0;
             dVelocity[i]   = 0.0;
             dTheta[i]      = 0.0;
             eulerAngles[i] = 0.0;
@@ -106,16 +144,19 @@ void FsNavigation_calibrateIMU();
 void FsNavigation_calibrateMAG();
 
 // Getters
-NavType* FsNavigation_getNavData();
+NavType* FsNavigation_getNavData(bool useTruth = false);
+NavType* FsNavigation_getNavError();
 
 // Setters
 void FsNavigation_setIMUdata(IMUtype* pIMUdataIn);
+void FsNavigation_setSimulationModels(ModelMap* pMap);
 
 // Support
+void updateTruth();
+
 void FsNavigation_bodyToNED(double* vNED, double* vB);
 void FsNavigation_NEDToBody(double* vB, double* vNED);
 
 void quaternionProduct(double *product, double *q1, double *q2);
-
 
 #endif /* fs_navigation_hpp */

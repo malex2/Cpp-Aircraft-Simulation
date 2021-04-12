@@ -185,15 +185,15 @@ QuadcopterActuatorModel::QuadcopterActuatorModel(ModelMap *pMapInit, bool debugF
     pMap      = pMapInit;
     debugFlag = debugFlagIn;
     
-    pMap->addLogVar("T1 cmd", &commands[T1], &save, 1);
-    pMap->addLogVar("T2 cmd", &commands[T2], &save, 1);
-    pMap->addLogVar("T3 cmd", &commands[T3], &save, 1);
-    pMap->addLogVar("T4 cmd", &commands[T4], &save, 1);
+    //pMap->addLogVar("T1 cmd", &commands[T1], printSavePlot, 3);
+    //pMap->addLogVar("T2 cmd", &commands[T2], printSavePlot, 3);
+    //pMap->addLogVar("T3 cmd", &commands[T3], printSavePlot, 3);
+    //pMap->addLogVar("T4 cmd", &commands[T4], printSavePlot, 3);
     
-    pMap->addLogVar("T1 ", &positions[T1], &save, 1);
-    pMap->addLogVar("T2 ", &positions[T2], &save, 1);
-    pMap->addLogVar("T3 ", &positions[T3], &save, 1);
-    pMap->addLogVar("T4 ", &positions[T4], &save, 1);
+    pMap->addLogVar("T1 ", &positions[T1], printSavePlot, 3);
+    pMap->addLogVar("T2 ", &positions[T2], printSavePlot, 3);
+    pMap->addLogVar("T3 ", &positions[T3], printSavePlot, 3);
+    pMap->addLogVar("T4 ", &positions[T4], printSavePlot, 3);
     
     // Create Actuators
     actuators[T1] = new BrushlessDCMotor(pMap, debugFlag, actuators_init[T1]);

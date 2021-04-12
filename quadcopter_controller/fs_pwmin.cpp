@@ -42,6 +42,18 @@ void FsPwmIn_performPwmIn()
     valuesIn[ROLL]     = mapToValue(pwmIn[ROLL]    , PWMMIN, PWMMAX, -MAXROLL   , MAXROLL);     // Roll (rad)
     valuesIn[PITCH]    = mapToValue(pwmIn[PITCH]   , PWMMIN, PWMMAX, -MAXPITCH  , MAXPITCH);    // Pitch (rad)
     valuesIn[YAWRATE]  = mapToValue(pwmIn[YAWRATE] , PWMMIN, PWMMAX, -MAXYAWRATE, MAXYAWRATE);  // Yaw Rate (rad/s)
+    /*
+    for (int iCh = THROTTLE; iCh != nChannels; iCh++)
+    {
+        display("Channel: ");
+        display((int) iCh);
+        display(", PWM: ");
+        display(pwmIn[iCh]);
+        display(", Value: ");
+        display(valuesIn[iCh]);
+        display("\n");
+    }
+     */
 }
 
 unsigned long* FsPwmIn_getPWM()    { return pwmIn; }
@@ -135,13 +147,18 @@ unsigned long PwmIn::getPwm()
             value = pTable->pTableValues[i];
         }
     }
-    /*
-     display(" Value: ");
-     display( value );
-     display("\n");
-     */
+    
     pwm = mapToPwm(value, minValue, maxValue, PWMMIN, PWMMAX);
     
+    /*
+    display("Channel: ");
+    display((int) channel);
+    display(", Value: ");
+    display(value);
+    display(", PWM: ");
+    display(pwm);
+    display("\n");
+    */
     return pwm;
 }
 

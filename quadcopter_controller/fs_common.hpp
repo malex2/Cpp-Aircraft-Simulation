@@ -63,7 +63,7 @@ unsigned long mapToPwm(double value, double valueMin, double valueMax, unsigned 
 unsigned long limit(unsigned long pwm, unsigned long pwmMin, unsigned long pwmMax);
 
 // Time
-double getTime(void);
+double getTime();
 
 // Printing
 template<typename TempType>

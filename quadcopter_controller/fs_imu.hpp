@@ -21,7 +21,7 @@ struct IMUtype {
     
     double temp;
     
-    int    dCount;
+    double    dCount;
     double timestamp;
     
     IMUtype()

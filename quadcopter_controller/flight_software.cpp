@@ -25,8 +25,7 @@ ArduinoSerial Serial;
 #endif
 
 // Simulation Classes
-class DynamicsModel*   pDyn  = 0;
-class ModelMap*        pMap  = 0;
+class ModelMap* pMap  = 0;
 
 // Time keeping (s)
 enum {hz50, hz100, hz200, hz800, printRoutine, nRoutines};
@@ -46,14 +45,19 @@ accSensitivityType accSensitivity;
 gyroSensitivityType gyroSensitivity;
 
 // Navigation
+bool useTruthNav;
 double initialPosition[3];
 NavType* pNavData = 0;
+#ifdef SIMULATION
+NavType* pNavError = 0;
+#endif
 
 // Controls
 ControlType* pControlData = 0;
 ControlMode controlMode;
 
 // Print
+double position[3];
 double eulerAnglesDeg[3];
 double eulerRatesDps[3];
 double bodyRatesDps[3];
@@ -82,12 +86,13 @@ void initialize(void)
     
     // IMU Settings
     accSensitivity  = accSensitivity_4g;
-    gyroSensitivity = gyroSensitivity_500dps;
+    gyroSensitivity = gyroSensitivity_250dps;
     
     // Navigation Settings
     initialPosition[0] = 28.5997222;  // Latitude  (deg)
     initialPosition[1] = -81.3394444; // Longitude (deg)
     initialPosition[2] = 0.6;         // Altitude  (m)
+    useTruthNav = true;
     
     // Control Settings
     controlMode = ThrottleControl;
@@ -103,7 +108,7 @@ void initialize(void)
     eventStartTimes[imuWarmup] = 1.0;
     
     // Finish Setup
-    getSimulationModels();
+    getModels();
     setup();
     
 }
@@ -162,7 +167,6 @@ bool mainFlightSoftware(void)
         // Calibrate Navigation
         FsNavigation_setIMUdata(pIMUdata);
         FsNavigation_calibrateIMU();
-        
     }
     
     if (performRoutine[hz100])
@@ -179,7 +183,7 @@ bool mainFlightSoftware(void)
 
         // Update Inertial Navigation
         FsNavigation_performNavigation();
-        pNavData = FsNavigation_getNavData();
+        pNavData = FsNavigation_getNavData(useTruthNav);
         
         // Read Controller PWM
         FsPwmIn_performPwmIn();
@@ -202,13 +206,15 @@ bool mainFlightSoftware(void)
         FsImu_zeroDelta(true);
     }
 
+    // Print Variables
+    pNavError = FsNavigation_getNavError();
     for (int i=0; i<3; i++)
     {
-        eulerAnglesDeg[i] = pNavData->eulerAngles[i]*deg2rad;
-        eulerRatesDps[i]  = pNavData->eulerRates[i]*deg2rad;
-        bodyRatesDps[i]   = pNavData->bodyRates[i]*deg2rad;
+        if (i != 3) { position[i] = pNavData->position[i]/deg2rad; }
+        eulerAnglesDeg[i] = pNavData->eulerAngles[i]/deg2rad;
+        eulerRatesDps[i]  = pNavData->eulerRates[i]/deg2rad;
+        bodyRatesDps[i]   = pNavData->bodyRates[i]/deg2rad;
     }
-    computeErrors();
     
     return true;
 }
@@ -216,21 +222,23 @@ bool mainFlightSoftware(void)
 // **********************************************************************
 // Initialization Functions
 // **********************************************************************
-void getSimulationModels()
+void getModels()
 {
+    
+    // Get Pointers
+    pIMUdata = FsImu_getIMUdata();
+    pNavData = FsNavigation_getNavData();
+    pNavError = FsNavigation_getNavError();
+    pControlData = FsControls_getControlData();
+    
 # ifdef SIMULATION
     if(pMap)
     {
-        // Get Pointers
-        pIMUdata = FsImu_getIMUdata();
-        pNavData = FsNavigation_getNavData();
-        pControlData = FsControls_getControlData();
-        
         // Set Simulation Pointers
+        FsCommon_setSimulationModels(pMap);
+        FsNavigation_setSimulationModels(pMap);
         FsControls_setSimulationModels(pMap);
         FsImu_setSimulationModels(pMap);
-        
-        pDyn = (DynamicsModel*)   pMap->getModel("DynamicsModel");
         
         setPrintVariables();
     }
@@ -253,6 +261,7 @@ void setPrintVariables()
 {
 #ifdef SIMULATION
     // IMU
+    /*
     pMap->addLogVar("IMU Acc X" , &pIMUdata->accel[0], savePlot, 2);
     pMap->addLogVar("IMU Acc Y" , &pIMUdata->accel[1], savePlot, 2);
     pMap->addLogVar("IMU Acc Z" , &pIMUdata->accel[2], savePlot, 2);
@@ -270,15 +279,23 @@ void setPrintVariables()
     pMap->addLogVar("IMU dTheta Z" , &dThetaIMU[2], savePlot, 2);
     
     // Navigation
-    pMap->addLogVar("Nav Lat" , &pNavData->position[0], savePlot, 2);
-    pMap->addLogVar("Nav Lon" , &pNavData->position[1], savePlot, 2);
-    pMap->addLogVar("Nav wgs84 Alt", &pNavData->position[2], savePlot, 2);
+    pMap->addLogVar("Nav Lat" , &position[0], savePlot, 2);
+    pMap->addLogVar("Nav Lon" , &position[1], savePlot, 2);
+    pMap->addLogVar("Nav wgs84 Alt", &position[2], savePlot, 2);
     pMap->addLogVar("Nav MSL Alt"  , &pNavData->mslAlt, savePlot, 2);
+    
+    pMap->addLogVar("Nav Gravity Body X" , &pNavData->gravityBody[0], savePlot, 2);
+    pMap->addLogVar("Nav Gravity Body Y" , &pNavData->gravityBody[1], savePlot, 2);
+    pMap->addLogVar("Nav Gravity Body Z" , &pNavData->gravityBody[2], savePlot, 2);
+    
+    pMap->addLogVar("Nav Acc Body X" , &pNavData->accelBody[0], savePlot, 2);
+    pMap->addLogVar("Nav Acc Body Y" , &pNavData->accelBody[1], savePlot, 2);
+    pMap->addLogVar("Nav Acc Body Z" , &pNavData->accelBody[2], savePlot, 2);
     
     pMap->addLogVar("Nav vel N" , &pNavData->velNED[0], savePlot, 2);
     pMap->addLogVar("Nav vel E" , &pNavData->velNED[1], savePlot, 2);
     pMap->addLogVar("Nav vel D" , &pNavData->velNED[2], savePlot, 2);
-    
+    */
     pMap->addLogVar("Nav Roll" , &eulerAnglesDeg[0], savePlot, 2);
     pMap->addLogVar("Nav Pitch", &eulerAnglesDeg[1], savePlot, 2);
     pMap->addLogVar("Nav Yaw"  , &eulerAnglesDeg[2], savePlot, 2);
@@ -291,27 +308,17 @@ void setPrintVariables()
     pMap->addLogVar("Nav q", &bodyRatesDps[1], savePlot, 2);
     pMap->addLogVar("Nav r", &bodyRatesDps[2], savePlot, 2);
     
-    // Controls
-#endif
-}
-
-void computeErrors()
-{
-#ifdef SIMULATION
-    for (int i=0; i<3; i++)
-    {
-        if (pDyn)
-        {
-            positionError[i]  = ( pNavData->position[i] - pDyn->getPosBody()[i] );
-            velocityError[i]  = ( pNavData->velNED[i]   - pDyn->getVelNED()[i].mps() );
-            accelBodyError[i] = ( pNavData->accelBody[i] - pDyn->getAccBody()[i] );
-            
-            attitudeError[i]  = ( pNavData->eulerAngles[i] - pDyn->getEulerAngles()[i].rad() ) / deg2rad;
-            eulerRateError[i] = ( pNavData->eulerRates[i] - pDyn->getEulerRates()[i].rps() ) / deg2rad;
-            bodyRateError[i]  = ( pNavData->bodyRates[i] - pDyn->getBodyRates()[i].rps() ) / deg2rad;
-            //std::cout << i << " (" << getTime() << ") " << bodyRates[i] << " " << pDyn->getBodyRates()[i].dps() << std::endl;
-        }
-    }
+    pMap->addLogVar("Roll Error", &pNavError->eulerAngles[0], savePlot, 2);
+    pMap->addLogVar("Pitch Error", &pNavError->eulerAngles[1], savePlot, 2);
+    pMap->addLogVar("Yaw Error", &pNavError->eulerAngles[2], savePlot, 2);
+    
+    //pMap->addLogVar("Roll Rate Error X", &pNavError->eulerRates[0], savePlot, 2);
+    //pMap->addLogVar("Pitch Rate Error Y", &pNavError->eulerRates[1], savePlot, 2);
+    //pMap->addLogVar("Yaw Rate Error", &pNavError->eulerRates[2], savePlot, 2);
+    
+    //pMap->addLogVar("Body Rate X Error", &pNavError->bodyRates[0], savePlot, 2);
+    //pMap->addLogVar("Body Rate Y Error", &pNavError->bodyRates[1], savePlot, 2);
+    //pMap->addLogVar("Body Rate Z Error", &pNavError->bodyRates[2], savePlot, 2);
 #endif
 }
 

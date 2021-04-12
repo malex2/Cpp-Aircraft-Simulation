@@ -31,7 +31,7 @@ public:
     
     bool available() { return true; }
     
-    void wire_setSimulationModels(ModelMap* pMap);
+    void wire_setSimulationModels(ModelMap* pMap, bool print_wire = false);
 private:
     class IMUModelBase*    pIMU;
     class AtmosphereModel* pAtmo;
@@ -65,6 +65,8 @@ private:
     
     double MPU6050_gyroByteToLSB(int byte);
     double MPU6050_accByteToLSB(int byte);
+    
+    bool print;
 };
 
 class Servo {

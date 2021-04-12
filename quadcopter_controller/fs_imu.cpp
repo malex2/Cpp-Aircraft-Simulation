@@ -14,6 +14,7 @@ IMUtype IMUdata;
 
 bool imu_setup = false;
 double imuDt = 1.0/800.0;
+bool print_wire = false;
 
 // IMU Sensitivity
 double accSensitivityLSB[nAccSensitivity] = {16483, 8192, 4096, 2048};
@@ -26,18 +27,9 @@ double LSBdps;
 
 int sensitivityByte[nAccSensitivity] = {0b00000000, 0b00001000, 0b00010000, 0b00011000};
 
-
-// Calibration
-/*
-int iSample          = 0;
-const int maxSample  = 100;
-double accSum[3]     = {0,0,0};
-double gyroSum[3]    = {0,0,0};
-*/
-
 // Simulation
 #ifdef SIMULATION
-    SimulationWire Wire;
+SimulationWire Wire;
 #endif
 
 void FsImu_setupIMU(accSensitivityType accSensitivity, gyroSensitivityType gyroSensitivity)
@@ -75,7 +67,6 @@ void FsImu_performIMU()
     if (!imu_setup) { return; }
     
     readIMU();
-    //if (!IMUdata.calibrated) { groundCalibration(); }
     updateDelta();
 }
 
@@ -107,6 +98,11 @@ void readIMU()
     // Convert to Units
     for (int i=0; i<3; i++)
     {
+        // Protect against negative
+        short maxByte = 32767;
+        if (IMUdata.accel[i] > maxByte) { IMUdata.accel[i] = IMUdata.accel[i] - 2*(maxByte+1); }
+        if (IMUdata.gyro[i] > maxByte)  { IMUdata.gyro[i] = IMUdata.gyro[i] - 2*(maxByte+1); }
+        
         IMUdata.accel[i] /= LSBg;
         IMUdata.gyro[i]  /= LSBdps;
     }
@@ -114,7 +110,7 @@ void readIMU()
 
 void updateDelta()
 {
-    IMUdata.dCount++;
+    IMUdata.dCount += imuDt;
     for (int i=0; i<3; i++)
     {
         IMUdata.dVelocity[i] += IMUdata.accel[i] * imuDt;
@@ -144,6 +140,6 @@ void FsImu_zeroDelta(bool zero)
 void FsImu_setSimulationModels(ModelMap* pMap)
 {
 #ifdef SIMULATION
-    Wire.wire_setSimulationModels(pMap);
+    Wire.wire_setSimulationModels(pMap, print_wire);
 #endif
 }

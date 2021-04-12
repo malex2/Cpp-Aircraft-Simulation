@@ -149,7 +149,7 @@ QuadcopterPropulsionModel::QuadcopterPropulsionModel(ModelMap *pMapInit, bool de
     pMap = pMapInit;
     
     debugFlag = debugFlagIn;
-    
+    /*
     pMap->addLogVar("propX", &bodyForce[0], savePlot, 2);
     pMap->addLogVar("propY", &bodyForce[1], savePlot, 2);
     pMap->addLogVar("propZ", &bodyForce[2], savePlot, 2);
@@ -165,7 +165,7 @@ QuadcopterPropulsionModel::QuadcopterPropulsionModel(ModelMap *pMapInit, bool de
     pMap->addLogVar("engineRPM3", &engineRPM[2], savePlot, 2);
     pMap->addLogVar("engineRPM4", &engineRPM[3], savePlot, 2);
     //pMap->addLogVar("propLLX", &LLForce[0], savePlot, 2);
- 
+ */
     pPropulsors[0] = new Propeller(pMap, debugFlag, maxThrust, maxRPM);
     pPropulsors[1] = new Propeller(pMap, debugFlag, maxThrust, maxRPM);
     pPropulsors[2] = new Propeller(pMap, debugFlag, maxThrust, maxRPM);
@@ -214,15 +214,15 @@ PropulsionTypeBase::PropulsionTypeBase(ModelMap *pMapInit, bool debugFlagIn, dou
     debugFlag = debugFlagIn;
 
     throttle  = 0.0;
-    Q         = 0.03; // 0.024 - 0.036
+    Q         = 0.003; // 0.024 - 0.036
     maxThrust = maxThrust_in;
     maxTorque = Q*maxThrust;
     maxRPM    = maxRPM_in;
     direction = direction_in;
     
     double rps2 = (maxRPM*util.rpm2rps)*(maxRPM*util.rpm2rps);
-    b = maxThrust/rps2;
-    k = maxTorque/rps2;
+    b = maxThrust/rps2; //.005022
+    k = maxTorque/rps2; //1.858e-5
     
     util.setArray(engineForce, zero_init, 3);
     util.setArray(engineMoment, zero_init, 3);

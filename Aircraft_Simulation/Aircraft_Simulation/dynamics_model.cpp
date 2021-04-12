@@ -32,33 +32,33 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     pMap->addLogVar("VE  ", &velNED[1].val, savePlot, 2);
     pMap->addLogVar("VD  ", &velNED[2].val, savePlot, 2);
     
-    pMap->addLogVar("Roll Rate", &eulerRatesDeg[0].val, savePlot, 2);
-    pMap->addLogVar("Pitch Rate", &eulerRatesDeg[1].val, savePlot, 2);
-    pMap->addLogVar("Yaw Rate", &eulerRatesDeg[2].val, savePlot, 2);
+    //pMap->addLogVar("Roll Rate", &eulerRatesDeg[0].val, savePlot, 2);
+    //pMap->addLogVar("Pitch Rate", &eulerRatesDeg[1].val, savePlot, 2);
+    //pMap->addLogVar("Yaw Rate", &eulerRatesDeg[2].val, savePlot, 2);
     
     //pMap->addLogVar("pdot", &bodyAngularAcc[0], printSavePlot, 3);
     //pMap->addLogVar("qdot", &bodyAngularAcc[1], printSavePlot, 3);
     //pMap->addLogVar("rdot", &bodyAngularAcc[2], printSavePlot, 3);
     
-    pMap->addLogVar("p", &bodyRatesDeg[0].val, savePlot, 2);
-    pMap->addLogVar("q", &bodyRatesDeg[1].val, printSavePlot, 3);
-    pMap->addLogVar("r", &bodyRatesDeg[2].val, savePlot, 2);
+    //pMap->addLogVar("p", &bodyRatesDeg[0].val, savePlot, 2);
+    //pMap->addLogVar("q", &bodyRatesDeg[1].val, printSavePlot, 3);
+    //pMap->addLogVar("r", &bodyRatesDeg[2].val, savePlot, 2);
     
     pMap->addLogVar("Roll ", &eulerAnglesDeg[0].val, printSavePlot, 3);
     pMap->addLogVar("Pitch", &eulerAnglesDeg[1].val, printSavePlot, 3);
     pMap->addLogVar("Yaw  ", &eulerAnglesDeg[2].val, savePlot, 2);
     
-    pMap->addLogVar("SumXLL", &LLForce[0], printSavePlot, 3);
-    pMap->addLogVar("SumYLL", &LLForce[1], savePlot, 2);
-    pMap->addLogVar("SumZLL", &LLForce[2], printSavePlot, 3);
+    //pMap->addLogVar("SumXLL", &LLForce[0], printSavePlot, 3);
+    //pMap->addLogVar("SumYLL", &LLForce[1], savePlot, 2);
+    //pMap->addLogVar("SumZLL", &LLForce[2], printSavePlot, 3);
  
-    pMap->addLogVar("Body Accel X", &accBody[0], printSavePlot, 3);
-    pMap->addLogVar("Body Accel Y", &accBody[1], savePlot, 2);
-    pMap->addLogVar("Body Accel Z", &accBody[2], printSavePlot, 3);
+    //pMap->addLogVar("Body Accel X", &accBody[0], printSavePlot, 3);
+    //pMap->addLogVar("Body Accel Y", &accBody[1], savePlot, 2);
+    //pMap->addLogVar("Body Accel Z", &accBody[2], printSavePlot, 3);
     
-    pMap->addLogVar("SumMX", &bodyMoment[0], savePlot, 2);
-    pMap->addLogVar("SumMY", &bodyMoment[1], savePlot, 2);
-    pMap->addLogVar("SumMZ", &bodyMoment[2], savePlot, 2);
+    //pMap->addLogVar("SumMX", &bodyMoment[0], savePlot, 2);
+    //pMap->addLogVar("SumMY", &bodyMoment[1], savePlot, 2);
+    //pMap->addLogVar("SumMZ", &bodyMoment[2], savePlot, 2);
     
     // Initialize Angles
     util.setUnitClassArray(eulerAngles, eulerAngles_init, degrees, 3);
