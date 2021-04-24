@@ -23,6 +23,9 @@ public:
     // Update obejct states and forces
     virtual bool update(void);
     
+    virtual void deltaIMU(double dt);
+    virtual void reset(void);
+    
     // getters
     double* getGyroscope(void)     { return gyroSensor; }
     double* getAccelerometer(void) { return accSensor; }
@@ -120,6 +123,11 @@ protected:
     
     AngleType<double>    sensorFrameEuler[3]; // Euler Angles from body frame to sensor frame
     DistanceType<double> sensorFramePosition[3]; // Position of sensor frame with respect to the body frame
+    
+    double dTheta[3];
+    double dVelocity[3];
+    double sumTime;
+    double resetPeriod;
     
     // Print Variables
     double bodyRatesPrint[3];

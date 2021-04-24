@@ -22,15 +22,24 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     
     pMap = pMapInit;
     
-    pMap->addLogVar("N (m)", &posRelNED[0].val, savePlot, 2);
-    pMap->addLogVar("E (m)", &posRelNED[1].val, savePlot, 2);
-    //pMap->addLogVar("Alt  ", &posBodyPrint[2], printSavePlot, 3);
-    pMap->addLogVar("gndAlt", &hGroundft, printSavePlot, 3);
+    pMap->addLogVar("Lat", &posBodyPrint[0], savePlot, 2);
+    pMap->addLogVar("Lon", &posBodyPrint[1], savePlot, 2);
+    pMap->addLogVar("Alt", &posBody[2], savePlot, 2);
     
-    pMap->addLogVar("speed", &gndVel.val, printSavePlot, 3);
-    pMap->addLogVar("VN  ", &velNED[0].val, savePlot, 2);
-    pMap->addLogVar("VE  ", &velNED[1].val, savePlot, 2);
-    pMap->addLogVar("VD  ", &velNED[2].val, savePlot, 2);
+    //pMap->addLogVar("N (m)", &posRelNED[0].val, savePlot, 2);
+    //pMap->addLogVar("E (m)", &posRelNED[1].val, savePlot, 2);
+    //pMap->addLogVar("Alt  ", &posBodyPrint[2], printSavePlot, 3);
+    //pMap->addLogVar("gndAlt", &hGroundft, printSavePlot, 3);
+    
+    //pMap->addLogVar("speed", &gndVel.val, savePlot, 2);
+    
+    //pMap->addLogVar("VbX  ", &velBody[0].val, savePlot, 2);
+    //pMap->addLogVar("VbY  ", &velBody[1].val, savePlot, 2);
+    //pMap->addLogVar("VbZ  ", &velBody[2].val, printSavePlot, 3);
+    
+    //pMap->addLogVar("VN  ", &velNED[0].val, savePlot, 2);
+    //pMap->addLogVar("VE  ", &velNED[1].val, savePlot, 2);
+    //pMap->addLogVar("VD  ", &velNED[2].val, savePlot, 2);
     
     //pMap->addLogVar("Roll Rate", &eulerRatesDeg[0].val, savePlot, 2);
     //pMap->addLogVar("Pitch Rate", &eulerRatesDeg[1].val, savePlot, 2);
@@ -44,9 +53,20 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("q", &bodyRatesDeg[1].val, printSavePlot, 3);
     //pMap->addLogVar("r", &bodyRatesDeg[2].val, savePlot, 2);
     
-    pMap->addLogVar("Roll ", &eulerAnglesDeg[0].val, printSavePlot, 3);
-    pMap->addLogVar("Pitch", &eulerAnglesDeg[1].val, printSavePlot, 3);
+    pMap->addLogVar("Roll ", &eulerAnglesDeg[0].val, savePlot, 2);
+    pMap->addLogVar("Pitch", &eulerAnglesDeg[1].val, savePlot, 2);
     pMap->addLogVar("Yaw  ", &eulerAnglesDeg[2].val, savePlot, 2);
+    
+    //pMap->addLogVar("q_B_NED[0]", &q_B_NED[0], savePlot, 2);
+    //pMap->addLogVar("q_B_NED[1]", &q_B_NED[1], savePlot, 2);
+    //pMap->addLogVar("q_B_NED[2]", &q_B_NED[2], savePlot, 2);
+    //pMap->addLogVar("q_B_NED[3]", &q_B_NED[3], savePlot, 2);
+    
+    //pMap->addLogVar("Roll Int", &eulerAngles_integralTheta[0], savePlot, 2);
+    //pMap->addLogVar("Pitch Int", &eulerAngles_integralTheta[1], printSavePlot, 2);
+    
+    //pMap->addLogVar("Roll Int Err", &eulerError[0], savePlot, 2);
+    //pMap->addLogVar("Pitch Int Err", &eulerError[1], printSavePlot, 2);
     
     //pMap->addLogVar("SumXLL", &LLForce[0], printSavePlot, 3);
     //pMap->addLogVar("SumYLL", &LLForce[1], savePlot, 2);
@@ -65,7 +85,12 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     util.setUnitClassUnit(eulerAngles, radians, 3);
     
     util.eulerToQuaternion(q_B_NED, eulerAngles);
-    util.setArray(q_B_NED_dot, quaternion_init2, 3);
+    util.setArray(q_B_NED_dot, quaternion_init2, 4);
+    
+    util.eulerToQuaternion(q_B_NED_integralTheta, eulerAngles);
+    util.setArray(eulerAngles_integralTheta, eulerAngles, 3);
+    util.setArray(q_B_NED_error, quaternion_init2, 4);
+    util.setArray(eulerError, zero_init, 3);
     
     // Extract yaw and copmute q_B_LL
     double temp1[3], tempQuat[4];
@@ -382,6 +407,41 @@ bool DynamicsModel::update(void)
         return false;
     }
     else { return true; }
+}
+
+void DynamicsModel::updateIntegralQuaternion(double* dTheta, double dt)
+{
+    double angle;
+    double dQ[4] = {1,0,0,0};
+    double dThetaUnit[3] = {0,0,0};
+    
+    // IMU to Body Frame
+    dTheta[1] = -dTheta[1];
+    dTheta[2] = -dTheta[2];
+    
+    // Angle
+    angle = util.mag(dTheta, 3);
+    
+    // Unit Vector
+    util.setArray(dThetaUnit, dTheta, 3);
+    util.unitVector(dThetaUnit, 3);
+    
+    // Delta Quaternion
+    util.initQuaternion(dQ, angle, dThetaUnit);
+    
+    // Quaternion
+    util.quaternionProduct(q_B_NED_integralTheta, q_B_NED_integralTheta, dQ);
+    util.unitVector(q_B_NED_integralTheta, 4);
+    
+    // Euler
+    util.quaternionToEuler(eulerAngles_integralTheta, q_B_NED_integralTheta);
+    
+    // Error
+    for (int i=0; i<4; i++)
+        q_B_NED_error[i] = q_B_NED[i] - q_B_NED_integralTheta[i];
+    
+    for (int i=0; i<3; i++)
+        eulerError[i] = eulerAngles[i].deg() - eulerAngles_integralTheta[i];
 }
 
 // Setters

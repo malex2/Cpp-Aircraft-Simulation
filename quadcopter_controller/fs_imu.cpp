@@ -7,14 +7,17 @@
 //
 
 #include "fs_imu.hpp"
+#ifdef SIMULATION
+#include "imu_model.hpp"
+#endif
 
 // IMU data
-
 IMUtype IMUdata;
 
-bool imu_setup = false;
-double imuDt = 1.0/800.0;
+bool imu_setup  = false;
+double imuDt    = 1.0/800.0;
 bool print_wire = false;
+bool directIMU  = true; // Use direct IMU and not I2C
 
 // IMU Sensitivity
 double accSensitivityLSB[nAccSensitivity] = {16483, 8192, 4096, 2048};
@@ -31,6 +34,8 @@ int sensitivityByte[nAccSensitivity] = {0b00000000, 0b00001000, 0b00010000, 0b00
 #ifdef SIMULATION
 SimulationWire Wire;
 #endif
+class IMUModelBase;
+IMUModelBase* pIMUmodel = 0;
 
 void FsImu_setupIMU(accSensitivityType accSensitivity, gyroSensitivityType gyroSensitivity)
 {
@@ -98,6 +103,13 @@ void readIMU()
     // Convert to Units
     for (int i=0; i<3; i++)
     {
+#ifdef SIMULATION
+        if (directIMU)
+        {
+            IMUdata.accel[i] = pIMUmodel->getAccelerometer()[i];
+            IMUdata.gyro[i] = pIMUmodel->getGyroscope()[i];
+        }
+#endif
         // Protect against negative
         short maxByte = 32767;
         if (IMUdata.accel[i] > maxByte) { IMUdata.accel[i] = IMUdata.accel[i] - 2*(maxByte+1); }
@@ -116,6 +128,9 @@ void updateDelta()
         IMUdata.dVelocity[i] += IMUdata.accel[i] * imuDt;
         IMUdata.dTheta[i]    += IMUdata.gyro[i] * imuDt;
     }
+    
+    if (pIMUmodel)
+    pIMUmodel->deltaIMU(imuDt);
 }
 
 IMUtype* FsImu_getIMUdata()
@@ -135,11 +150,16 @@ void FsImu_zeroDelta(bool zero)
             IMUdata.dVelocity[i] = 0.0;
         }
     }
+
+    if (pIMUmodel)
+        pIMUmodel->reset();
+        
 }
 
 void FsImu_setSimulationModels(ModelMap* pMap)
 {
 #ifdef SIMULATION
     Wire.wire_setSimulationModels(pMap, print_wire);
+    pIMUmodel = (IMUModelBase*) pMap->getModel("IMUModel");
 #endif
 }

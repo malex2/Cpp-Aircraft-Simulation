@@ -62,8 +62,9 @@ struct NavType {
     double position[3]; // Latitude, longitude, wgs84 altitde
     double mslAlt;
     double velNED[3];
-    
     double velBody[3];
+    double speed;
+    
     double accelBody[3];
     double accelIMUBody[3];
     double gravityNED[3];
@@ -96,6 +97,7 @@ struct NavType {
     NavType()
     {
         mslAlt  = 0.0;
+        speed   = 0.0;
         gravity = 0.0;
         useAcc  = false;
         useMag  = false;

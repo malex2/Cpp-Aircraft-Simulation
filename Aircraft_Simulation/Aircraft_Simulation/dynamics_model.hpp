@@ -24,6 +24,8 @@ public:
     // Update dynamic states
     virtual bool update(void);
     
+    void updateIntegralQuaternion(double* dTheta, double dt);
+    
     // Getters
     double*                getPosBody(void)        { return posBody; }   // Lat, Lon, Alt
     DistanceType<double>*  getPosRelNED(void)      { return posRelNED; } // N, E, D from start in m
@@ -95,6 +97,12 @@ private:
     double q_B_NED[4];
     double q_B_LL[4];
     double q_B_NED_dot[4];
+    
+    // Integral Theta Quaternion
+    double q_B_NED_integralTheta[4];
+    double eulerAngles_integralTheta[4];
+    double q_B_NED_error[4];
+    double eulerError[3];
     
     AngleRateType<double> bodyRates[3];
     AngleRateType<double> eulerRates[3];

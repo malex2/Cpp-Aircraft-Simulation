@@ -86,6 +86,11 @@ IMUModelBase::IMUModelBase(ModelMap *pMapInit, bool debugFlagIn)
     sensorFrameEuler[1].val = 0.0;
     sensorFrameEuler[2].val = 0.0;
     
+    util.initArray(dTheta, 0.0, 3);
+    util.initArray(dVelocity, 0.0, 3);
+    sumTime     = 0.0;
+    resetPeriod = dynamicsInterval_init;
+    
     util.setUnitClassArray(sensorFramePosition, zero_init, meters, 3);
     
     debugFlag = debugFlagIn;
@@ -112,6 +117,8 @@ IMUModelBase::IMUModelBase(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("IMU normal acc x (g)", &accNormalBody[0], savePlot, 2);
     //pMap->addLogVar("IMU normal acc y (g)", &accNormalBody[1], savePlot, 2);
     //pMap->addLogVar("IMU normal acc z (g)", &accNormalBody[2], savePlot, 2);
+    //pMap->addLogVar("dPitch", &dTheta[1], printSavePlot, 3);
+    //pMap->addLogVar("IntSumTime", &sumTime, printSavePlot, 3);
     
     //pMap->addLogVar("IMU mag x (uT)", &magInUnits[0], savePlot, 2);
     //pMap->addLogVar("IMU mag y (uT)", &magInUnits[1], savePlot, 2);
@@ -265,6 +272,25 @@ void IMUModelBase::accelerometerModel(void)
     util.vgain(accSensor, LSBg, 3);
 }
 
+void IMUModelBase::deltaIMU(double dt)
+{
+    for (int i=0; i<3; i++)
+    {
+        dTheta[i]    += gyroIMU[i]*dt;
+        dVelocity[i] += accIMUnoGravity[i]*dt;
+    }
+    sumTime += dt;
+}
+
+void IMUModelBase::reset()
+{
+    pDyn->updateIntegralQuaternion(dTheta, sumTime);
+    
+    util.setArray(dTheta, zero_init, 3);
+    util.setArray(dVelocity, zero_init, 3);
+    sumTime = 0.0;
+}
+
 void IMUModelBase::magnetometerModel(void)
 {
     // Earth magnetic field
@@ -350,4 +376,6 @@ QuadcopterIMUModel::QuadcopterIMUModel(ModelMap *pMapInit, bool debugFlagIn) : I
 
     magneticStrength = 55;
     inclination = 70;
+    
+    resetPeriod = 1.0/50.0;
 }

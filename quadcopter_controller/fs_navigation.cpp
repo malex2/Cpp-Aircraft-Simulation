@@ -10,6 +10,7 @@
 #include "fs_imu.hpp"
 #ifdef SIMULATION
 #include "dynamics_model.hpp"
+#include "atmosphere_model.hpp"
 #endif
 
 // Data
@@ -46,7 +47,8 @@ double beta;
 double zeta;
 
 // Simulation Models
-class DynamicsModel* pDyn = 0;
+class DynamicsModel*   pDyn = 0;
+class AtmosphereModel* pAtmo = 0;
 
 void FsNavigation_setupNavigation(double *initialPosition)
 {
@@ -69,8 +71,8 @@ void FsNavigation_setupNavigation(double *initialPosition)
     NavData.useMag = false; // set true/false here
     
     // Variables
-    maxFilterAcc    = 1.05; // g's
-    minFilterAcc    = 0.95; // g's
+    maxFilterAcc    = 1.02; // g's
+    minFilterAcc    = 0.98; // g's
     bodyRateThresh  = 1.0;  // deg/s
     magCalibrated = !NavData.useMag;
     
@@ -171,6 +173,7 @@ void performARHS()
     
     // accelerometer part of cost function
     if (NavData.useAcc)
+    //if (false)
     {
         f[0] = 2*zdir*(q[1]*q[3] - q[0]*q[2])       - accelUnit[0];
         f[1] = 2*zdir*(q[0]*q[1] + q[2]*q[3])       - accelUnit[1];
@@ -249,7 +252,7 @@ void performARHS()
     for (int i=0; i<4; i++)
     { NavData.q_B_NED[i] = qw[i] - beta*qedot[i]*navDt; }
     
-    // gaureentee unit vector
+    // guarantee unit vector
     qMag = sqrt( NavData.q_B_NED[0]*NavData.q_B_NED[0] +
                  NavData.q_B_NED[1]*NavData.q_B_NED[1] +
                  NavData.q_B_NED[2]*NavData.q_B_NED[2] +
@@ -261,8 +264,14 @@ void performARHS()
 
 void performINS()
 {
+    double cr;
+    double sr;
+    double tp;
+    double secp;
+    double* q;
+    
     // Shorthand
-    double* q = NavData.q_B_NED;
+    q = NavData.q_B_NED;
     
     // Euler Angles
     NavData.eulerAngles[0] = atan2(2*q[2]*q[3] + 2*q[0]*q[1], 2*q[0]*q[0] + 2*q[3]*q[3] - 1);
@@ -270,10 +279,10 @@ void performINS()
     NavData.eulerAngles[2] = atan2(2*q[1]*q[2] + 2*q[0]*q[3], 2*q[0]*q[0] + 2*q[1]*q[1] - 1);
     
     // Euler Rates
-    double cr = cos(NavData.eulerAngles[0]);     // cos(roll)
-    double sr = sin(NavData.eulerAngles[0]);     // sin(roll)
-    double tp = tan(NavData.eulerAngles[1]);     // tan(pitch)
-    double secp = 1/cos(NavData.eulerAngles[1]); // sec(pitch)
+    cr = cos(NavData.eulerAngles[0]);     // cos(roll)
+    sr = sin(NavData.eulerAngles[0]);     // sin(roll)
+    tp = tan(NavData.eulerAngles[1]);     // tan(pitch)
+    secp = 1/cos(NavData.eulerAngles[1]); // sec(pitch)
     
     NavData.eulerRates[0] = 1.0*NavData.bodyRates[0] + sr*tp  *NavData.bodyRates[1] + cr*tp  *NavData.bodyRates[2];
     NavData.eulerRates[1] =                            cr     *NavData.bodyRates[1] + -sr    *NavData.bodyRates[2];
@@ -293,6 +302,11 @@ void performINS()
     
     // NED Velocity
     FsNavigation_bodyToNED(NavData.velNED, NavData.velBody);
+    
+    // Speed
+    NavData.speed = sqrt( NavData.velNED[0]*NavData.velNED[0] +
+                    NavData.velNED[1]*NavData.velNED[1] +
+                    NavData.velNED[2]*NavData.velNED[2] );
     
     // Altitude
     NavData.mslAlt      -= NavData.velNED[2]*navDt;
@@ -396,7 +410,8 @@ NavType* FsNavigation_getNavError()
 void FsNavigation_setSimulationModels(ModelMap* pMap)
 {
 #ifdef SIMULATION
-    pDyn = (DynamicsModel*) pMap->getModel("DynamicsModel");
+    pDyn  = (DynamicsModel*)   pMap->getModel("DynamicsModel");
+    pAtmo = (AtmosphereModel*) pMap->getModel("AtmosphereModel");
 #endif
 }
 
@@ -408,56 +423,87 @@ void FsNavigation_setIMUdata(IMUtype* pIMUdataIn)
 void updateTruth()
 {
 #ifdef SIMULATION
-    truthNavData.position[0] = pDyn->getPosBody()[0];
-    truthNavData.position[1] = pDyn->getPosBody()[1];
-    truthNavData.position[2] = pDyn->getPosBody()[2];
+    if (pDyn)
+    {
+        truthNavData.position[0] = pDyn->getPosBody()[0];
+        truthNavData.position[1] = pDyn->getPosBody()[1];
+        truthNavData.position[2] = pDyn->getPosBody()[2];
+        
+        truthNavData.velBody[0] = pDyn->getVelBody()[0].mps();
+        truthNavData.velBody[1] = pDyn->getVelBody()[1].mps();
+        truthNavData.velBody[2] = pDyn->getVelBody()[2].mps();
+        
+        truthNavData.velNED[0] = pDyn->getVelNED()[0].mps();
+        truthNavData.velNED[1] = pDyn->getVelNED()[1].mps();
+        truthNavData.velNED[2] = pDyn->getVelNED()[2].mps();
+        
+        truthNavData.speed = pDyn->getSpeed().mps();
+        
+        truthNavData.accelBody[0] = pDyn->getAccBody()[0];
+        truthNavData.accelBody[1] = pDyn->getAccBody()[1];
+        truthNavData.accelBody[2] = pDyn->getAccBody()[2];
+        
+        truthNavData.bodyRates[0] = pDyn->getBodyRates()[0].rps();
+        truthNavData.bodyRates[1] = pDyn->getBodyRates()[1].rps();
+        truthNavData.bodyRates[2] = pDyn->getBodyRates()[2].rps();
+        
+        truthNavData.eulerAngles[0] = pDyn->getEulerAngles()[0].rad();
+        truthNavData.eulerAngles[1] = pDyn->getEulerAngles()[1].rad();
+        truthNavData.eulerAngles[2] = pDyn->getEulerAngles()[2].rad();
+        
+        truthNavData.eulerRates[0] = pDyn->getEulerRates()[0].rps();
+        truthNavData.eulerRates[1] = pDyn->getEulerRates()[1].rps();
+        truthNavData.eulerRates[2] = pDyn->getEulerRates()[2].rps();
+        
+        truthNavData.q_B_NED[0] = pDyn->get_q_B_NED()[0];
+        truthNavData.q_B_NED[1] = pDyn->get_q_B_NED()[1];
+        truthNavData.q_B_NED[2] = pDyn->get_q_B_NED()[2];
+        truthNavData.q_B_NED[3] = pDyn->get_q_B_NED()[3];
+    }
     
-    truthNavData.velBody[0] = pDyn->getVelBody()[0].mps();
-    truthNavData.velBody[1] = pDyn->getVelBody()[1].mps();
-    truthNavData.velBody[2] = pDyn->getVelBody()[2].mps();
-    
-    truthNavData.velNED[0] = pDyn->getVelNED()[0].mps();
-    truthNavData.velNED[1] = pDyn->getVelNED()[1].mps();
-    truthNavData.velNED[2] = pDyn->getVelNED()[2].mps();
-    
-    truthNavData.accelBody[0] = pDyn->getAccBody()[0];
-    truthNavData.accelBody[1] = pDyn->getAccBody()[1];
-    truthNavData.accelBody[2] = pDyn->getAccBody()[2];
-    
-    truthNavData.bodyRates[0] = pDyn->getBodyRates()[0].rps();
-    truthNavData.bodyRates[1] = pDyn->getBodyRates()[1].rps();
-    truthNavData.bodyRates[2] = pDyn->getBodyRates()[2].rps();
-    
-    truthNavData.eulerAngles[0] = pDyn->getEulerAngles()[0].rad();
-    truthNavData.eulerAngles[1] = pDyn->getEulerAngles()[1].rad();
-    truthNavData.eulerAngles[2] = pDyn->getEulerAngles()[2].rad();
-    
-    truthNavData.eulerRates[0] = pDyn->getEulerRates()[0].rps();
-    truthNavData.eulerRates[1] = pDyn->getEulerRates()[1].rps();
-    truthNavData.eulerRates[2] = pDyn->getEulerRates()[2].rps();
+    if (pAtmo)
+    {
+        truthNavData.gravity = pAtmo->getGravity();
+        
+        truthNavData.gravityBody[0] = pAtmo->getGravityBody()[0];
+        truthNavData.gravityBody[1] = pAtmo->getGravityBody()[1];
+        truthNavData.gravityBody[2] = pAtmo->getGravityBody()[2];
+        
+        truthNavData.gravityNED[0] = pAtmo->getGravityNED()[0];
+        truthNavData.gravityNED[1] = pAtmo->getGravityNED()[1];
+        truthNavData.gravityNED[2] = pAtmo->getGravityNED()[2];
+    }
     
     for (int i=0; i<3; i++)
     {
-        NavError.position[i]    = truthNavData.position[i]    - NavData.position[i];
-        NavError.velBody[i]     = truthNavData.velBody[i]     - NavData.velBody[i];
-        NavError.velNED[i]      = truthNavData.velNED[i]      - NavData.velNED[i];
+        NavError.position[i]    = truthNavData.position[i]     - NavData.position[i];
+        NavError.velBody[i]     = truthNavData.velBody[i]      - NavData.velBody[i];
+        NavError.velNED[i]      = truthNavData.velNED[i]       - NavData.velNED[i];
+        NavError.gravityBody[i] = truthNavData.gravityBody[i]  - NavData.gravityBody[i];
+        NavError.gravityNED[i]  = truthNavData.gravityNED[i]  - NavData.gravityNED[i];
         NavError.bodyRates[i]   = (truthNavData.bodyRates[i]   - NavData.bodyRates[i]) / deg2rad;
-        NavError.accelBody[i]   = truthNavData.accelBody[i]   - NavData.accelBody[i];
+        NavError.accelBody[i]   = truthNavData.accelBody[i]    - NavData.accelBody[i];
         NavError.eulerAngles[i] = (truthNavData.eulerAngles[i] - NavData.eulerAngles[i]) / deg2rad;
         NavError.eulerRates[i]  = (truthNavData.eulerRates[i]  - NavData.eulerRates[i]) / deg2rad;
+        NavError.q_B_NED[i]     = truthNavData.q_B_NED[i]      - NavData.q_B_NED[i];
     }
     NavError.position[0] /= deg2rad;
     NavError.position[1] /= deg2rad;
+    
+    NavError.q_B_NED[3] = truthNavData.q_B_NED[3] - NavData.q_B_NED[3];
+    
+    NavError.speed = truthNavData.speed - NavData.speed;
+    NavError.gravity = truthNavData.gravity - NavData.gravity;
 #endif
 }
 
 void FsNavigation_bodyToNED(double* vNED, double* vB)
 {
     // vNED = q_B_NED * vB * q_B_NED'
-    double q1 = NavData.q_B_NED[0];
-    double q2 = NavData.q_B_NED[1];
-    double q3 = NavData.q_B_NED[2];
-    double q4 = NavData.q_B_NED[3];
+    double q1 =  NavData.q_B_NED[0];
+    double q2 = -NavData.q_B_NED[1];
+    double q3 = -NavData.q_B_NED[2];
+    double q4 = -NavData.q_B_NED[3];
     
     vNED[0] = (2*q1*q1-1+2*q2*q2)*vB[0] + 2*(q2*q3 + q1*q4)  *vB[1] + 2*(q2*q4 - q1*q3)  *vB[2];
     vNED[1] = 2*(q2*q3 - q1*q4)  *vB[0] + (2*q1*q1-1+2*q3*q3)*vB[1] + 2*(q3*q4 + q1*q2)  *vB[2];
@@ -469,10 +515,10 @@ void FsNavigation_NEDToBody(double* vB, double* vNED)
 {
     // vB = q_B_NED' * vNED * q_B_NED
     
-    double q1 =  NavData.q_B_NED[0];
-    double q2 = -NavData.q_B_NED[1];
-    double q3 = -NavData.q_B_NED[2];
-    double q4 = -NavData.q_B_NED[3];
+    double q1 = NavData.q_B_NED[0];
+    double q2 = NavData.q_B_NED[1];
+    double q3 = NavData.q_B_NED[2];
+    double q4 = NavData.q_B_NED[3];
     
     vB[0] = (2*q1*q1-1+2*q2*q2)*vNED[0] + 2*(q2*q3 + q1*q4)  *vNED[1] + 2*(q2*q4 - q1*q3)  *vNED[2];
     vB[1] = 2*(q2*q3 - q1*q4)  *vNED[0] + (2*q1*q1-1+2*q3*q3)*vNED[1] + 2*(q3*q4 + q1*q2)  *vNED[2];

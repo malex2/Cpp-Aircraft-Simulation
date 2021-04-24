@@ -30,6 +30,8 @@ public:
     SpeedType<double>* getVelWindBody(void) { return velWindBody; }
     SpeedType<double>* getVelWindNED(void)  { return velWindNED; }
     double             getGravity(void)     { return gravity; }
+    double*            getGravityNED(void)  { return nedGravity; }
+    double*            getGravityBody(void) { return bodyGravity; }
     double*            getAir(void)         { return air; }
     double             getRe(void)          { return Re;  }
     double             getMach(void)        { return Mach; }

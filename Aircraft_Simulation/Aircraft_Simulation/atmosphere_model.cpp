@@ -19,18 +19,18 @@ AtmosphereModel::AtmosphereModel(ModelMap *pMapInit, bool debugFlagIn)
     pDyn    = NULL;
     pMap    = pMapInit;
     
-    /*
-    pMap->addLogVar("Body Gravity X", &bodyGravity[0], savePlot, 2);
-    pMap->addLogVar("Body Gravity Y", &bodyGravity[1], savePlot, 2);
-    pMap->addLogVar("Body Gravity Z", &bodyGravity[2], savePlot, 2);
-    pMap->addLogVar("Grav", &gravity, savePlot, 2);
-    pMap->addLogVar("Wx  ", &bodyForce[0], savePlot, 2);
-    pMap->addLogVar("Wy  ", &bodyForce[1], savePlot, 2);
-    pMap->addLogVar("Wz  ", &bodyForce[2], savePlot, 2);
-    pMap->addLogVar("W   ", &LLForce[2], savePlot, 3);
-    pMap->addLogVar("Re  ", &Re, savePlot, 2);
-    pMap->addLogVar("Mach", &Mach, savePlot, 2);
-    */
+    
+    //pMap->addLogVar("Body Gravity X", &bodyGravity[0], savePlot, 2);
+    //pMap->addLogVar("Body Gravity Y", &bodyGravity[1], savePlot, 2);
+    //pMap->addLogVar("Body Gravity Z", &bodyGravity[2], savePlot, 2);
+    //pMap->addLogVar("Grav", &gravity, savePlot, 2);
+    //pMap->addLogVar("Wx  ", &bodyForce[0], savePlot, 2);
+    //pMap->addLogVar("Wy  ", &bodyForce[1], savePlot, 2);
+    //pMap->addLogVar("Wz  ", &bodyForce[2], savePlot, 2);
+    //pMap->addLogVar("W   ", &LLForce[2], savePlot, 3);
+    //pMap->addLogVar("Re  ", &Re, savePlot, 2);
+    //pMap->addLogVar("Mach", &Mach, savePlot, 2);
+    
     
     util.setArray(nedGravity, zero_init, 3);
     util.setArray(bodyGravity, zero_init, 3);
