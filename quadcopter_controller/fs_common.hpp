@@ -19,6 +19,8 @@
     #include "model_mapping.hpp"
     #include "arduino_class_models.hpp"
     #include <iostream>
+    #include <iomanip>
+    #include <fstream>
     typedef std::string String;
 #endif
 
@@ -27,13 +29,18 @@ struct IMUtype;
 struct NavType;
 struct ControlType;
 class ModelMap;
+class Utilities;
 
 // Types
 enum channelType {THROTTLE, ROLL, PITCH, YAWRATE, nChannels};
 
 // Constants
 const double deg2rad = M_PI/180.0;
-const double RE = 6371e+3;
+const double deg2rad2 = deg2rad*deg2rad;
+const double RE  = 6371e+3;
+const double GMe = 3.9857e+14;
+const double earthRotationRate = 7.292115*pow(10,-5);
+
 // Pulse In Pins
 #define THROTTLEPIN  7  // CH3
 #define ROLLPIN      8  // CH4

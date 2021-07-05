@@ -37,6 +37,8 @@ public:
     
     // Update forces and moments
     virtual bool update(void) { return true; };
+    
+    virtual void setDebugFlag(bool flag);
 };
 
 class GenericForceModel : public GenericModel {

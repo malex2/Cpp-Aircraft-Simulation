@@ -72,6 +72,8 @@ struct NavType {
     double gravity;
     
     double dVelocity[3];
+    double dVelocityCorrected[3];
+    double dVelocityNED[3];
     double dTheta[3];
     
     double eulerAngles[3];
@@ -91,6 +93,7 @@ struct NavType {
     bool useMag;
     
     double imuDt;
+    double navDt;
     NavState state;
     double timestamp;
     
@@ -102,6 +105,7 @@ struct NavType {
         useAcc  = false;
         useMag  = false;
         imuDt   = 0.0;
+        navDt   = 0.0;
         state   = Calibration;
         timestamp = 0.0;
         
@@ -115,6 +119,8 @@ struct NavType {
             gravityNED[i]  = 0.0;
             gravityBody[i] = 0.0;
             dVelocity[i]   = 0.0;
+            dVelocityCorrected[i] = 0.0;
+            dVelocityNED[i] = 0.0;
             dTheta[i]      = 0.0;
             eulerAngles[i] = 0.0;
             eulerRates[i]  = 0.0;
@@ -136,6 +142,7 @@ void FsNavigation_setupNavigation(double *initialPosition);
 // Perform
 void FsNavigation_performNavigation();
 
+void updateGravity();
 void applyCalibration();
 void performARHS();
 void performINS();

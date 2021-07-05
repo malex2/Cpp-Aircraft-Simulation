@@ -1452,6 +1452,7 @@ template void Utilities::crossProduct(double*, double*, DistanceType<double>*);
 
 template void Utilities::crossProduct(double*, SpeedType<double>*, DistanceType<double>*);
 template void Utilities::crossProduct(double*, SpeedType<double>*, AngleRateType<double>*);
+template void Utilities::crossProduct(double*, AngleRateType<double>*, SpeedType<double>*);
 
 template int Utilities::dotProduct(int* , int* , int);
 template float Utilities::dotProduct(float* , float* , int);

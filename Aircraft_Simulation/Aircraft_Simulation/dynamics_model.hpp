@@ -63,6 +63,7 @@ private:
     class AtmosphereModel     *pAtmo;
     class Time                *pTime;
     
+    double deltaCount;
     double posBody[3];                 // Lat (rad), Lon (rad), Alt (m)
     double posBodyPrint[3];             // Lat (deg), Lon (deg), Alt (ft)
     DistanceType<double> posRelNED[3];  // N, E, D distance from start
@@ -92,6 +93,7 @@ private:
     
     double dPosBody[3]; // Lat rate, Lon rate, Alt rate
     double accBody[3];
+    double accNED[3];
     
     AngleType<double> eulerAngles[3];
     double q_B_NED[4];

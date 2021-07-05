@@ -60,6 +60,8 @@ public:
     void eulerRateToBodyRate(AngleRateType<double> *bodyRates, AngleRateType<double> *eulerRates);
     void bodyRateToEulerRate(AngleRateType<double> *eulerRates, AngleRateType<double> *bodyRates);
 
+    // Getters
+    double* getq_B_NED(void) { return q_B_NED; }
 private:
     
     // Classes

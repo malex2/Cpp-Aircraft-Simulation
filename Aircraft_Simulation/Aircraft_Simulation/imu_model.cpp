@@ -118,6 +118,9 @@ IMUModelBase::IMUModelBase(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("IMU normal acc y (g)", &accNormalBody[1], savePlot, 2);
     //pMap->addLogVar("IMU normal acc z (g)", &accNormalBody[2], savePlot, 2);
     //pMap->addLogVar("dPitch", &dTheta[1], printSavePlot, 3);
+    //pMap->addLogVar("dVelocity X", &dVelocity[0], savePlot, 2);
+    //pMap->addLogVar("dVelocity Y", &dVelocity[1], savePlot, 2);
+    //pMap->addLogVar("dVelocity Z", &dVelocity[2], savePlot, 2);
     //pMap->addLogVar("IntSumTime", &sumTime, printSavePlot, 3);
     
     //pMap->addLogVar("IMU mag x (uT)", &magInUnits[0], savePlot, 2);
@@ -168,7 +171,6 @@ bool IMUModelBase::update(void)
     
     imuReady = true;
     
-    // Convert to raw
     if (debugFlag)
     {
         // Gyroscope
@@ -188,6 +190,10 @@ bool IMUModelBase::update(void)
         util.print(accError, 3, "Accelerometer Errors");
         util.print(accInUnits, 3, "Acclerometer In Units");
         util.print(accSensor, 3, "Accelerometer Raw");
+        
+        // Integrals
+        util.print(dTheta, 3, "dTheta");
+        util.print(dVelocity, 3, "dVelocity");
         
         // Magnetometer
         util.print(magNED, 3, "NED Magnetic Field");
@@ -232,7 +238,7 @@ void IMUModelBase::accelerometerModel(void)
     
     // Normal Acceleration
     util.crossProduct(velNormalBody, bodyRates, sensorFramePosition);
-    util.crossProduct(accNormalBody, velNormalBody, bodyRates);
+    util.crossProduct(accNormalBody, bodyRates, velNormalBody);
     
     // Total Body Acceleration
     util.vAdd(accRotationBody, accTangentBody, accNormalBody, 3);
@@ -353,16 +359,16 @@ QuadcopterIMUModel::QuadcopterIMUModel(ModelMap *pMapInit, bool debugFlagIn) : I
     gyroBias[0] = 0.02;
     gyroBias[1] = -0.08;
     gyroBias[2] = 0.05;
-    //gyroNoiseMax[0] = 0.15;
-    //gyroNoiseMax[1] = 0.35;
-    //gyroNoiseMax[2] = 0.15;
+    gyroNoiseMax[0] = 0.15;
+    gyroNoiseMax[1] = 0.35;
+    gyroNoiseMax[2] = 0.15;
     
     accBias[0] = 0.01;
     accBias[1] = -0.03;
     accBias[2] = 0.08;
-    //accNoiseMax[0] = 0.02;
-    //accNoiseMax[1] = 0.02;
-    //accNoiseMax[2] = 0.02;
+    accNoiseMax[0] = 0.02;
+    accNoiseMax[1] = 0.02;
+    accNoiseMax[2] = 0.02;
 
     magBias[0] = 1.0;
     magBias[1] = -2.0;

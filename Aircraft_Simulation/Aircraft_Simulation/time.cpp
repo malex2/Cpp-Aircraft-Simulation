@@ -81,6 +81,11 @@ bool Time::update(void)
     timeSinceLastClockDt  = systemtime - lastClockDt;
 #endif
     
+    timeSinceLastDynamics += dtPad;
+    timeSinceLastPrint += dtPad;
+    timeSinceLastSave += dtPad;
+    timeSinceLastClockDt += dtPad;
+    
     if (timeSinceLastDynamics >= dynamicsInterval)
     {
         lastDynamicTime = systemtime;
@@ -105,9 +110,11 @@ bool Time::update(void)
     if (timeSinceLastClockDt >= clock_dt)
     {
         lastClockDt = systemtime;
-        counter++;
+        clockCounter++;
     }
-        
+    
+    counter++;
+    
     // Udpate stop criteria
     if ( curTime > runTime )
     {

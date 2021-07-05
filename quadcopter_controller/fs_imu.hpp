@@ -15,23 +15,22 @@
 struct IMUtype {
     double accel[3];
     double dVelocity[3];
-    
     double gyro[3];
     double dTheta[3];
     
     double temp;
     
-    double    dCount;
+    double dCount;
     double timestamp;
     
     IMUtype()
     {
         for (int i=0; i<3; i++)
         {
-            accel[i]     = 0;
-            dVelocity[i] = 0;
-            gyro[i]      = 0;
-            dTheta[i]    = 0;
+            accel[i]     = 0.0;
+            dVelocity[i] = 0.0;
+            gyro[i]      = 0.0;
+            dTheta[i]    = 0.0;
         }
         temp = 0;
         dCount = 0;
@@ -60,6 +59,7 @@ void FsImu_zeroDelta(bool zero);
 // Internal Functions
 void readIMU();
 void groundCalibration();
+void updateRotation();
 void updateDelta();
 
 void FsImu_setSimulationModels(ModelMap* pMap);

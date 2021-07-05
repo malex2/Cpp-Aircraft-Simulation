@@ -21,12 +21,13 @@ public:
     
     // Getters
     systemTime getSystemTime(void) { return systemtime; }
-    double getSimTime(void)         { return curTime; }
+    double getSimTime(void)        { return curTime; }
     bool  performPrint(void)       { return print; }
     bool  performSave(void)        { return save; }
     bool  performDynamics(void)    { return dynamics; }
-    int   getCount(void)           { return counter; } // get counter at clock_dt rate
-    double getDeltaTime(void)       { return dt; }      // get delta time of simulation
+    int   getCount(void)           { return counter; }      // get counter
+    int   getClockCount(void)      { return clockCounter; } // get counter at clock_dt rate
+    double getDeltaTime(void)      { return dt; }           // get delta time of simulation
     
     // Functions
     virtual bool update(void);
@@ -51,12 +52,14 @@ private:
     double dynamicsInterval;
     double printInterval;
     double saveInterval;
+    const double dtPad = 1e-10;
     
     // Getters
     bool print;
     bool save;
     bool dynamics;
     int  counter;
+    int  clockCounter;
 };
 
 #endif /* Time_hpp */

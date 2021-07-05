@@ -22,8 +22,9 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     
     pMap = pMapInit;
     
-    pMap->addLogVar("Lat", &posBodyPrint[0], savePlot, 2);
-    pMap->addLogVar("Lon", &posBodyPrint[1], savePlot, 2);
+    //pMap->addLogVar("Dyn deltaCount", &deltaCount, savePlot, 2);
+    //pMap->addLogVar("Lat", &posBodyPrint[0], savePlot, 2);
+    //pMap->addLogVar("Lon", &posBodyPrint[1], savePlot, 2);
     pMap->addLogVar("Alt", &posBody[2], savePlot, 2);
     
     //pMap->addLogVar("N (m)", &posRelNED[0].val, savePlot, 2);
@@ -37,12 +38,12 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("VbY  ", &velBody[1].val, savePlot, 2);
     //pMap->addLogVar("VbZ  ", &velBody[2].val, printSavePlot, 3);
     
-    //pMap->addLogVar("VN  ", &velNED[0].val, savePlot, 2);
+    pMap->addLogVar("VN  ", &velNED[0].val, savePlot, 2);
     //pMap->addLogVar("VE  ", &velNED[1].val, savePlot, 2);
-    //pMap->addLogVar("VD  ", &velNED[2].val, savePlot, 2);
+    pMap->addLogVar("VD  ", &velNED[2].val, savePlot, 2);
     
     //pMap->addLogVar("Roll Rate", &eulerRatesDeg[0].val, savePlot, 2);
-    //pMap->addLogVar("Pitch Rate", &eulerRatesDeg[1].val, savePlot, 2);
+    pMap->addLogVar("Pitch Rate", &eulerRatesDeg[1].val, savePlot, 2);
     //pMap->addLogVar("Yaw Rate", &eulerRatesDeg[2].val, savePlot, 2);
     
     //pMap->addLogVar("pdot", &bodyAngularAcc[0], printSavePlot, 3);
@@ -74,11 +75,13 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
  
     //pMap->addLogVar("Body Accel X", &accBody[0], printSavePlot, 3);
     //pMap->addLogVar("Body Accel Y", &accBody[1], savePlot, 2);
-    //pMap->addLogVar("Body Accel Z", &accBody[2], printSavePlot, 3);
+    pMap->addLogVar("Body Accel Z", &accBody[2], savePlot, 2);
     
     //pMap->addLogVar("SumMX", &bodyMoment[0], savePlot, 2);
     //pMap->addLogVar("SumMY", &bodyMoment[1], savePlot, 2);
     //pMap->addLogVar("SumMZ", &bodyMoment[2], savePlot, 2);
+    
+    deltaCount = 0;
     
     // Initialize Angles
     util.setUnitClassArray(eulerAngles, eulerAngles_init, degrees, 3);
@@ -187,12 +190,23 @@ void DynamicsModel::initialize(void)
 
 bool DynamicsModel::update(void)
 {
+    updateDt(pTime);
+    
+    static int prevCount = 0;
+    deltaCount = counter - prevCount;
+    prevCount = counter;
+    
     if (debugFlag) { printf("Dynamics Model Update:\n"); }
+    
     // Setup print variables
     util.setUnitClassUnit(eulerAnglesDeg, radians, 3);
     util.setUnitClassUnit(eulerCheckDeg, radians, 3);
     util.setUnitClassUnit(bodyRatesDeg, radiansPerSecond, 3);
     util.setUnitClassUnit(eulerRatesDeg, radiansPerSecond, 3);
+    
+    // Previous States
+    SpeedType<double> prevVelNED[3];
+    util.setArray(prevVelNED, velNED, 3);
     
     // Update forces
     if (testDynamics)
@@ -254,25 +268,7 @@ bool DynamicsModel::update(void)
     util.setArray(temp2, eulerRates, 3);
     util.vgain(temp2, dt, 3);
     util.vAdd(eulerCheck, eulerAngles, temp2, 3);
-    /*
-    // Way 2: q = q*dq, dq = quaterion(omega*dt, bodyRates/omega)
-    double angle;
-    double bodyRatesUnit[3];
-    static double q_B_NED2[4] = {1,0,0,0};
-    static bool set2 = false;
-    double dQ[4] = {1,0,0,0};
-    double eulerAngles2[3] = {0,0,0};
-    double eulerError2[3];
-    if (!set2) { util.setArray(q_B_NED2, q_B_NED, 4); set2 = true; }
     
-    angle = util.mag(bodyRates, 3) / util.deg2rad * dt;
-    util.setArray(bodyRatesUnit, bodyRates, 3);
-    util.unitVector(bodyRatesUnit, 3);
-    util.initQuaternion(dQ, angle, bodyRatesUnit);
-    util.quaternionProduct(q_B_NED2, q_B_NED2, dQ);
-    util.unitVector(q_B_NED2,4);
-    util.quaternionToEuler(eulerAngles2, q_B_NED2);
-    */
     // Update body orientation  (qdot = 0.5 * q * [0 wx wy wz])
     util.vecToQuat(tempQuat, bodyRates);
     util.quaternionProduct(q_B_NED_dot, q_B_NED, tempQuat);
@@ -283,56 +279,7 @@ bool DynamicsModel::update(void)
     util.unitVector(q_B_NED, 4);
     
     util.quaternionToEuler(eulerAngles, q_B_NED);
-    /*for (int i=0; i<3; i++) { eulerError2[i] = eulerAngles[i].deg() - eulerAngles2[i]; }
-    
-    // Way 3:
-    static int counter = 0;
-    int countRate = 20;
-    static double q_B_NED3[4] = {1,0,0,0};
-    static bool set3 = false;
-    static double dAngles[3] = {0,0,0};
-    double dAnglesUnit[3];
-    if (!set3) { util.setArray(q_B_NED3, q_B_NED, 4); set3 = true; }
-    for (int i=0; i<3; i++) { dAngles[i] += bodyRates[i].dps()*dt; }
-    
-    if (counter % countRate == 0)
-    {
-        double angle;
-        double dQ[4] = {1,0,0,0};
-        double eulerAngles3[3] = {0,0,0};
-        double eulerError3[3] = {0,0,0};
-        
-        angle = util.mag(dAngles, 3);
-        util.setArray(dAnglesUnit, dAngles, 3);
-        util.unitVector(dAnglesUnit, 3);
-        util.initQuaternion(dQ, angle, dAnglesUnit);
-        util.quaternionProduct(q_B_NED3, q_B_NED3, dQ);
-        util.unitVector(q_B_NED3, 4);
-        util.quaternionToEuler(eulerAngles3, q_B_NED3);
-        
-        std::cout << "Time: " << pTime->getSimTime() << " " << counter << std::endl;
-        util.print(q_B_NED, 4, "q_B_NED:");
-        util.print(q_B_NED3, 4, "q_B_NED3:");
-        
-        util.print(dAngles, 3, "dAngles:");
-        util.print(eulerAngles, degrees, 3, "eulerAngles:");
-        util.print(eulerAngles3, 3, "eulerAngles3:");
-        
-        for (int i=0; i<3; i++) { dAngles[i] = 0.0; }
-        
-        for (int i=0; i<3; i++) { eulerError3[i] = eulerAngles[i].deg() - eulerAngles3[i]; }
-        util.print(eulerError3, 3, "eulerError3:");
-        
-        
-        util.print(q_B_NED, 4, "q_B_NED:");
-        util.print(q_B_NED2, 4, "q_B_NED2:");
-        
-        util.print(eulerAngles, degrees, 3, "eulerAngles:");
-        util.print(eulerAngles2, 3, "eulerAngles2:");
-        util.print(eulerError2, 3, "eulerError2:");
-    }
-    counter++;
-    */
+   
     // Extract yaw and copmute q_B_LL
     util.setArray(temp1, zero_init, 3);
     temp1[2] = -eulerAngles[2].deg(); // -yaw
@@ -344,6 +291,7 @@ bool DynamicsModel::update(void)
     
     // NED frame velocity
     pRotate->bodyToNED(velNED, velBody);
+    pRotate->bodyToNED(accNED, accBody);
     
     // Update other velocities
     gndVel.val = util.mag(velNED, 3);
@@ -356,19 +304,19 @@ bool DynamicsModel::update(void)
     util.vAdd(posRelNED, posRelNED, temp1, 3);
     
     // Altitude
-    dPosBody[2] = -velNED[2].mps(); // Altitude rate in m/s
-    posBody[2]  = posBody[2] + dPosBody[2]*dt;
+    dPosBody[2] = -(prevVelNED[2].mps()*dt + 0.5*accNED[2]*dt*dt); // Altitude rate in m/s
+    posBody[2]  = posBody[2] + dPosBody[2];
     
     hGround.val = posBody[2] - elevation.m();
     hGroundft   = hGround.ft();
     hCenter.val = Rearth + posBody[2];
     
     // Latitude and Longitude
-    dPosBody[0] = velNED[0].mps() / ( hCenter.m() );  // Latitude rate in rad/s
-    dPosBody[1] = velNED[1].mps() / ( hCenter.m() );  // Longitude rate in rad/s
+    dPosBody[0] = prevVelNED[0].mps()*dt + 0.5*accNED[0]*dt*dt;  // Latitude rate in rad/s
+    dPosBody[1] = prevVelNED[1].mps()*dt + 0.5*accNED[1]*dt*dt;  // Longitude rate in rad/s
     
-    posBody[0] = posBody[0] + dPosBody[0]*dt;
-    posBody[1] = posBody[1] + dPosBody[1]*dt;
+    posBody[0] = posBody[0] + dPosBody[0]/hCenter.m(); // L = L + distance/radius
+    posBody[1] = posBody[1] + dPosBody[1]/hCenter.m();
     
     // Store print variables
     posBodyPrint[0] = posBody[0]/util.deg2rad;

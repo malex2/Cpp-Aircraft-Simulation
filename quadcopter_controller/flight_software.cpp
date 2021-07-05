@@ -34,10 +34,16 @@ double routineDelays[nRoutines];
 bool   performRoutine[nRoutines];
 double actualDelays[nRoutines];
 
+// Timing Accuracy
+long int loopCount;
+long int routineCount[nRoutines];
+long int routineCountDelta[nRoutines];
+
 // Event keeping (s)
 enum {startGNC, imuWarmup, nEvents};
 double eventStartTimes[nEvents];
 bool eventStarted[nEvents];
+const double dtPad = 1e-10;
 
 // IMU
 IMUtype* pIMUdata = 0;
@@ -47,6 +53,7 @@ gyroSensitivityType gyroSensitivity;
 // Navigation
 bool useTruthNav;
 double useAcc = 0.0;
+double navState = 0.0;
 double initialPosition[3];
 NavType* pNavData = 0;
 #ifdef SIMULATION
@@ -64,9 +71,12 @@ double eulerRatesDps[3];
 double bodyRatesDps[3];
 double dVelIMU[3];
 double dThetaIMU[3];
+double fsTime;
+double countDelta50hz;
 
 // Errors
 double positionError[3];
+double altitudeError;
 double velocityError[3];
 double attitudeError[3];
 double attitdeCmdError[3];
@@ -105,13 +115,20 @@ void initialize(void)
     routineDelays[hz800] = 1.0/800.0;
     routineDelays[printRoutine] = 0.5;
     
+    // Time Accuracy
+    loopCount = 0;
+    for (int i=0; i<nRoutines; i++)
+    {
+        routineCount[i] = 0;
+        routineCountDelta[i] = 0;
+    }
+    
     // Event Settings
     eventStartTimes[imuWarmup] = 1.0;
     
     // Finish Setup
     getModels();
     setup();
-    
 }
 
 // **********************************************************************
@@ -134,7 +151,7 @@ bool mainFlightSoftware(void)
     // Update Routine Booleans
     for (int i=0; i<nRoutines; i++)
     {
-        performRoutine[i] = getTime() - prevTime[i] >= routineDelays[i];
+        performRoutine[i] = getTime() + dtPad - prevTime[i] >= routineDelays[i];
     }
 
     // 800 houtine
@@ -143,6 +160,9 @@ bool mainFlightSoftware(void)
         // Timing info
         actualDelays[hz800] = getTime() - prevTime[hz800];
         prevTime[hz800] = getTime();
+        
+        routineCountDelta[hz800] = loopCount - routineCount[hz800];
+        routineCount[hz800] = loopCount;
         
         // Update IMU
         FsImu_performIMU();
@@ -165,6 +185,9 @@ bool mainFlightSoftware(void)
         actualDelays[hz200] = getTime() - prevTime[hz200];
         prevTime[hz200] = getTime();
         
+        routineCountDelta[hz200] = loopCount - routineCount[hz200];
+        routineCount[hz200] = loopCount;
+        
         // Calibrate Navigation
         FsNavigation_setIMUdata(pIMUdata);
         FsNavigation_calibrateIMU();
@@ -174,6 +197,9 @@ bool mainFlightSoftware(void)
     {
         actualDelays[hz100] = getTime() - prevTime[hz100];
         prevTime[hz100] = getTime();
+        
+        routineCountDelta[hz100] = loopCount - routineCount[hz100];
+        routineCount[hz100] = loopCount;
     }
     
     // 50 hz routine
@@ -182,6 +208,9 @@ bool mainFlightSoftware(void)
         actualDelays[hz50] = getTime() - prevTime[hz50];
         prevTime[hz50] = getTime();
 
+        routineCountDelta[hz50] = loopCount - routineCount[hz50];
+        routineCount[hz50] = loopCount;
+        
         // Update Inertial Navigation
         FsNavigation_performNavigation();
         pNavData = FsNavigation_getNavData(useTruthNav);
@@ -208,8 +237,13 @@ bool mainFlightSoftware(void)
     }
 
     // Print Variables
+    countDelta50hz = static_cast<double> (routineCountDelta[hz50]);
+    fsTime = getTime();
+    
     if (pNavData->useAcc) { useAcc = 1.0; }
     else { useAcc = 0.0; }
+    
+    navState = static_cast<double> (pNavData->state);
     
     pNavError = FsNavigation_getNavError();
     for (int i=0; i<3; i++)
@@ -219,7 +253,9 @@ bool mainFlightSoftware(void)
         eulerRatesDps[i]  = pNavData->eulerRates[i]/deg2rad;
         bodyRatesDps[i]   = pNavData->bodyRates[i]/deg2rad;
     }
+    altitudeError = -pNavError->position[2];
     
+    loopCount++;
     return true;
 }
 
@@ -264,10 +300,14 @@ void flightSoftware_setMapPointer(ModelMap* pMapInit)
 void setPrintVariables()
 {
 #ifdef SIMULATION
+    // Timing
+    //pMap->addLogVar("fsTime" , &fsTime, savePlot, 2);
+    //pMap->addLogVar("countDelta50hz", &countDelta50hz, savePlot, 2);
+    
     // IMU
     //pMap->addLogVar("IMU Acc X" , &pIMUdata->accel[0], savePlot, 2);
     //pMap->addLogVar("IMU Acc Y" , &pIMUdata->accel[1], savePlot, 2);
-    //pMap->addLogVar("IMU Acc Z" , &pIMUdata->accel[2], savePlot, 2);
+    //pMap->addLogVar("IMU Acc Z" , &pIMUdata->accel[2], printSavePlot, 3);
     
     //pMap->addLogVar("IMU Gyro X" , &pIMUdata->gyro[0], savePlot, 2);
     //pMap->addLogVar("IMU Gyro Y" , &pIMUdata->gyro[1], savePlot, 2);
@@ -282,18 +322,10 @@ void setPrintVariables()
     //pMap->addLogVar("IMU dTheta Z" , &dThetaIMU[2], savePlot, 2);
     
     // Navigation
-    pMap->addLogVar("Nav Lat" , &position[0], savePlot, 2);
-    pMap->addLogVar("Nav Lon" , &position[1], savePlot, 2);
+    //pMap->addLogVar("Nav Lat" , &position[0], savePlot, 2);
+    //pMap->addLogVar("Nav Lon" , &position[1], savePlot, 2);
     pMap->addLogVar("Nav wgs84 Alt", &pNavData->position[2], savePlot, 2);
     //pMap->addLogVar("Nav MSL Alt"  , &pNavData->mslAlt, savePlot, 2);
-    
-    //pMap->addLogVar("Nav Gravity Body X" , &pNavData->gravityBody[0], savePlot, 2);
-    //pMap->addLogVar("Nav Gravity Body Y" , &pNavData->gravityBody[1], savePlot, 2);
-    //pMap->addLogVar("Nav Gravity Body Z" , &pNavData->gravityBody[2], savePlot, 2);
-    
-    //pMap->addLogVar("Nav Acc Body X" , &pNavData->accelBody[0], savePlot, 2);
-    //pMap->addLogVar("Nav Acc Body Y" , &pNavData->accelBody[1], savePlot, 2);
-    //pMap->addLogVar("Nav Acc Body Z" , &pNavData->accelBody[2], savePlot, 2);
     
     //pMap->addLogVar("Nav Speed" , &pNavData->speed, savePlot, 2);
     
@@ -301,21 +333,30 @@ void setPrintVariables()
     //pMap->addLogVar("Nav vel Y" , &pNavData->velBody[1], savePlot, 2);
     //pMap->addLogVar("Nav vel Z" , &pNavData->velBody[2], printSavePlot, 3);
     
+    //pMap->addLogVar("Nav dVel X" , &pNavData->dVelocity[0], savePlot, 2);
+    //pMap->addLogVar("Nav dVel E" , &pNavData->dVelocity[1], savePlot, 2);
+    //pMap->addLogVar("Nav dVel Z" , &pNavData->dVelocity[2], savePlot, 2);
+    
     //pMap->addLogVar("Nav vel N" , &pNavData->velNED[0], savePlot, 2);
     //pMap->addLogVar("Nav vel E" , &pNavData->velNED[1], savePlot, 2);
     //pMap->addLogVar("Nav vel D" , &pNavData->velNED[2], savePlot, 2);
 
-    //pMap->addLogVar("IMU period", &pNavData->imuDt, printSavePlot, 3);
-    //pMap->addLogVar("Nav Use ACC" , &useAcc, savePlot, 2);
+    //pMap->addLogVar("imuDt", &pNavData->imuDt, printSavePlot, 3);
+    //pMap->addLogVar("navDt" , &pNavData->navDt, savePlot, 2);
+    //pMap->addLogVar("navstate", &navState, savePlot, 2);
     
-    pMap->addLogVar("Nav Roll" , &eulerAnglesDeg[0], savePlot, 2);
-    pMap->addLogVar("Nav Pitch", &eulerAnglesDeg[1], savePlot, 2);
-    pMap->addLogVar("Nav Yaw"  , &eulerAnglesDeg[2], savePlot, 2);
+    //pMap->addLogVar("Nav Roll" , &eulerAnglesDeg[0], savePlot, 2);
+    //pMap->addLogVar("Nav Pitch", &eulerAnglesDeg[1], savePlot, 2);
+    //pMap->addLogVar("Nav Yaw"  , &eulerAnglesDeg[2], savePlot, 2);
     
     //pMap->addLogVar("q[0]", &pNavData->q_B_NED[0], savePlot, 2);
     //pMap->addLogVar("q[1]", &pNavData->q_B_NED[1], savePlot, 2);
     //pMap->addLogVar("q[2]", &pNavData->q_B_NED[2], savePlot, 2);
     //pMap->addLogVar("q[3]", &pNavData->q_B_NED[3], savePlot, 2);
+    
+    //pMap->addLogVar("Nav Acc Body X" , &pNavData->accelBody[0], savePlot, 2);
+    //pMap->addLogVar("Nav Acc Body Y" , &pNavData->accelBody[1], savePlot, 2);
+    //pMap->addLogVar("Nav Acc Body Z" , &pNavData->accelBody[2], savePlot, 2);
     
     //pMap->addLogVar("Gravity Bx", &pNavData->gravityBody[0], savePlot, 2);
     //pMap->addLogVar("Gravity By", &pNavData->gravityBody[1], savePlot, 2);
@@ -342,25 +383,25 @@ void setPrintVariables()
     //pMap->addLogVar("qError[2]", &pNavError->q_B_NED[2], savePlot, 2);
     //pMap->addLogVar("qError[3]", &pNavError->q_B_NED[3], savePlot, 2);
     
-    //pMap->addLogVar("Roll Rate Error X", &pNavError->eulerRates[0], savePlot, 2);
-    //pMap->addLogVar("Pitch Rate Error Y", &pNavError->eulerRates[1], savePlot, 2);
-    //pMap->addLogVar("Yaw Rate Error", &pNavError->eulerRates[2], savePlot, 2);
+    pMap->addLogVar("Roll Rate Error X", &pNavError->eulerRates[0], savePlot, 2);
+    pMap->addLogVar("Pitch Rate Error Y", &pNavError->eulerRates[1], savePlot, 2);
+    pMap->addLogVar("Yaw Rate Error", &pNavError->eulerRates[2], savePlot, 2);
     
-    //pMap->addLogVar("Body Rate X Error", &pNavError->bodyRates[0], savePlot, 2);
-    //pMap->addLogVar("Body Rate Y Error", &pNavError->bodyRates[1], savePlot, 2);
-    //pMap->addLogVar("Body Rate Z Error", &pNavError->bodyRates[2], savePlot, 2);
+    pMap->addLogVar("Body Rate X Error", &pNavError->bodyRates[0], savePlot, 2);
+    pMap->addLogVar("Body Rate Y Error", &pNavError->bodyRates[1], savePlot, 2);
+    pMap->addLogVar("Body Rate Z Error", &pNavError->bodyRates[2], savePlot, 2);
     
     //pMap->addLogVar("Gravity Error", &pNavError->gravity, savePlot, 2);
     
-    //pMap->addLogVar("Gravity Bx Error", &pNavError->gravityBody[0], savePlot, 2);
+    pMap->addLogVar("Gravity Bx Error", &pNavError->gravityBody[0], savePlot, 2);
     //pMap->addLogVar("Gravity By Error", &pNavError->gravityBody[1], savePlot, 2);
-    //pMap->addLogVar("Gravity Bz Error", &pNavError->gravityBody[2], savePlot, 2);
+    pMap->addLogVar("Gravity Bz Error", &pNavError->gravityBody[2], savePlot, 2);
     
     //pMap->addLogVar("Gravity NED X Error", &pNavError->gravityNED[0], savePlot, 2);
     //pMap->addLogVar("Gravity NED Y Error", &pNavError->gravityNED[1], savePlot, 2);
     //pMap->addLogVar("Gravity NED Z Error", &pNavError->gravityNED[2], savePlot, 2);
     
-    //pMap->addLogVar("Vel Body X Error", &pNavError->velBody[0], savePlot, 2);
+    //pMap->addLogVar("Vel Body X Error", &pNavError->velBody[0], printSavePlot, 3);
     //pMap->addLogVar("Vel Body Y Error", &pNavError->velBody[1], savePlot, 2);
     //pMap->addLogVar("Vel Body Z Error", &pNavError->velBody[2], savePlot, 2);
     
@@ -368,15 +409,15 @@ void setPrintVariables()
     pMap->addLogVar("Vel E Error", &pNavError->velNED[1], savePlot, 2);
     pMap->addLogVar("Vel D Error", &pNavError->velNED[2], savePlot, 2);
     
-    //pMap->addLogVar("Speed Error", &pNavError->speed, savePlot, 2);
+    pMap->addLogVar("Speed Error", &pNavError->speed, savePlot, 2);
     
     pMap->addLogVar("Lat Error (deg)", &pNavError->position[0], savePlot, 2);
     pMap->addLogVar("Lon Error (deg)", &pNavError->position[1], savePlot, 2);
-    pMap->addLogVar("Alt Err (m)"    , &pNavError->position[2], savePlot, 2);
+    pMap->addLogVar("Alt Err (m)"    , &altitudeError, savePlot, 2);
     
-    //pMap->addLogVar("Acc Body X Error", &pNavError->accelBody[0], savePlot, 2);
+    pMap->addLogVar("Acc Body X Error", &pNavError->accelBody[0], savePlot, 2);
     //pMap->addLogVar("Acc Body Y Error", &pNavError->accelBody[1], savePlot, 2);
-    //pMap->addLogVar("Acc Body Z Error", &pNavError->accelBody[2], savePlot, 2);
+    pMap->addLogVar("Acc Body Z Error", &pNavError->accelBody[2], savePlot, 2);
 #endif
 }
 

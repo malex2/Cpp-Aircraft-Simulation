@@ -29,6 +29,7 @@ double navDt = 1.0/50.0;
 bool navSetup = false;
 bool imuCalibrated = false;
 bool magCalibrated = false;
+bool customPrint = false;
 
 // Accelerometer Acceptance Criteria
 double maxFilterAcc;
@@ -93,14 +94,22 @@ void FsNavigation_setupNavigation(double *initialPosition)
 void FsNavigation_performNavigation()
 {
     static double prevIMUtime = 0.0;
-    //NavData.imuDt = nav_pIMUdata->timestamp - prevIMUtime;
-    NavData.imuDt = nav_pIMUdata->dCount;
+    NavData.imuDt = nav_pIMUdata->timestamp - prevIMUtime;
+    //NavData.imuDt = nav_pIMUdata->dCount;
     prevIMUtime = nav_pIMUdata->timestamp;
     
+    // Nav dt
+    static double prevNavTime = 0.0;
+    navDt = getTime() - prevNavTime;
+    prevNavTime = getTime();
+    
+    NavData.navDt = navDt;
     // Determine Nav State
     if (imuCalibrated && magCalibrated) { NavData.state = INS; }
     
     if ( (NavData.state == Calibration) || (!navSetup) ) { return; }
+    
+    updateGravity();
     
     applyCalibration();
     
@@ -114,15 +123,22 @@ void FsNavigation_performNavigation()
     updateTruth();
 }
 
+void updateGravity()
+{
+    double hCenter;
+    hCenter = RE + NavData.position[2];
+    NavData.gravity = GMe/(hCenter*hCenter);
+}
+
 void applyCalibration()
 {
     for (int i=0; i<3; i++)
     {
-        NavData.bodyRates[i] = sensorToBody[i]*nav_pIMUdata->gyro[i]*deg2rad          - NavData.gyroBias[i];
+        NavData.bodyRates[i] = sensorToBody[i]*nav_pIMUdata->gyro[i]*deg2rad - NavData.gyroBias[i];
         NavData.accelIMUBody[i] = sensorToBody[i]*nav_pIMUdata->accel[i]*NavData.gravity - NavData.accBias[i];
         
-        NavData.dVelBias[i]   = NavData.gyroBias[i] * NavData.imuDt;
-        NavData.dThetaBias[i] = NavData.accBias[i]  * NavData.imuDt;
+        NavData.dVelBias[i]   = NavData.accBias[i] * NavData.imuDt;
+        NavData.dThetaBias[i] = NavData.gyroBias[i]  * NavData.imuDt;
         
         NavData.dVelocity[i] = sensorToBody[i]*nav_pIMUdata->dVelocity[i]*NavData.gravity - NavData.dVelBias[i];
         NavData.dTheta[i]    = sensorToBody[i]*nav_pIMUdata->dTheta[i]*deg2rad - NavData.dThetaBias[i];
@@ -146,7 +162,7 @@ void performARHS()
     double qedot[4];
     double df[4];
     double dfMag;
-    
+
     // Shorthand
     double* q = NavData.q_B_NED;
     
@@ -163,7 +179,6 @@ void performARHS()
         if (aMag > 0.01) { accelUnit[i]  = NavData.accelIMUBody[i] / aMag; }
         else             { accelUnit[i] = 0.0; }
     }
-    
     
     // Assess Acceleration
     NavData.useAcc = (aMag < maxFilterAcc*NavData.gravity) && (aMag > minFilterAcc*NavData.gravity) && (bodyRateMag < bodyRateThresh);
@@ -269,6 +284,10 @@ void performINS()
     double tp;
     double secp;
     double* q;
+    double prevVelNED[3];
+    double dPosition[3];
+    double coriolisAccel[3];
+    double omegaEarth[3];
     
     // Shorthand
     q = NavData.q_B_NED;
@@ -292,15 +311,37 @@ void performINS()
     NavData.gravityNED[2] = NavData.gravity;
     FsNavigation_NEDToBody(NavData.gravityBody, NavData.gravityNED);
     
+    // Coriolis Effect
+    omegaEarth[0] = earthRotationRate*cos(NavData.position[0]);
+    omegaEarth[1] = 0.0;
+    omegaEarth[2] = earthRotationRate*sin(NavData.position[0]);
+    
+    coriolisAccel[0] = omegaEarth[1]*NavData.velNED[2] - omegaEarth[2]*NavData.velNED[1];
+    coriolisAccel[1] = omegaEarth[2]*NavData.velNED[0] - omegaEarth[0]*NavData.velNED[2];
+    coriolisAccel[2] = omegaEarth[0]*NavData.velNED[1] - omegaEarth[1]*NavData.velNED[0];
+    
     // Body Acceleration
     for (int i=0; i<3; i++)
     NavData.accelBody[i] = NavData.accelIMUBody[i] + NavData.gravityBody[i];
     
+    // Delta Velocity
+    for (int i=0; i<3; i++)
+    {
+        // correct for gravity and corriolis effect
+        NavData.dVelocityCorrected[i] = NavData.dVelocity[i]
+        + NavData.gravityBody[i]*NavData.imuDt;
+        //- coriolisAccel[i]*NavData.imuDt;
+    }
+    FsNavigation_bodyToNED(NavData.dVelocityNED, NavData.dVelocityCorrected);
+    
     // Body Velocity
     for (int i=0; i<3; i++)
-    NavData.velBody[i] += (NavData.dVelocity[i] + NavData.gravityBody[i]*NavData.imuDt);
+    NavData.velBody[i] += NavData.dVelocityCorrected[i];
     
     // NED Velocity
+    for (int i=0; i<3; i++)
+    prevVelNED[i] = NavData.velNED[i];
+    
     FsNavigation_bodyToNED(NavData.velNED, NavData.velBody);
     
     // Speed
@@ -308,13 +349,19 @@ void performINS()
                     NavData.velNED[1]*NavData.velNED[1] +
                     NavData.velNED[2]*NavData.velNED[2] );
     
+    for (int i=0; i<3; i++)
+    {
+        dPosition[i] = prevVelNED[i]*navDt + 0.5*NavData.dVelocityNED[i]*navDt;
+    }
+    
     // Altitude
-    NavData.mslAlt      -= NavData.velNED[2]*navDt;
-    NavData.position[2] -= NavData.velNED[2]*navDt;
+    NavData.mslAlt      = NavData.mslAlt - dPosition[2];
+    NavData.position[2] = NavData.position[2] - dPosition[2];
     
     // Latitude, Longitude
-    NavData.position[0] += NavData.velNED[0]/(NavData.position[2] + RE) * navDt;
-    NavData.position[1] += NavData.velNED[1]/(NavData.position[2] + RE) * navDt;
+    NavData.position[0] = NavData.position[0] + dPosition[0]/(NavData.position[2] + RE);
+    NavData.position[1] = NavData.position[1] + dPosition[1]/(NavData.position[2] + RE);
+    //std::cout << "dPosition[2]: " << dPosition[2] << std::endl;
 }
 
 void FS_performGPSUpdate()
@@ -329,7 +376,6 @@ void FsNavigation_calibrateIMU()
     if (imuCalibrated) { return; }
     double tempAcc;
     double tempGyro;
-    double sum_std;
     
     // Get Sum
     for (int i=0; i<3; i++)
@@ -359,14 +405,17 @@ void FsNavigation_calibrateIMU()
         for (int i=0; i<3; i++)
         {
             gyroError[i].mean = gyroError[i].sum / maxCalCounter;
-            sum_std = gyroError[i].sumSqr - maxCalCounter*gyroError[i].mean - 2*gyroError[i].mean*gyroError[i].sum;
-            gyroError[i].variance = sum_std / maxCalCounter;
+            gyroError[i].variance = gyroError[i].sumSqr/maxCalCounter - (gyroError[i].sum/maxCalCounter)*(gyroError[i].sum/maxCalCounter);
+            if (gyroError[i].variance <= 0.0) { gyroError[i].variance = 0.0; }
             gyroError[i].std = sqrt(gyroError[i].variance);
             
             accelError[i].mean = accelError[i].sum / maxCalCounter;
-            sum_std = accelError[i].sumSqr - maxCalCounter*accelError[i].mean - 2*accelError[i].mean*accelError[i].sum;
-            accelError[i].variance = sum_std / maxCalCounter;
+            accelError[i].variance = accelError[i].sumSqr/maxCalCounter - (accelError[i].sum/maxCalCounter)*(accelError[i].sum/maxCalCounter);
+            if (accelError[i].variance <= 0.0) { accelError[i].variance = 0.0; }
             accelError[i].std = sqrt(accelError[i].variance);
+            
+            NavData.gyroBias[i] =  gyroError[i].mean;
+            NavData.accBias[i]  = accelError[i].mean;
         }
         
         gyroError[0].print();
@@ -463,6 +512,8 @@ void updateTruth()
     
     if (pAtmo)
     {
+        pAtmo->update();
+        
         truthNavData.gravity = pAtmo->getGravity();
         
         truthNavData.gravityBody[0] = pAtmo->getGravityBody()[0];
@@ -480,7 +531,7 @@ void updateTruth()
         NavError.velBody[i]     = truthNavData.velBody[i]      - NavData.velBody[i];
         NavError.velNED[i]      = truthNavData.velNED[i]       - NavData.velNED[i];
         NavError.gravityBody[i] = truthNavData.gravityBody[i]  - NavData.gravityBody[i];
-        NavError.gravityNED[i]  = truthNavData.gravityNED[i]  - NavData.gravityNED[i];
+        NavError.gravityNED[i]  = truthNavData.gravityNED[i]   - NavData.gravityNED[i];
         NavError.bodyRates[i]   = (truthNavData.bodyRates[i]   - NavData.bodyRates[i]) / deg2rad;
         NavError.accelBody[i]   = truthNavData.accelBody[i]    - NavData.accelBody[i];
         NavError.eulerAngles[i] = (truthNavData.eulerAngles[i] - NavData.eulerAngles[i]) / deg2rad;
@@ -494,6 +545,7 @@ void updateTruth()
     
     NavError.speed = truthNavData.speed - NavData.speed;
     NavError.gravity = truthNavData.gravity - NavData.gravity;
+    
 #endif
 }
 

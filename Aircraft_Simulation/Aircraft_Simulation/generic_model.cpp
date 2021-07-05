@@ -38,6 +38,11 @@ void GenericModel::updateDt(Time* pTime)
     }
 }
 
+void GenericModel::setDebugFlag(bool flag)
+{
+    debugFlag = flag;
+}
+
 GenericForceModel::GenericForceModel()
 {
     util.setArray(LLForce, zero_init, 3);

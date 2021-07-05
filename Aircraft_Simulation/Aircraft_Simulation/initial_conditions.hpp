@@ -22,9 +22,9 @@
 //#define RealTime
 
 // Time
-const double runTime_init          = 120;
+const double runTime_init          = 5;
 const double printInterval_init    = 0.1;
-const double saveInterval_init     = 0.01;
+const double saveInterval_init     = 1.0/800;
 const double dynamicsInterval_init = 1.0/800;
 const double clock_dt              = 1.0/800; // time interval when not in real time mode
 
