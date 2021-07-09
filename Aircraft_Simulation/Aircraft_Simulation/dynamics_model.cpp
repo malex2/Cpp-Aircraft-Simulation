@@ -25,7 +25,7 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("Dyn deltaCount", &deltaCount, savePlot, 2);
     //pMap->addLogVar("Lat", &posBodyPrint[0], savePlot, 2);
     //pMap->addLogVar("Lon", &posBodyPrint[1], savePlot, 2);
-    pMap->addLogVar("Alt", &posBody[2], savePlot, 2);
+    pMap->addLogVar("Alt", &posBody[2], printSavePlot, 3);
     
     //pMap->addLogVar("N (m)", &posRelNED[0].val, savePlot, 2);
     //pMap->addLogVar("E (m)", &posRelNED[1].val, savePlot, 2);
@@ -38,24 +38,24 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("VbY  ", &velBody[1].val, savePlot, 2);
     //pMap->addLogVar("VbZ  ", &velBody[2].val, printSavePlot, 3);
     
-    pMap->addLogVar("VN  ", &velNED[0].val, savePlot, 2);
+    //pMap->addLogVar("VN  ", &velNED[0].val, savePlot, 2);
     //pMap->addLogVar("VE  ", &velNED[1].val, savePlot, 2);
-    pMap->addLogVar("VD  ", &velNED[2].val, savePlot, 2);
+    //pMap->addLogVar("VD  ", &velNED[2].val, savePlot, 2);
     
     //pMap->addLogVar("Roll Rate", &eulerRatesDeg[0].val, savePlot, 2);
-    pMap->addLogVar("Pitch Rate", &eulerRatesDeg[1].val, savePlot, 2);
+    //pMap->addLogVar("Pitch Rate", &eulerRatesDeg[1].val, savePlot, 2);
     //pMap->addLogVar("Yaw Rate", &eulerRatesDeg[2].val, savePlot, 2);
     
     //pMap->addLogVar("pdot", &bodyAngularAcc[0], printSavePlot, 3);
-    //pMap->addLogVar("qdot", &bodyAngularAcc[1], printSavePlot, 3);
+    //pMap->addLogVar("qdot", &bodyAngularAcc[1], savePlot, 2);
     //pMap->addLogVar("rdot", &bodyAngularAcc[2], printSavePlot, 3);
     
     //pMap->addLogVar("p", &bodyRatesDeg[0].val, savePlot, 2);
     //pMap->addLogVar("q", &bodyRatesDeg[1].val, printSavePlot, 3);
     //pMap->addLogVar("r", &bodyRatesDeg[2].val, savePlot, 2);
     
-    pMap->addLogVar("Roll ", &eulerAnglesDeg[0].val, savePlot, 2);
-    pMap->addLogVar("Pitch", &eulerAnglesDeg[1].val, savePlot, 2);
+    pMap->addLogVar("Roll ", &eulerAnglesDeg[0].val, printSavePlot, 2);
+    pMap->addLogVar("Pitch", &eulerAnglesDeg[1].val, printSavePlot, 3);
     pMap->addLogVar("Yaw  ", &eulerAnglesDeg[2].val, savePlot, 2);
     
     //pMap->addLogVar("q_B_NED[0]", &q_B_NED[0], savePlot, 2);
@@ -75,7 +75,8 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
  
     //pMap->addLogVar("Body Accel X", &accBody[0], printSavePlot, 3);
     //pMap->addLogVar("Body Accel Y", &accBody[1], savePlot, 2);
-    pMap->addLogVar("Body Accel Z", &accBody[2], savePlot, 2);
+    //pMap->addLogVar("Body Accel Z", &accBody[2], savePlot, 2);
+    pMap->addLogVar("Accel Mag", &accMag, printSavePlot, 3);
     
     //pMap->addLogVar("SumMX", &bodyMoment[0], savePlot, 2);
     //pMap->addLogVar("SumMY", &bodyMoment[1], savePlot, 2);
@@ -139,6 +140,7 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     // Initialize Accelerations
     util.setArray(accBody, zero_init, 3);
     util.setArray(bodyAngularAcc, zero_init, 3);
+    accMag = 0.0;
     
     // Initialize Forces
     util.setArray(bodyForce, zero_init, 3);
@@ -247,6 +249,7 @@ bool DynamicsModel::update(void)
     util.crossProduct(temp2, bodyRates, temp1);
     util.vSubtract(accBody, bodyForce, temp2, 3);
     util.vgain(accBody, 1/mass, 3);
+    accMag = util.mag(accBody,3);
     
     // bodyAngularAcc = I^-1 * (M - bodyRates x I*bodyRates)
     util.mmult(temp1, *inertia, bodyRates, 3, 3);

@@ -94,6 +94,7 @@ private:
     double dPosBody[3]; // Lat rate, Lon rate, Alt rate
     double accBody[3];
     double accNED[3];
+    double accMag;
     
     AngleType<double> eulerAngles[3];
     double q_B_NED[4];

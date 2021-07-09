@@ -22,9 +22,9 @@
 //#define RealTime
 
 // Time
-const double runTime_init          = 5;
-const double printInterval_init    = 0.1;
-const double saveInterval_init     = 1.0/800;
+const double runTime_init          = 1800;
+const double printInterval_init    = 1.0;
+const double saveInterval_init     = 1.0;
 const double dynamicsInterval_init = 1.0/800;
 const double clock_dt              = 1.0/800; // time interval when not in real time mode
 
@@ -62,9 +62,9 @@ const double inertia_init[3][3] = {
 // Quadcopter Constants
 const double mass_init = 0.5;// Weight = 4.9 N
 const double inertia_init[3][3] = {
-    {0.0000907 , 0.0      , 0.0        },
-    {0.0       , 0.0005005, 0.0        },
-    {0.0       , 0.0      , 0.0005422  }};
+    {0.0196 , 0.0      , 0.0        },
+    {0.0       , 0.0196, 0.0        },
+    {0.0       , 0.0      , 0.0264  }};
 
 // Reference Frames
 const double imuFrame_init[3] = {0, 0, 0};

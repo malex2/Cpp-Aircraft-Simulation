@@ -384,7 +384,7 @@ private:
 class FirstOrderFilter {
 public:
     // xcmd/x = k/(tau*s + 1)
-    FirstOrderFilter(double x_in = 0.0, double dt_in = 0.0, double tau_in = 0.001, double gain_in = 1.0)
+    FirstOrderFilter(double x_in = 0.0, double dt_in = 0.0, double tau_in = 0.0, double gain_in = 1.0)
     {
         dt   = dt_in;
         tau  = tau_in;
@@ -405,8 +405,8 @@ public:
     void setValue(double xcmd)
     {
         xprev = x;
-        if (tau != 0) { xdot  = (k*xcmd - x)/tau; }
-        else          { xdot = 0;}
+        if (tau != 0.0) { xdot  = (k*xcmd - x)/tau; }
+        else            { xdot = (k*xcmd-xprev)/dt;} // x = xcmd
         
         if (xdot > maxrate)  { xdot = maxrate; }
         if (xdot < -maxrate) { xdot = -maxrate; }

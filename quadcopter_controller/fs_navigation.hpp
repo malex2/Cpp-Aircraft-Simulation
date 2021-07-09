@@ -13,6 +13,7 @@
 
 // Types
 enum NavState {Calibration, INS, GPS};
+enum attitudeFilterType {noFilter, madgwick, complimentary};
 
 struct SensorErrorType {
     double sum;
@@ -95,8 +96,10 @@ struct NavType {
     double imuDt;
     double navDt;
     NavState state;
+    attitudeFilterType attitudeFilterMode;
     double timestamp;
     
+    double extra;
     NavType()
     {
         mslAlt  = 0.0;
@@ -107,7 +110,9 @@ struct NavType {
         imuDt   = 0.0;
         navDt   = 0.0;
         state   = Calibration;
+        attitudeFilterMode = noFilter;
         timestamp = 0.0;
+        extra = 0.0;
         
         for (int i=0; i<3; i++)
         {
@@ -145,6 +150,9 @@ void FsNavigation_performNavigation();
 void updateGravity();
 void applyCalibration();
 void performARHS();
+void gyroUpdate();
+void madgwickFilter();
+void compFilter();
 void performINS();
 void performEKF();
 

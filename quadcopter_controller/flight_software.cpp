@@ -344,9 +344,10 @@ void setPrintVariables()
     //pMap->addLogVar("imuDt", &pNavData->imuDt, printSavePlot, 3);
     //pMap->addLogVar("navDt" , &pNavData->navDt, savePlot, 2);
     //pMap->addLogVar("navstate", &navState, savePlot, 2);
-    
-    //pMap->addLogVar("Nav Roll" , &eulerAnglesDeg[0], savePlot, 2);
-    //pMap->addLogVar("Nav Pitch", &eulerAnglesDeg[1], savePlot, 2);
+    pMap->addLogVar("useAcc", &useAcc, savePlot, 2);
+    pMap->addLogVar("comp gain", &pNavData->extra, printSavePlot, 3);
+    pMap->addLogVar("Nav Roll" , &eulerAnglesDeg[0], savePlot, 2);
+    pMap->addLogVar("Nav Pitch", &eulerAnglesDeg[1], savePlot, 2);
     //pMap->addLogVar("Nav Yaw"  , &eulerAnglesDeg[2], savePlot, 2);
     
     //pMap->addLogVar("q[0]", &pNavData->q_B_NED[0], savePlot, 2);
@@ -354,9 +355,9 @@ void setPrintVariables()
     //pMap->addLogVar("q[2]", &pNavData->q_B_NED[2], savePlot, 2);
     //pMap->addLogVar("q[3]", &pNavData->q_B_NED[3], savePlot, 2);
     
-    //pMap->addLogVar("Nav Acc Body X" , &pNavData->accelBody[0], savePlot, 2);
-    //pMap->addLogVar("Nav Acc Body Y" , &pNavData->accelBody[1], savePlot, 2);
-    //pMap->addLogVar("Nav Acc Body Z" , &pNavData->accelBody[2], savePlot, 2);
+    pMap->addLogVar("Nav Acc Body X" , &pNavData->accelBody[0], savePlot, 2);
+    pMap->addLogVar("Nav Acc Body Y" , &pNavData->accelBody[1], savePlot, 2);
+    pMap->addLogVar("Nav Acc Body Z" , &pNavData->accelBody[2], savePlot, 2);
     
     //pMap->addLogVar("Gravity Bx", &pNavData->gravityBody[0], savePlot, 2);
     //pMap->addLogVar("Gravity By", &pNavData->gravityBody[1], savePlot, 2);
@@ -375,7 +376,7 @@ void setPrintVariables()
     //pMap->addLogVar("Nav r", &bodyRatesDps[2], savePlot, 2);
     
     pMap->addLogVar("Roll Error", &pNavError->eulerAngles[0], savePlot, 2);
-    pMap->addLogVar("Pitch Error", &pNavError->eulerAngles[1], printSavePlot, 2);
+    pMap->addLogVar("Pitch Error", &pNavError->eulerAngles[1], printSavePlot, 3);
     pMap->addLogVar("Yaw Error", &pNavError->eulerAngles[2], savePlot, 2);
     
     //pMap->addLogVar("qError[0]", &pNavError->q_B_NED[0], savePlot, 2);
@@ -383,41 +384,41 @@ void setPrintVariables()
     //pMap->addLogVar("qError[2]", &pNavError->q_B_NED[2], savePlot, 2);
     //pMap->addLogVar("qError[3]", &pNavError->q_B_NED[3], savePlot, 2);
     
-    pMap->addLogVar("Roll Rate Error X", &pNavError->eulerRates[0], savePlot, 2);
-    pMap->addLogVar("Pitch Rate Error Y", &pNavError->eulerRates[1], savePlot, 2);
-    pMap->addLogVar("Yaw Rate Error", &pNavError->eulerRates[2], savePlot, 2);
+    //pMap->addLogVar("Roll Rate Error X", &pNavError->eulerRates[0], savePlot, 2);
+    //pMap->addLogVar("Pitch Rate Error Y", &pNavError->eulerRates[1], savePlot, 2);
+    //pMap->addLogVar("Yaw Rate Error", &pNavError->eulerRates[2], savePlot, 2);
     
-    pMap->addLogVar("Body Rate X Error", &pNavError->bodyRates[0], savePlot, 2);
-    pMap->addLogVar("Body Rate Y Error", &pNavError->bodyRates[1], savePlot, 2);
-    pMap->addLogVar("Body Rate Z Error", &pNavError->bodyRates[2], savePlot, 2);
+    //pMap->addLogVar("Body Rate X Error", &pNavError->bodyRates[0], savePlot, 2);
+    //pMap->addLogVar("Body Rate Y Error", &pNavError->bodyRates[1], savePlot, 2);
+    //pMap->addLogVar("Body Rate Z Error", &pNavError->bodyRates[2], savePlot, 2);
     
     //pMap->addLogVar("Gravity Error", &pNavError->gravity, savePlot, 2);
     
-    pMap->addLogVar("Gravity Bx Error", &pNavError->gravityBody[0], savePlot, 2);
+    //pMap->addLogVar("Gravity Bx Error", &pNavError->gravityBody[0], savePlot, 2);
     //pMap->addLogVar("Gravity By Error", &pNavError->gravityBody[1], savePlot, 2);
-    pMap->addLogVar("Gravity Bz Error", &pNavError->gravityBody[2], savePlot, 2);
+    //pMap->addLogVar("Gravity Bz Error", &pNavError->gravityBody[2], savePlot, 2);
     
     //pMap->addLogVar("Gravity NED X Error", &pNavError->gravityNED[0], savePlot, 2);
     //pMap->addLogVar("Gravity NED Y Error", &pNavError->gravityNED[1], savePlot, 2);
     //pMap->addLogVar("Gravity NED Z Error", &pNavError->gravityNED[2], savePlot, 2);
     
-    //pMap->addLogVar("Vel Body X Error", &pNavError->velBody[0], printSavePlot, 3);
+    //pMap->addLogVar("Vel Body X Error", &pNavError->velBody[0], savePlot, 2);
     //pMap->addLogVar("Vel Body Y Error", &pNavError->velBody[1], savePlot, 2);
     //pMap->addLogVar("Vel Body Z Error", &pNavError->velBody[2], savePlot, 2);
     
-    pMap->addLogVar("Vel N Error", &pNavError->velNED[0], savePlot, 2);
-    pMap->addLogVar("Vel E Error", &pNavError->velNED[1], savePlot, 2);
-    pMap->addLogVar("Vel D Error", &pNavError->velNED[2], savePlot, 2);
+    //pMap->addLogVar("Vel N Error", &pNavError->velNED[0], savePlot, 2);
+    //pMap->addLogVar("Vel E Error", &pNavError->velNED[1], savePlot, 2);
+    //pMap->addLogVar("Vel D Error", &pNavError->velNED[2], savePlot, 2);
     
-    pMap->addLogVar("Speed Error", &pNavError->speed, savePlot, 2);
+    //pMap->addLogVar("Speed Error", &pNavError->speed, savePlot, 2);
     
-    pMap->addLogVar("Lat Error (deg)", &pNavError->position[0], savePlot, 2);
-    pMap->addLogVar("Lon Error (deg)", &pNavError->position[1], savePlot, 2);
-    pMap->addLogVar("Alt Err (m)"    , &altitudeError, savePlot, 2);
+    //pMap->addLogVar("Lat Error (deg)", &pNavError->position[0], savePlot, 2);
+    //pMap->addLogVar("Lon Error (deg)", &pNavError->position[1], savePlot, 2);
+    //pMap->addLogVar("Alt Err (m)"    , &altitudeError, savePlot, 2);
     
-    pMap->addLogVar("Acc Body X Error", &pNavError->accelBody[0], savePlot, 2);
+    //pMap->addLogVar("Acc Body X Error", &pNavError->accelBody[0], savePlot, 2);
     //pMap->addLogVar("Acc Body Y Error", &pNavError->accelBody[1], savePlot, 2);
-    pMap->addLogVar("Acc Body Z Error", &pNavError->accelBody[2], savePlot, 2);
+    //pMap->addLogVar("Acc Body Z Error", &pNavError->accelBody[2], savePlot, 2);
 #endif
 }
 

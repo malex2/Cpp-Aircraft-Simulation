@@ -58,6 +58,7 @@ public:
     
     bool continueArray[maxActuators];
     
+    static int iActuator;
 protected:
     class DynamicsModel       *pDyn;
     class RotateFrame         *pRotate;
@@ -73,7 +74,6 @@ protected:
     double positions[maxActuators];
     double commands[maxActuators];
     tableType *pTable[maxActuators];
-    
 };
 
 // **********************************************************************
@@ -140,19 +140,19 @@ private:
     */
     
     static const int lengthTable = 8;
-     
+    const double dt = 0.0*dynamicsInterval_init;
     double actuatorTimes[nActuators][lengthTable] = {
-        {0, 2, 3, 3.15, 3.3, 29, 29.15, 29.3},
-        {0, 2, 3, 3.15, 3.3, 29, 29.15, 29.3},
-        {0, 2, 3, 3.15, 3.3, 29, 29.15, 29.3},
-        {0, 2, 3, 3.15, 3.3, 29, 29.15, 29.3}
+        {0, 2, 10, 10.3, 10.6, 29, 29.3, 29.6},
+        {0, 2, 10, 10.3, 10.6, 29, 29.3, 29.6},
+        {0, 2, 10, 10.3, 10.6, 29, 29.3, 29.6},
+        {0, 2, 10, 10.3, 10.6, 29, 29.3, 29.6}
     };
     
     double actuatorValues[nActuators][lengthTable] = {
-        {0, 0.6, 0.605 , 0.595, 0.6, 0.595, 0.605, 0.6}, // front left
-        {0, 0.6, 0.605 , 0.595, 0.6, 0.605, 0.595, 0.6}, // front right
-        {0, 0.6, 0.595 , 0.605, 0.6, 0.605, 0.595, 0.6}, // rear right
-        {0, 0.6, 0.595 , 0.605, 0.6, 0.595, 0.605, 0.6}  // rear left
+        {0, 0.55, 0.555 , 0.545, 0.58, 0.555, 0.545, 0.55}, // front left
+        {0, 0.55, 0.555 , 0.545, 0.58, 0.545, 0.555, 0.55}, // front right
+        {0, 0.55, 0.545 , 0.555, 0.58, 0.545, 0.555, 0.55}, // rear right
+        {0, 0.55, 0.545 , 0.555, 0.58, 0.555, 0.545, 0.55}  // rear left
     };
     
     // Servo dynamics

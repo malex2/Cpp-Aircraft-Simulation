@@ -19,8 +19,8 @@ IMUtype IMUdata;
 bool imu_setup  = false;
 double imuDt    = 1.0/800.0;
 bool print_wire = false;
-bool directIMU  = true; // Use direct IMU and not I2C
-bool bodySum    = true; // Sum delta velocities in a previous body frame under a duration of rotation, then transform into the new body frame
+bool directIMU  = false; // Use direct IMU and not I2C
+bool bodySum    = false; // Sum delta velocities in a previous body frame under a duration of rotation, then transform into the new body frame
 double R[3][3];
 double dVelocity[3];
 double dVelcoity_preBody[3];

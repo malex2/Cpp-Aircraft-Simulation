@@ -20,6 +20,8 @@
 
 #include "actuator_model.hpp"
 
+int ActuatorModelBase::iActuator = 0;
+
 // **********************************************************************
 // Actuator Model Base
 // **********************************************************************
@@ -42,7 +44,7 @@ ActuatorModelBase::ActuatorModelBase(ModelMap *pMapInit, bool debugFlagIn)
         actuators[i] = NULL;
         pTable[i]    = NULL;
     }
-    
+    iActuator = 0;
     std::fill_n(continueArray, maxActuators, true);
 }
 
@@ -90,6 +92,7 @@ bool ActuatorModelBase::update(void)
 {
     for (int i = 0; i < maxActuators; i++)
     {
+        iActuator = i;
         if (actuators[i] != NULL)
         {
             actuators[i]->setCommand(commands[i]);
@@ -312,6 +315,9 @@ void ActuatorTypeBase::updateKeyboard(void)
 
 void ActuatorTypeBase::updateTable(void)
 {
+    static int ncount = 0;
+    static double prev_command = pTable->pTableTimes[0];
+    
     if (pTable == NULL) return;
 
     if (debugFlag) { std::cout<<"Table:"; }
@@ -323,6 +329,18 @@ void ActuatorTypeBase::updateTable(void)
             command = pTable->pTableValues[i];
         }
     }
+    
+    if ( ActuatorModelBase::iActuator==0 )
+    {
+        if (prev_command != command)
+        {
+            //std::cout << "command: " << prev_command << " ncount: " << ncount << std::endl;
+            prev_command = command;
+            ncount = 0;
+        }
+        else { ncount++; }
+    }
+    
     if (debugFlag) { std::cout<<std::endl; }
 }
 

@@ -30,6 +30,7 @@ IMUModelBase::IMUModelBase(ModelMap *pMapInit, bool debugFlagIn)
     refGravity = 9.81;;
     perfectSensor = false;;
     imuReady = false;
+    onlyGravity = false;
     
     // Noise
     util.initArray(noise, 0.0, 3);
@@ -258,6 +259,8 @@ void IMUModelBase::accelerometerModel(void)
     // Add gravity
     util.vAdd(accIMU, accIMUnoGravity, gravityIMU, 3);
     
+    if (onlyGravity) { util.setArray(accIMU, gravityIMU, 3); }
+        
     // Acceleration in g's
     util.vgain(accIMU, 1/refGravity, 3);
     
@@ -359,9 +362,9 @@ QuadcopterIMUModel::QuadcopterIMUModel(ModelMap *pMapInit, bool debugFlagIn) : I
     gyroBias[0] = 0.02;
     gyroBias[1] = -0.08;
     gyroBias[2] = 0.05;
-    gyroNoiseMax[0] = 0.15;
-    gyroNoiseMax[1] = 0.35;
-    gyroNoiseMax[2] = 0.15;
+    gyroNoiseMax[0] = 0.23;//0.15;
+    gyroNoiseMax[1] = 0.27;//0.35;
+    gyroNoiseMax[2] = 0.26;//0.15;
     
     accBias[0] = 0.01;
     accBias[1] = -0.03;
@@ -384,4 +387,6 @@ QuadcopterIMUModel::QuadcopterIMUModel(ModelMap *pMapInit, bool debugFlagIn) : I
     inclination = 70;
     
     resetPeriod = 1.0/50.0;
+    
+    onlyGravity = false;
 }

@@ -55,6 +55,7 @@ protected:
     double refGravity;
     bool perfectSensor;
     bool imuReady;
+    bool onlyGravity;
     
     // _Body   = IMU value without errors in body frame
     // _IMU    = IMU value without errors in IMU frame

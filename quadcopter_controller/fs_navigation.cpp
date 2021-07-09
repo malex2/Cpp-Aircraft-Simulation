@@ -37,8 +37,8 @@ double minFilterAcc;
 double bodyRateThresh;
 
 // Sensor Errors
-SensorErrorType accelError[3];
-SensorErrorType gyroError[3];
+SensorErrorType* accelError[3];
+SensorErrorType* gyroError[3];
 int calCounter;
 int maxCalCounter;
 double sensorToBody[3];
@@ -46,6 +46,10 @@ double sensorToBody[3];
 // Madgwick Filter Parameters
 double beta;
 double zeta;
+
+// Complemintary Filter Parameters
+double gyroVar;
+double accelVar;
 
 // Simulation Models
 class DynamicsModel*   pDyn = 0;
@@ -68,17 +72,25 @@ void FsNavigation_setupNavigation(double *initialPosition)
     
     NavData.state = Calibration;
     
+    NavData.attitudeFilterMode = complimentary; // noFilter, madgwick, complimentary
     NavData.useAcc = false; // automatically updated
     NavData.useMag = false; // set true/false here
     
     // Variables
-    maxFilterAcc    = 1.02; // g's
-    minFilterAcc    = 0.98; // g's
+    maxFilterAcc    = 1.01; // g's
+    minFilterAcc    = 0.99; // g's
     bodyRateThresh  = 1.0;  // deg/s
     magCalibrated = !NavData.useMag;
     
+    for (int i=0; i<3; i++)
+    {
+        gyroError[i] = NULL;
+        accelError[i] = NULL;
+    }
     beta = 0.0;
     zeta = 0.015;
+    gyroVar = 0.0;
+    accelVar = 0.0;
     
     sensorToBody[0] = 1;
     sensorToBody[1] = -1;
@@ -89,21 +101,21 @@ void FsNavigation_setupNavigation(double *initialPosition)
     maxCalCounter = 100;
 
     navSetup = true;
+    
 }
 
 void FsNavigation_performNavigation()
 {
     static double prevIMUtime = 0.0;
     NavData.imuDt = nav_pIMUdata->timestamp - prevIMUtime;
-    //NavData.imuDt = nav_pIMUdata->dCount;
     prevIMUtime = nav_pIMUdata->timestamp;
     
     // Nav dt
     static double prevNavTime = 0.0;
     navDt = getTime() - prevNavTime;
     prevNavTime = getTime();
-    
     NavData.navDt = navDt;
+    
     // Determine Nav State
     if (imuCalibrated && magCalibrated) { NavData.state = INS; }
     
@@ -147,18 +159,137 @@ void applyCalibration()
 
 void performARHS()
 {
-    double bodyRateMag;
+    // Update quaternion using gyroscope
+    gyroUpdate();
+    
+    // Apply attitude correction using accelerometer and/or magnetometer
+    if (NavData.attitudeFilterMode == complimentary)
+    {
+        compFilter();
+    }
+    else if (NavData.attitudeFilterMode == madgwick)
+    {
+        madgwickFilter();
+    }
+    
+}
+
+void gyroUpdate()
+{
+    // Variables
     double dThetaMag;
+    double qMag;
+    double unitDir[3];
+    double dqGyro[4];
+    double qOld[4];
+    
+    // Store quaternion
+    for (int i=0; i<4; i++)
+    { qOld[i] = NavData.q_B_NED[i]; }
+    
+    // Angle change magnitude
+    dThetaMag = sqrt( NavData.dTheta[0]*NavData.dTheta[0] +
+                     NavData.dTheta[1]*NavData.dTheta[1] +
+                     NavData.dTheta[2]*NavData.dTheta[2] );
+    
+    for (int i=0; i<3; i++)
+    {
+        if (dThetaMag > 0.00001) { unitDir[i]  = NavData.dTheta[i] / dThetaMag; }
+        else                     { unitDir[i] = 0.0; }
+    }
+    
+    // Compute change in quaternion
+    dqGyro[0] = cos(dThetaMag/2);
+    dqGyro[1] = unitDir[0]*sin(dThetaMag/2);
+    dqGyro[2] = unitDir[1]*sin(dThetaMag/2);
+    dqGyro[3] = unitDir[2]*sin(dThetaMag/2);
+    
+    // Update quaternion
+    quaternionProduct(NavData.q_B_NED, qOld, dqGyro);
+    
+    // Quarantee unit vector
+    qMag = sqrt( NavData.q_B_NED[0]*NavData.q_B_NED[0] +
+                NavData.q_B_NED[1]*NavData.q_B_NED[1] +
+                NavData.q_B_NED[2]*NavData.q_B_NED[2] +
+                NavData.q_B_NED[3]*NavData.q_B_NED[3] );
+    
+    for (int i=0; i<4; i++)
+    { NavData.q_B_NED[i] /= qMag; }
+}
+
+void compFilter()
+{
+    // Variables
+    double aMag;
+    double accelUnitNED[3];
+    double gain = 0.0;
+    double dThetaMag;
+    double unitDir[3];
+    double qOld[4];
+    double dqAccel[4];
+    
+    static double predUnc = 0.0;
+    double gyroUnc = gyroVar;
+    double accUnc = accelVar;
+    
+    // Store quaternion
+    for (int i=0; i<4; i++)
+    { qOld[i] = NavData.q_B_NED[i]; }
+    
+    // Rotate acceleration into NED frame using gyroscope prediction
+    FsNavigation_bodyToNED(accelUnitNED, NavData.accelIMUBody);
+    
+    // Magnitudes and Unit Vectors
+    aMag = sqrt( accelUnitNED[0]*accelUnitNED[0] +
+                 accelUnitNED[1]*accelUnitNED[1] +
+                 accelUnitNED[2]*accelUnitNED[2] );
+    
+    for (int i=0; i<3; i++)
+    {
+        if (aMag > 0.01) { accelUnitNED[i]  = accelUnitNED[i] / aMag; }
+        else             { accelUnitNED[i] = 0.0; }
+    }
+    
+    // Update uncertainties
+    predUnc = predUnc + gyroUnc;
+    accUnc += fabs((NavData.gravity-aMag)) * 10.0 * accUnc;
+    
+    // Update gain
+    gain = predUnc/(predUnc + accUnc);
+
+    // Accelerometer Angle Correction
+    dThetaMag = gain * acos( -accelUnitNED[2] );
+    
+    // Accelerometer Correction Direction
+    unitDir[0] = -accelUnitNED[1];
+    unitDir[1] = accelUnitNED[0];
+    unitDir[2] = 0;
+    
+    // Compute change in quaternion
+    dqAccel[0] = cos(dThetaMag/2);
+    dqAccel[1] = unitDir[0]*sin(dThetaMag/2);
+    dqAccel[2] = unitDir[1]*sin(dThetaMag/2);
+    dqAccel[3] = unitDir[2]*sin(dThetaMag/2);
+    
+    // Apply accelerometer correction
+    quaternionProduct(NavData.q_B_NED, qOld, dqAccel);
+    
+    // Update prediction uncertainty
+    predUnc -= gain*predUnc;
+    
+    NavData.extra = gain;
+}
+
+void madgwickFilter()
+{
+    double bodyRateMag;
     double aMag;
     double qMag;
     double accelUnit[3];
-    double dThetaUnit[3];
     int zdir = -1;
     double f[6];
     double Jtrans[4][6];
     
-    double dqGyro[4];
-    double qw[4];
     double qedot[4];
     double df[4];
     double dfMag;
@@ -188,17 +319,12 @@ void performARHS()
     
     // accelerometer part of cost function
     if (NavData.useAcc)
-    //if (false)
     {
         f[0] = 2*zdir*(q[1]*q[3] - q[0]*q[2])       - accelUnit[0];
         f[1] = 2*zdir*(q[0]*q[1] + q[2]*q[3])       - accelUnit[1];
         f[2] = 2*zdir*(0.5 - q[1]*q[1] - q[2]*q[2]) - accelUnit[2];
         
         // accelerometer part of cost function gradient
-        //Jtrans[0][0] = -2*zdir*q[2]; Jtrans[0][1] = 2*zdir*q[3];  Jtrans[0][2] = -2*zdir*q[0]; Jtrans[0][3] = 2*zdir*q[1];
-        //Jtrans[1][0] = 2*zdir*q[1];  Jtrans[1][1] = 2*zdir*q[0];  Jtrans[1][2] = 2*zdir*q[3];  Jtrans[1][3] = 2*zdir*q[2];
-        //Jtrans[2][0] = 0.0;          Jtrans[2][1] = -4*zdir*q[1]; Jtrans[2][2] = -4*zdir*q[2]; Jtrans[2][3] = 0.0;
-        
         Jtrans[0][0] = -2*zdir*q[2]; Jtrans[0][1] = 2*zdir*q[1]; Jtrans[0][2] = 0.0;
         Jtrans[1][0] =  2*zdir*q[3]; Jtrans[1][1] = 2*zdir*q[0]; Jtrans[1][2] = -4*zdir*q[1];
         Jtrans[2][0] = -2*zdir*q[0]; Jtrans[2][1] = 2*zdir*q[3]; Jtrans[2][2] = -4*zdir*q[2];
@@ -244,28 +370,9 @@ void performARHS()
         }
     }
     
-    // dTheta magnitude and unit vector
-    dThetaMag = sqrt( NavData.dTheta[0]*NavData.dTheta[0] +
-                      NavData.dTheta[1]*NavData.dTheta[1] +
-                      NavData.dTheta[2]*NavData.dTheta[2] );
-    
-    for (int i=0; i<3; i++)
-    {
-        if (dThetaMag > 0.00001) { dThetaUnit[i]  = NavData.dTheta[i] / dThetaMag; }
-        else                     { dThetaUnit[i] = 0.0; }
-    }
-
-    // Quaternion from Gyroscope
-    dqGyro[0] = cos(dThetaMag/2);
-    dqGyro[1] = dThetaUnit[0]*sin(dThetaMag/2);
-    dqGyro[2] = dThetaUnit[1]*sin(dThetaMag/2);
-    dqGyro[3] = dThetaUnit[2]*sin(dThetaMag/2);
-    
-    quaternionProduct(qw, q, dqGyro);
-    
     // Correct using accelerometer and magnetometer
     for (int i=0; i<4; i++)
-    { NavData.q_B_NED[i] = qw[i] - beta*qedot[i]*navDt; }
+    { NavData.q_B_NED[i] = NavData.q_B_NED[i] - beta*qedot[i]*navDt; }
     
     // guarantee unit vector
     qMag = sqrt( NavData.q_B_NED[0]*NavData.q_B_NED[0] +
@@ -361,7 +468,6 @@ void performINS()
     // Latitude, Longitude
     NavData.position[0] = NavData.position[0] + dPosition[0]/(NavData.position[2] + RE);
     NavData.position[1] = NavData.position[1] + dPosition[1]/(NavData.position[2] + RE);
-    //std::cout << "dPosition[2]: " << dPosition[2] << std::endl;
 }
 
 void FS_performGPSUpdate()
@@ -373,65 +479,98 @@ void FS_performGPSUpdate()
 
 void FsNavigation_calibrateIMU()
 {
+    static bool firstTime = true;
+    
     if (imuCalibrated) { return; }
     double tempAcc;
     double tempGyro;
     
+    if (firstTime)
+    {
+        for (int i=0; i<3; i++)
+        {
+            gyroError[i] = new SensorErrorType;
+            accelError[i] = new SensorErrorType;
+        }
+        firstTime = false;
+    }
+
     // Get Sum
     for (int i=0; i<3; i++)
     {
         // Gyroscope
         tempGyro = sensorToBody[i] * nav_pIMUdata->gyro[i] * deg2rad;
-        gyroError[i].sum    += tempGyro;
-        gyroError[i].sumSqr += tempGyro * tempGyro;
-        if (nav_pIMUdata->gyro[i] > gyroError[i].max) { gyroError[i].max =  tempGyro; }
-        if (nav_pIMUdata->gyro[i] < gyroError[i].min) { gyroError[i].min =  tempGyro; }
+        gyroError[i]->sum    += tempGyro;
+        gyroError[i]->sumSqr += tempGyro * tempGyro;
+        if (nav_pIMUdata->gyro[i] > gyroError[i]->max) { gyroError[i]->max =  tempGyro; }
+        if (nav_pIMUdata->gyro[i] < gyroError[i]->min) { gyroError[i]->min =  tempGyro; }
         
         // Accelerometer
         if (i==2) { tempAcc = sensorToBody[i] * (nav_pIMUdata->accel[i] - 1.0) * NavData.gravity; }
         else { tempAcc = sensorToBody[i] * nav_pIMUdata->accel[i] * NavData.gravity; }
         
-        accelError[i].sum    += tempAcc;
-        accelError[i].sumSqr += tempAcc * tempAcc;
-        if (tempAcc > accelError[i].max) { accelError[i].max =  tempAcc; }
-        if (tempAcc < accelError[i].min) { accelError[i].min =  tempAcc; }
+        accelError[i]->sum    += tempAcc;
+        accelError[i]->sumSqr += tempAcc * tempAcc;
+        if (tempAcc > accelError[i]->max) { accelError[i]->max =  tempAcc; }
+        if (tempAcc < accelError[i]->min) { accelError[i]->min =  tempAcc; }
     }
     
     calCounter++;
     
-    // Computer statistics
+    // Compute statistics
     if (calCounter >= maxCalCounter)
     {
         for (int i=0; i<3; i++)
         {
-            gyroError[i].mean = gyroError[i].sum / maxCalCounter;
-            gyroError[i].variance = gyroError[i].sumSqr/maxCalCounter - (gyroError[i].sum/maxCalCounter)*(gyroError[i].sum/maxCalCounter);
-            if (gyroError[i].variance <= 0.0) { gyroError[i].variance = 0.0; }
-            gyroError[i].std = sqrt(gyroError[i].variance);
+            gyroError[i]->mean = gyroError[i]->sum / maxCalCounter;
+            gyroError[i]->variance = gyroError[i]->sumSqr/maxCalCounter - gyroError[i]->mean*gyroError[i]->mean;
+            gyroError[i]->std = sqrt(gyroError[i]->variance);
             
-            accelError[i].mean = accelError[i].sum / maxCalCounter;
-            accelError[i].variance = accelError[i].sumSqr/maxCalCounter - (accelError[i].sum/maxCalCounter)*(accelError[i].sum/maxCalCounter);
-            if (accelError[i].variance <= 0.0) { accelError[i].variance = 0.0; }
-            accelError[i].std = sqrt(accelError[i].variance);
+            accelError[i]->mean = accelError[i]->sum / maxCalCounter;
+            accelError[i]->variance = accelError[i]->sumSqr/maxCalCounter - accelError[i]->mean*accelError[i]->mean;
+            accelError[i]->std = sqrt(accelError[i]->variance);
             
-            NavData.gyroBias[i] =  gyroError[i].mean;
-            NavData.accBias[i]  = accelError[i].mean;
+            NavData.gyroBias[i] = gyroError[i]->mean;
+            NavData.accBias[i]  = accelError[i]->mean;
         }
-        
-        gyroError[0].print();
-        gyroError[1].print();
-        gyroError[2].print();
-        
-        accelError[0].print();
-        accelError[1].print();
-        accelError[2].print();
-        
+     
         // gyroscope measurement error
-        beta = sqrt(3/4) * 3 * (gyroError[0].variance + gyroError[1].variance + gyroError[2].variance);
+        beta = sqrt(3.0/4.0) * 3.0 * (gyroError[0]->variance + gyroError[1]->variance + gyroError[2]->variance);
+        
+        gyroVar = sqrt( gyroError[0]->variance*gyroError[0]->variance
+                        + gyroError[0]->variance*gyroError[0]->variance
+                        + gyroError[0]->variance*gyroError[0]->variance );
+        accelVar = sqrt( accelError[0]->variance*accelError[0]->variance
+                       + accelError[0]->variance*accelError[0]->variance
+                       + accelError[0]->variance*accelError[0]->variance );
+        
+        //beta = sqrt(3.0/4.0) * 3.0 * (gyroError[0]->std + gyroError[1]->std + gyroError[2]->std);
+
+        display("gyro bias: ");
+        display(NavData.gyroBias[0]);
+        display(" ");
+        display(NavData.gyroBias[1]);
+        display(" ");
+        display(NavData.gyroBias[2]);
+        display("\n");
+  
+        display("accel bias: ");
+        display(NavData.accBias[0]);
+        display(" ");
+        display(NavData.accBias[1]);
+        display(" ");
+        display(NavData.accBias[2]);
+        display("\n");
         
         display("beta: ");
         display(beta);
         display("\n");
+        
+        for (int i=0; i<3; i++)
+        {
+            delete gyroError[i];
+            delete accelError[i];
+        }
         
         imuCalibrated = true;
     }
