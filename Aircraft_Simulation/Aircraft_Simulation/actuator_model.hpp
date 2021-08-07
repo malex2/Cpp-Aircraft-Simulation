@@ -121,7 +121,7 @@ public:
     
 private:
     // Tables
-    /*
+    
     static const int lengthTable = 4;
     
     double actuatorTimes[nActuators][lengthTable] = {
@@ -132,15 +132,14 @@ private:
     };
     
     double actuatorValues[nActuators][lengthTable] = {
-        {0, 0.6, 0.8, 0.3}, // front left
-        {0, 0.6, 0.8, 0.3}, // front right
-        {0, 0.6, 0.8, 0.3}, // rear right
-        {0, 0.6, 0.8, 0.3}  // rear left
+        {0, 0.2, 0.3, 0.1}, // front left
+        {0, 0.2, 0.3, 0.1}, // front right
+        {0, 0.2, 0.3, 0.1}, // rear right
+        {0, 0.2, 0.3, 0.1}  // rear left
     };
-    */
     
+    /*
     static const int lengthTable = 8;
-    const double dt = 0.0*dynamicsInterval_init;
     double actuatorTimes[nActuators][lengthTable] = {
         {0, 2, 10, 10.3, 10.6, 29, 29.3, 29.6},
         {0, 2, 10, 10.3, 10.6, 29, 29.3, 29.6},
@@ -149,12 +148,12 @@ private:
     };
     
     double actuatorValues[nActuators][lengthTable] = {
-        {0, 0.55, 0.555 , 0.545, 0.58, 0.555, 0.545, 0.55}, // front left
-        {0, 0.55, 0.555 , 0.545, 0.58, 0.545, 0.555, 0.55}, // front right
-        {0, 0.55, 0.545 , 0.555, 0.58, 0.545, 0.555, 0.55}, // rear right
-        {0, 0.55, 0.545 , 0.555, 0.58, 0.555, 0.545, 0.55}  // rear left
+        {0, 0.55, 0.56 , 0.54, 0.58, 0.555, 0.545, 0.55}, // front left
+        {0, 0.55, 0.56 , 0.54, 0.58, 0.545, 0.555, 0.55}, // front right
+        {0, 0.55, 0.54 , 0.56, 0.58, 0.545, 0.555, 0.55}, // rear right
+        {0, 0.55, 0.54 , 0.56, 0.58, 0.555, 0.545, 0.55}  // rear left
     };
-    
+    */
     // Servo dynamics
     double escDelays[4] = {0.01, 0.01, 0.01, 0.01};
 };

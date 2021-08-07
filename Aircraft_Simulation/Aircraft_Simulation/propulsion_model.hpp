@@ -81,9 +81,10 @@ private:
     
     double throttle[4];
     double engineRPM[4];
-    const double riseTimes[4] = {0.1, 0.1, 0.1, 0.1};
-    //const double riseTimes[4] = {0.0, 0.0, 0.0, 0.0};
+    //const double riseTimes[4] = {0.1, 0.1, 0.1, 0.1};
+    const double riseTimes[4] = {0.0, 0.0, 0.0, 0.0};
     const double maxThrust = 4.22; // 430g (12v) - 621g / 4.22N - 6.12N @12V
+    const double minRPM = 500;
     const double maxRPM = 6440;
     const int directions[4] = {-1,1,-1,1};
     const double locations[4][3] ={
@@ -122,9 +123,10 @@ public:
     virtual void setOrientation   (double* orientation_in) { util.setUnitClassArray(orientation, orientation_in, degrees, 3); }
     virtual void setMaxThrust     (double maxThrust_in)    { maxThrust = maxThrust_in; }
     virtual void setMaxRPM        (double maxRPM_in)       { maxRPM = maxRPM_in; }
+    virtual void setMinRPM        (double minRPM_in)       { minRPM = minRPM_in; }
     virtual void setTorqueRatio   (double ratio_in)        { Q = ratio_in; }
     virtual void setThrottle      (double throttle_in)     { throttle = throttle_in; }
-    virtual void setDirection     (int direction_in)      { direction = direction_in; }
+    virtual void setDirection     (int direction_in)       { direction = direction_in; }
     virtual void setEngineInertia (double *inertia_in)     { util.initMatrix(*engineInertia, *inertia_in, 3, 3); }
     
     virtual double getRPM (void) { return rpm; }
@@ -139,6 +141,7 @@ protected:
     double throttle;
     double maxThrust;
     double maxTorque;
+    double minRPM;
     double maxRPM;
     double rpm;
     int direction; // positive is clockwise -> positive torque
@@ -162,6 +165,7 @@ protected:
     double TBE[3][3]; // Rotation matrix from engine frame to body frame moments
     
     void updateEngineRotations(void);
+    void updateSpeedRatio(void);
     virtual void calculateForcesAndMoments(void);
     void setBodyForcesAndMoments(void);
 };
@@ -176,6 +180,9 @@ public:
     SimpleThrustEngine(ModelMap *pMapInit, bool debugFlagIn = false, double maxThrust_in=0.0, double maxRPM_in=0.0, int direction_in=1);
 };
 
+// **********************************************************************
+// Equation Propeller Model
+// **********************************************************************
 class Propeller : public PropulsionTypeBase
 {
 public:

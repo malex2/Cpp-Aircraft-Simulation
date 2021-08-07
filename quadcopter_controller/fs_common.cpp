@@ -10,65 +10,25 @@
 
 #ifdef SIMULATION
     #include "time.hpp"
-    //#include "actuator_model.hpp"
-    //#include "rotate_frame.hpp"
-    //#include "dynamics_model.hpp"
-#else
-    #include "Servo.h"
-    #include "Wire.h" // This library allows you to communicate with I2C devices.
-    #define EI_ARDUINO_INTERRUPTED_PIN
-    #include <EnableInterrupt.h>
 #endif
 
 // Classes
-class Time* pTime = 0;
-
-// Functions
-double mapToValue(unsigned long pwm, unsigned long pwmMin, unsigned long pwmMax, double valueMin, double valueMax)
-{
-    // y - y1 = m * (x - x1)
-    double slope = (valueMax-valueMin) / static_cast<double>(pwmMax-pwmMin);
-    return slope*(pwm-pwmMin) + valueMin;
-}
-
-unsigned long mapToValue(unsigned long pwm, unsigned long pwmMin, unsigned long pwmMax, unsigned long valueMin, unsigned long valueMax)
-{
-    // y - y1 = m * (x - x1)
-    double slope = 1.0*(valueMax-valueMin) / (pwmMax-pwmMin);
-    return slope*(pwm-pwmMin) + valueMin;
-}
-
-unsigned long mapToPwm(double value, double valueMin, double valueMax, unsigned long pwmMin, unsigned long pwmMax)
-{
-    // y - y1 = m * (x - x1)
-    double slope = (pwmMax-pwmMin) / (valueMax-valueMin);
-    return slope*(value-valueMin) + pwmMin;
-}
-
-unsigned long limit(unsigned long pwm, unsigned long pwmMin, unsigned long pwmMax)
-{
-    if (pwm < pwmMin)
-    {
-        display("Warning (limit): pwm below limit ");
-        display(pwm);
-        display("\n");
-        return pwmMin;
-    }
-    if (pwm > pwmMax)
-    {
-        display("Warning (limit): pwm above limit ");
-        display(pwm);
-        display("\n");
-        return pwmMax;
-    }
-    return pwm;
-}
-
-
-#ifndef SIMULATION
-const unsigned int LEDPIN = LED_BUILTIN;
+#ifdef SIMULATION
+    class Time* pTime = 0;
 #endif
 
+// Time
+double getTime()
+{
+#ifdef SIMULATION
+    if (pTime) { return pTime->getSimTime(); }
+    else { return 0.0; }
+#else
+    return micros() / 1000000.0;
+#endif
+}
+
+// LED
 void LEDon()
 {
 #ifndef SIMULATION
@@ -82,17 +42,7 @@ void LEDoff()
 #endif
 }
 
-
-double getTime()
-{
-#ifdef SIMULATION
-    if (pTime) { return pTime->getSimTime(); }
-    else { return 0.0; }
-#else
-    return micros() / 1000000.0;
-#endif
-}
-
+// Printing
 template<typename TempType>
 void display(TempType val)
 {
@@ -106,11 +56,14 @@ void display(TempType val)
 template void display(const char*);
 template void display(String);
 template void display(int);
+template void display(unsigned int);
 template void display(float);
 template void display(double);
 template void display(unsigned long);
 
 void FsCommon_setSimulationModels(ModelMap* pMap)
 {
+#ifdef SIMULATION
     if (pMap) { pTime = (Time*) pMap->getModel("Time"); }
+#endif
 }

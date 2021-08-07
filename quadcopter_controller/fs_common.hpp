@@ -13,7 +13,7 @@
 #include <math.h>
 
 // MACROS
-#define SIMULATION
+//#define SIMULATION
 
 #ifdef SIMULATION
     #include "model_mapping.hpp"
@@ -22,6 +22,13 @@
     #include <iomanip>
     #include <fstream>
     typedef std::string String;
+#else
+    #include "arduino.h"
+    #ifdef max
+        #undef max
+        #undef min
+    #endif
+    #define LEDPIN LED_BUILTIN
 #endif
 
 // Forward References
@@ -32,14 +39,13 @@ class ModelMap;
 class Utilities;
 
 // Types
-enum channelType {THROTTLE, ROLL, PITCH, YAWRATE, nChannels};
+enum channelType {THROTTLE, ROLL, PITCH, YAW, nChannels};
 
 // Constants
-const double deg2rad = M_PI/180.0;
-const double deg2rad2 = deg2rad*deg2rad;
-const double RE  = 6371e+3;
-const double GMe = 3.9857e+14;
-const double earthRotationRate = 7.292115*pow(10,-5);
+#define degree2radian M_PI/180.0
+#define radian2degree 180.0/M_PI
+#define RE  6371e+3
+#define GMe 3.9857e+14
 
 // Pulse In Pins
 #define THROTTLEPIN  7  // CH3
@@ -53,21 +59,33 @@ const double earthRotationRate = 7.292115*pow(10,-5);
 #define T3PIN  10
 #define T4PIN  11
 
-#define PWMMIN  1000
-#define PWMMAX  2000
+// PWM
+#define PWMMIN 1000
+#define PWMMAX 2000
 
-#define MAXROLL      20 * deg2rad // rad
-#define MAXPITCH     20 * deg2rad // rad
-#define MAXYAWRATE   45 * deg2rad // rad/s
-#define MAXTHROTTLE  85 //(PWMMAX-PWMMIN)*1.85 // PWM
+#define PWMMINRPM 1100
+#define MINRPM 500
+#define MAXRPM 6440
+#define dMIN   4.0*MINRPM*MINRPM
+#define dMAX   4.0*MAXRPM*MAXRPM
+
+// Min/Max Limits
+#define MAXVELOCITY  1.5 // m/s - 5 ft/s
+#define MAXROLL      20.0 * degree2radian // rad
+#define MAXPITCH     20.0 * degree2radian // rad
+#define MAXYAWRATE   360.0 * degree2radian // rad/s
+#define MINTHROTTLE  dMIN
+#define MAXTHROTTLE  0.85*dMAX
+
+#define minDeg 0.5
+#define minDps 1.0
+#define minPWMΙncr 5.0
+
+#define quadMass 0.5
 
 // GPS Pins
-#define GPSintPIN = 3;
-
-// Mapping
-double mapToValue(unsigned long pwm, unsigned long pwmMin, unsigned long pwmMax, double valueMin, double valueMax);
-unsigned long mapToPwm(double value, double valueMin, double valueMax, unsigned long pwmMin, unsigned long pwmMax);
-unsigned long limit(unsigned long pwm, unsigned long pwmMin, unsigned long pwmMax);
+#define GPSRXPIN 2
+#define GPSTXPIN 3
 
 // Time
 double getTime();

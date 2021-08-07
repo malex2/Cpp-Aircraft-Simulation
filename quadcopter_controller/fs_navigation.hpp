@@ -13,7 +13,6 @@
 
 // Types
 enum NavState {Calibration, INS, GPS};
-enum attitudeFilterType {noFilter, madgwick, complimentary};
 
 struct SensorErrorType {
     double sum;
@@ -25,116 +24,36 @@ struct SensorErrorType {
     double variance;
     
     SensorErrorType() : sum(0), mean(0), max(-999), min(999), std(0), sumSqr(0), variance(0) {}
-    
-    void printMean()
-    {
-        display("mean: ");
-        display(mean);
-        display("\n");
-    }
-    
-    void print()
-    {
-        display("sum: ");
-        display(sum);
-        
-        display(", mean: ");
-        display(mean);
-        
-        display(", max: ");
-        display(max);
-        
-        display(", min: ");
-        display(min);
-        
-        display(", std: ");
-        display(std);
-        
-        display(", sumSqr: ");
-        display(sumSqr);
-        
-        display(", variance: ");
-        display(variance);
-        display("\n");
-    }
 };
 
 struct NavType {
-    double position[3]; // Latitude, longitude, wgs84 altitde
-    double mslAlt;
+    double position[3]; //Latitude, longitude, Altitude
     double velNED[3];
-    double velBody[3];
-    double speed;
-    
-    double accelBody[3];
-    double accelIMUBody[3];
-    double gravityNED[3];
-    double gravityBody[3];
-    double gravity;
-    
-    double dVelocity[3];
-    double dVelocityCorrected[3];
-    double dVelocityNED[3];
-    double dTheta[3];
-    
+    bool   initNED;
     double eulerAngles[3];
-    double eulerRates[3];
-    double bodyRates[3];
-   
     double q_B_NED[4]; // Quaternion of Body relative to NED
-
     double accBias[3];
     double gyroBias[3];
-    double gyroBiasDrift[3];
+    double gravity;
+    double velBody[3];
     
-    double dVelBias[3];
-    double dThetaBias[3];
-    
-    bool useAcc;
-    bool useMag;
-    
-    double imuDt;
-    double navDt;
     NavState state;
-    attitudeFilterType attitudeFilterMode;
     double timestamp;
     
-    double extra;
     NavType()
     {
-        mslAlt  = 0.0;
-        speed   = 0.0;
-        gravity = 0.0;
-        useAcc  = false;
-        useMag  = false;
-        imuDt   = 0.0;
-        navDt   = 0.0;
         state   = Calibration;
-        attitudeFilterMode = noFilter;
         timestamp = 0.0;
-        extra = 0.0;
-        
+        gravity = 9.81;
+        initNED = false;
         for (int i=0; i<3; i++)
         {
             position[i]    = 0.0;
             velNED[i]      = 0.0;
             velBody[i]     = 0.0;
-            accelIMUBody[i] = 0.0;
-            accelBody[i]   = 0.0;
-            gravityNED[i]  = 0.0;
-            gravityBody[i] = 0.0;
-            dVelocity[i]   = 0.0;
-            dVelocityCorrected[i] = 0.0;
-            dVelocityNED[i] = 0.0;
-            dTheta[i]      = 0.0;
             eulerAngles[i] = 0.0;
-            eulerRates[i]  = 0.0;
-            bodyRates[i]   = 0.0;
             accBias[i]     = 0.0;
             gyroBias[i]    = 0.0;
-            gyroBiasDrift[i] = 0.0;
-            dVelBias[i]    = 0.0;
-            dThetaBias[i]  = 0.0;
             q_B_NED[i]     = 0.0;
         }
         q_B_NED[3] = 0.0;
@@ -142,38 +61,38 @@ struct NavType {
 };
 
 // Setup
-void FsNavigation_setupNavigation(double *initialPosition);
+void FsNavigation_setupNavigation(double *initialPosition, double initialHeading);
 
 // Perform
-void FsNavigation_performNavigation();
+void FsNavigation_performNavigation( double &navDt );
 
 void updateGravity();
-void applyCalibration();
-void performARHS();
-void gyroUpdate();
-void madgwickFilter();
-void compFilter();
-void performINS();
-void performEKF();
+void performARHS(double &navDt);
+void gyroUpdate(double &navDt);
+void compFilter(double &navDt);
+void performINS( double &navDt );
+void FsNavigation_performGPSPVTUpdate(double* gps_LLA, double* gps_velNED, double gps_heading, double gps_timestamp);
 
 // Calibration
 void FsNavigation_calibrateIMU();
-void FsNavigation_calibrateMAG();
 
 // Getters
 NavType* FsNavigation_getNavData(bool useTruth = false);
 NavType* FsNavigation_getNavError();
+NavState FsNavigation_getNavState();
 
 // Setters
 void FsNavigation_setIMUdata(IMUtype* pIMUdataIn);
 void FsNavigation_setSimulationModels(ModelMap* pMap);
+void FsNavigation_initNED(double* LLA, double* velNED, double heading, bool bypassInit = false);
 
 // Support
 void updateTruth();
 
-void FsNavigation_bodyToNED(double* vNED, double* vB);
-void FsNavigation_NEDToBody(double* vB, double* vNED);
-
-void quaternionProduct(double *product, double *q1, double *q2);
+inline void FsNavigation_bodyToNED(double* vNED, double* vB);
+inline void FsNavigation_NEDToBody(double* vB, double* vNED);
+void FsNavigation_bodyToLL(double* vLL, double* vBody);
+inline void quaternionProduct(double *product, double *q1, double *q2);
+inline void updateEulerAngles();
 
 #endif /* fs_navigation_hpp */

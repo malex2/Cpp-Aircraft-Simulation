@@ -12,65 +12,55 @@
 #include "fs_common.hpp"
 
 // Types
-enum ControlMode {ThrottleControl, AttitudeControl, NoControl};
-
-struct SignalErrorType {
-    double error;
-    double dError;
-    double iError;
-};
+enum ControlMode {ThrottleControl, AttitudeControl, VelocityControl, NoControl};
 
 struct ControlType {
     // Command Input
+    double VLLxCmd;
+    double VLLyCmd;
+    double VLLzCmd;
     double rollCmd;
     double pitchCmd;
     double yawRateCmd;
-    double throttleCmd;
     
     // roll/pitch/yaw motor commands
-    double dRoll;
-    double dPitch;
-    double dYawRate;
+    double da;
+    double de;
+    double dr;
+    double dT;
+    double dTo;
     
-    // roll/pitch/yaw motor PWM commands
-    double rollPWM;
-    double pitchPWM;
-    double yawPWM;
-    double throttlePWM;
+    //
+    double rpmSq[4];
     
-    SignalErrorType rollError;
-    SignalErrorType pitchError;
-    SignalErrorType yawRateError;
+    // PWM
+    double TPWM[4];
     
-    double T1PWM;
-    double T2PWM;
-    double T3PWM;
-    double T4PWM;
-    
-    ControlMode mode;
     double timestamp;
+    ControlMode mode;
     
     ControlType()
     {
+        VLLxCmd = 0.0;
+        VLLyCmd = 0.0;
+        VLLzCmd = 0.0;
         rollCmd = 0.0;
         pitchCmd = 0.0;
         yawRateCmd = 0.0;
-        throttleCmd = 0.0;
         
-        dRoll = 0.0;
-        dPitch = 0.0;
-        dYawRate = 0.0;
+        da = 0.0;
+        de = 0.0;
+        dr = 0.0;
+        dT = 0.0;
+        dTo = 1.2*4.0*MINRPM*MINRPM;
         
-        rollPWM  = 0;
-        pitchPWM = 0;
-        yawPWM   = 0;
-        throttlePWM = PWMMIN;
+        for (int i=0; i<3; i++)
+        {
+            TPWM[i]  = 0.0;
+            rpmSq[i] = 0.0;
+        }
         
-        T1PWM = 0;
-        T2PWM = 0;
-        T3PWM = 0;
-        T4PWM = 0;
-        
+        timestamp = 0.0;
         mode = NoControl;
     }
 };
@@ -81,40 +71,28 @@ void FsControls_performControls();
 
 // Setters
 void FsControls_setMode(ControlMode mode);
-void FsControls_setThrottleCmd(double throttleIn);
-void FsControls_setRollCmd(double rollIn);
-void FsControls_setPitchCmd(double pitchIn);
-void FsControls_setBodyYawRateCmd(double yawRateIn);
+void FsControls_setPWMCommands(int* pwmIn);
 void FsControls_setSimulationModels(ModelMap* pMap);
 
-void FsControls_setIMUdata(IMUtype* pIMUdataIn);
-void FsControls_setNavdata(NavType* pNavDataIn);
+void FsControls_setControlsData(IMUtype* pIMUdataIn, NavType* pNavDataIn);
 
 // Getters
 ControlType* FsControls_getControlData();
+double getPwmCmd(channelType chn);
 
 // Internal Access
 void discretizeCommands();
+int discretize(int desiredCommand, int command, int minCmd, int maxCmd, int deltaPwm);
 void performControls();
 void setMotors();
 
-class DiscreteCommand {
-public:
-    DiscreteCommand();
-    
-    void setup(double minIncr, double minCmd, double maxCmd);
-    double discretize(double desiredCommand);
-private:
-    double minCmd;
-    double maxCmd;
-    double minIncr;
-    
-    double command;
-    double commandOption;
-    bool increasing;
-    int lengthArray;
-    
-    void updateCommandOption(int index);
-};
+// Limits
+void rpmPwmLimits(float value, float threshold);
+void minAttitudeThrottle();
 
+template<typename TempType1, typename TempType2>
+inline TempType2 mapToValue(TempType1 pwm, TempType1 pwmMin, TempType1 pwmMax, TempType2 valueMin, TempType2 valueMax);
+
+template<typename TempType>
+inline TempType limit(TempType value, TempType valueMin, TempType valueMax);
 #endif /* fs_controls_hpp */

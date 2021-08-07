@@ -22,11 +22,11 @@
 //#define RealTime
 
 // Time
-const double runTime_init          = 1800;
+const double runTime_init          = 300.0;
 const double printInterval_init    = 1.0;
-const double saveInterval_init     = 1.0;
-const double dynamicsInterval_init = 1.0/800;
-const double clock_dt              = 1.0/800; // time interval when not in real time mode
+const double saveInterval_init     = 0.1;
+const double dynamicsInterval_init = 1.0/800.0;
+const double clock_dt              = 1.0/800.0; // time interval when not in real time mode
 
 // Print options
 const bool saveOutput  = true;
@@ -40,7 +40,7 @@ const double posBody_init[3] = {28.5997222, -81.3394444, 1.968}; // deg, deg, ft
 const double eulerAngles_init[3] = {0, 0.0, 0}; // {0, 6.507, 0};
 const double eulerRates_init[3]  = {0, 0, 0};
 const double actuators_init[4]   = {0.0, 0.0, 0.0, 0.0}; //{de,da,dr,dT}
-const int inputMode_init = 2; // 0 - external, 1 - keyboard, 2 - table
+const int inputMode_init = 0; // 0 - external, 1 - keyboard, 2 - table
 
 // Trim
 // Uses initial position above
@@ -62,9 +62,9 @@ const double inertia_init[3][3] = {
 // Quadcopter Constants
 const double mass_init = 0.5;// Weight = 4.9 N
 const double inertia_init[3][3] = {
-    {0.0196 , 0.0      , 0.0        },
-    {0.0       , 0.0196, 0.0        },
-    {0.0       , 0.0      , 0.0264  }};
+    {0.0196 , 0.0      , 0.0     },
+    {0.0       , 0.0196, 0.0     },
+    {0.0       , 0.0   , 0.0264  }};
 
 // Reference Frames
 const double imuFrame_init[3] = {0, 0, 0};

@@ -215,7 +215,7 @@ GroundModelBase::GroundModelBase(ModelMap *pMapInit, bool debugFlagIn)
     
     //pMap->addLogVar("gLLxF", &LLForce[0], savePlot, 3);
     //pMap->addLogVar("gLLyF", &LLForce[1], savePlot, 2);
-    pMap->addLogVar("gLLzF", &LLForce[2], savePlot, 3);
+    //pMap->addLogVar("gLLzF", &LLForce[2], savePlot, 3);
     
     //pMap->addLogVar("gbxM ", &bodyMoment[0], savePlot, 2);
     //pMap->addLogVar("gbyM ", &bodyMoment[1], savePlot, 2);

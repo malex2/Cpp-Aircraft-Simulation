@@ -16,8 +16,7 @@ void FsPwmIn_setup();
 void FsPwmIn_performPwmIn();
 
 // Getters
-unsigned long* FsPwmIn_getPWM();
-double*        FsPwmIn_getValues();
+int* FsPwmIn_getPWM();
 
 class PwmIn {
 #ifdef SIMULATION
@@ -27,8 +26,10 @@ public:
     
     void attach(int pinIn);
     
-    unsigned long getPwm();
+    int getPwm();
 private:
+    // Functions
+    int mapToPwm(double value, double valueMin, double valueMax, int pwmMin, int pwmMax);
     
     struct tableType
     {
@@ -44,27 +45,27 @@ private:
     double maxValues[nChannels];
     
     channelType channel;
-    unsigned long pwm;
+    unsigned int pwm;
     double value;
     double minValue;
     double maxValue;
     bool foundChannel;
     
     // Tables
-    static const int lengthTable = 4;
+    static const int lengthTable = 5;
     
     double signalTimes[nChannels][lengthTable] = {
-        {0, 5, 15, 20},
-        {0, 5, 15, 20},
-        {0, 5, 15, 20},
-        {0, 5, 15, 20}
+        {0.0, 5.0, 15.0, 25.0, 30.0},
+        {0.0, 5.0, 15.0, 25.0, 30.0},
+        {0.0, 5.0, 15.0, 25.0, 30.0},
+        {0.0, 5.0, 15.0, 25.0, 30.0}
     };
     
     double signalValues[nChannels][lengthTable] = {
-        {0, 100, 100, 60}, // Throttle (%), 0-100
-        {0, 0 , 5 , -5}, // Aileron  (deg)
-        {0, 0 , 0 , 0 }, // Pitch    (deg)
-        {0, 0 , 0 , 0 }  // Yaw      (deg)
+        {0.0, 70.0, 20.0 , 70.0 , 39.0}, // Throttle (%), 0-100
+        {0.0, 0.0 , 0.0  , 0.0  , 3.0 }, // Aileron  (deg)
+        {0.0, 0.0 , 0.0  , 0.0  , -3.0 }, // Pitch    (deg)
+        {0.0, -1.0 , 1.0  , 0.0  , 0.0 }  // YawRate  (deg/s)
     };
 #else
 public:
@@ -75,7 +76,7 @@ public:
     void attach(int pinIn);
     
     // Instance Getters
-    unsigned long getPwm();
+    int getPwm();
     int getPin()    { return thisPin; }
     int getPinLoc() { return thisPinLoc; }
     static int getCurPin() { return pinArray[iPin]; }

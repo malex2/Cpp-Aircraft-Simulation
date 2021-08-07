@@ -14,8 +14,8 @@
 #include "model_mapping.hpp"
 
 typedef unsigned char byte;
-#define LEDPIN 0
 enum pinMode {INPUT, OUTPUT};
+const unsigned int LEDPIN = 0;
 
 class SimulationWire {
 public:

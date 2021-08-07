@@ -26,8 +26,8 @@ AtmosphereModel::AtmosphereModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("Grav", &gravity, savePlot, 2);
     //pMap->addLogVar("Wx  ", &bodyForce[0], savePlot, 2);
     //pMap->addLogVar("Wy  ", &bodyForce[1], savePlot, 2);
-    pMap->addLogVar("Wz  ", &bodyForce[2], savePlot, 2);
-    //pMap->addLogVar("W   ", &LLForce[2], savePlot, 3);
+    //pMap->addLogVar("Wz  ", &bodyForce[2], savePlot, 2);
+    pMap->addLogVar("W   ", &LLForce[2], savePlot, 2);
     //pMap->addLogVar("Re  ", &Re, savePlot, 2);
     //pMap->addLogVar("Mach", &Mach, savePlot, 2);
     

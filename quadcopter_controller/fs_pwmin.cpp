@@ -8,20 +8,23 @@
 
 #include "fs_pwmin.hpp"
 
+# ifndef SIMULATION
+    #define EI_ARDUINO_INTERRUPTED_PIN
+    #include <EnableInterrupt.h>
+#endif
+
 PwmIn throttleChannel;
 PwmIn rollChannel;
 PwmIn yawChannel;
 PwmIn pitchChannel;
 
-unsigned long pwmIn[nChannels];
-double valuesIn[nChannels];
+int pwmIn[nChannels];
 
 void FsPwmIn_setup()
 {
     for (int iCh = THROTTLE; iCh != nChannels; iCh++)
     {
         pwmIn[iCh]    = PWMMIN;
-        valuesIn[iCh] = 0.0;
     }
     
     throttleChannel.attach(THROTTLEPIN);
@@ -36,28 +39,10 @@ void FsPwmIn_performPwmIn()
     pwmIn[THROTTLE] = throttleChannel.getPwm();
     pwmIn[ROLL]     = rollChannel.getPwm();
     pwmIn[PITCH]    = pitchChannel.getPwm();
-    pwmIn[YAWRATE]  = yawChannel.getPwm();
-    
-    valuesIn[THROTTLE] = mapToValue(pwmIn[THROTTLE], PWMMIN, PWMMAX, 0     , MAXTHROTTLE); // Throttle (0 - 100)
-    valuesIn[ROLL]     = mapToValue(pwmIn[ROLL]    , PWMMIN, PWMMAX, -MAXROLL   , MAXROLL);     // Roll (rad)
-    valuesIn[PITCH]    = mapToValue(pwmIn[PITCH]   , PWMMIN, PWMMAX, -MAXPITCH  , MAXPITCH);    // Pitch (rad)
-    valuesIn[YAWRATE]  = mapToValue(pwmIn[YAWRATE] , PWMMIN, PWMMAX, -MAXYAWRATE, MAXYAWRATE);  // Yaw Rate (rad/s)
-    /*
-    for (int iCh = THROTTLE; iCh != nChannels; iCh++)
-    {
-        display("Channel: ");
-        display((int) iCh);
-        display(", PWM: ");
-        display(pwmIn[iCh]);
-        display(", Value: ");
-        display(valuesIn[iCh]);
-        display("\n");
-    }
-     */
+    pwmIn[YAW]      = yawChannel.getPwm();
 }
 
-unsigned long* FsPwmIn_getPWM()    { return pwmIn; }
-double*        FsPwmIn_getValues() { return valuesIn; }
+int* FsPwmIn_getPWM()    { return pwmIn; }
 
 #ifdef SIMULATION
 PwmIn::PwmIn()
@@ -66,18 +51,18 @@ PwmIn::PwmIn()
     Pins[THROTTLE] = THROTTLEPIN; // CH3
     Pins[ROLL]     = ROLLPIN;     // CH4
     Pins[PITCH]    = PITCHPIN;    // CH5
-    Pins[YAWRATE]  = YAWPIN;      // CH6
+    Pins[YAW]      = YAWPIN;      // CH6
     
     // Initialize Ranges
     minValues[THROTTLE] = 0.0;
     minValues[ROLL]     = -MAXROLL;
     minValues[PITCH]    = -MAXPITCH;
-    minValues[YAWRATE]  = -MAXYAWRATE;
+    minValues[YAW]      = -MAXYAWRATE;
     
     maxValues[THROTTLE] = 100.0;
     maxValues[ROLL]     = MAXROLL;
     maxValues[PITCH]    = MAXPITCH;
-    maxValues[YAWRATE]  = MAXYAWRATE;
+    maxValues[YAW]      = MAXYAWRATE;
     
     // Initialize Variables
     channel  = THROTTLE;
@@ -93,7 +78,7 @@ PwmIn::PwmIn()
     {
         for (int col = 0; col < lengthTable; col++)
         {
-            signalValues[iCh][col] *= deg2rad;
+            signalValues[iCh][col] *= degree2radian;
         }
     }
 }
@@ -127,7 +112,7 @@ void PwmIn::attach(int pinIn)
     }
 }
 
-unsigned long PwmIn::getPwm()
+int PwmIn::getPwm()
 {
     if (pTable == NULL) return pwm;
     
@@ -162,6 +147,13 @@ unsigned long PwmIn::getPwm()
     return pwm;
 }
 
+int PwmIn::mapToPwm(double value, double valueMin, double valueMax, int pwmMin, int pwmMax)
+{
+    // y - y1 = m * (x - x1)
+    double slope = (pwmMax-pwmMin) / (valueMax-valueMin);
+    return slope*(value-valueMin) + pwmMin;
+}
+
 #else
 PwmIn::PwmIn()
 {
@@ -193,7 +185,7 @@ void PwmIn::attach(int pinIn)
     // Increment Pins
     nPins++;
 }
-unsigned long PwmIn::getPwm()
+int PwmIn::getPwm()
 {
     if (thisPinLoc != -1) { return pwm[thisPinLoc]; }
     
@@ -232,6 +224,6 @@ void PwmIn::fallInterrupt()
 int PwmIn::iPin  = 0;
 int PwmIn::nPins = 0;
 int PwmIn::pinArray[PwmIn::maxPins] = {0};
-volatile int PwmIn::tRise = 0;
+volatile long PwmIn::tRise = 0;
 volatile int PwmIn::pwm[PwmIn::maxPins] = {0};
 #endif

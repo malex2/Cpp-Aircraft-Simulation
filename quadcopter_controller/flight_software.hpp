@@ -9,15 +9,7 @@
 #ifndef flight_software_hpp
 #define flight_software_hpp
 
-#define SIMULATION
-
-#include <stdio.h>
-#ifdef SIMULATION
-    #include <iostream>
-    typedef std::string String;
-#else
-    #include "arduino.h"
-#endif
+#include "fs_common.hpp"
 
 class ModelMap;
 
@@ -26,7 +18,7 @@ void initialize();
 void initializeVariables();
 void getModels();
 void setPrintVariables();
-void setup();
+void setupIO();
 
 // Main Function
 bool mainFlightSoftware();
