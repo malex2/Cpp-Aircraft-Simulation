@@ -42,7 +42,7 @@ struct NavType {
     
     NavType()
     {
-        state   = Calibration;
+        state = Calibration;
         timestamp = 0.0;
         gravity = 9.81;
         initNED = false;
@@ -69,7 +69,7 @@ void FsNavigation_performNavigation( double &navDt );
 void updateGravity();
 void performARHS(double &navDt);
 void gyroUpdate(double &navDt);
-void compFilter(double &navDt);
+void compFilter();
 void performINS( double &navDt );
 void FsNavigation_performGPSPVTUpdate(double* gps_LLA, double* gps_velNED, double gps_heading, double gps_timestamp);
 
@@ -83,11 +83,15 @@ NavState FsNavigation_getNavState();
 
 // Setters
 void FsNavigation_setIMUdata(IMUtype* pIMUdataIn);
-void FsNavigation_setSimulationModels(ModelMap* pMap);
 void FsNavigation_initNED(double* LLA, double* velNED, double heading, bool bypassInit = false);
+#ifdef SIMULATION
+    void FsNavigation_setSimulationModels(ModelMap* pMap);
+#endif
 
 // Support
-void updateTruth();
+#ifdef SIMULATION
+    void updateTruth();
+#endif
 
 inline void FsNavigation_bodyToNED(double* vNED, double* vB);
 inline void FsNavigation_NEDToBody(double* vB, double* vNED);

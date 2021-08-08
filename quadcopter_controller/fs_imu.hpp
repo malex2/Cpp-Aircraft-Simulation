@@ -58,6 +58,8 @@ void readIMU();
 void groundCalibration();
 void updateDelta( double &imuDt );
 
-void FsImu_setSimulationModels(ModelMap* pMap);
+#ifdef SIMULATION
+    void FsImu_setSimulationModels(ModelMap* pMap);
+#endif
 
 #endif /* fs_imu_hpp */

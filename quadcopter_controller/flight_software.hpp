@@ -17,16 +17,20 @@ class ModelMap;
 void initialize();
 void initializeVariables();
 void getModels();
-void setPrintVariables();
+#ifdef SIMULATION
+    void setPrintVariables();
+#endif
 void setupIO();
 
 // Main Function
 bool mainFlightSoftware();
 
 // Setters
-void flightSoftware_setMapPointer(ModelMap* pMapInit);
+#ifdef SIMULATION
+    void flightSoftware_setMapPointer(ModelMap* pMapInit);
+#endif
 
-// Interrupts
-
+// Support
+void printData();
 
 #endif /* flight_software_hpp */

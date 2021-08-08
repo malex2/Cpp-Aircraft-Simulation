@@ -18,7 +18,18 @@
 
 // General Settings
 int baudRate;
-bool intiailized  = false;
+bool intiailized = false;
+
+// Print
+bool printTiming;
+bool printIMU;
+bool printCalibration;
+bool printCalibratedIMU;
+bool printAngles;
+bool printVelocity;
+bool printPosition;
+bool printCommands;
+bool printPWM;
 
 // Simulation Classes
 #ifdef SIMULATION
@@ -59,13 +70,13 @@ ControlMode controlMode;
 
 // Print
 #ifdef SIMULATION
-double position[3];
-double eulerAnglesDeg[3];
-double fsTime;
-double countDelta50hz;
-double navState = 0.0;
-double altitudeError = 0.0;
-double cpwmCmd;
+    double position[3];
+    double eulerAnglesDeg[3];
+    double fsTime;
+    double countDelta50hz;
+    double navState = 0.0;
+    double altitudeError = 0.0;
+    double cpwmCmd;
 #endif
 
 // **********************************************************************
@@ -76,11 +87,22 @@ void initialize(void)
     // Setup
     initializeVariables();
     
+    // Print Settings
+    printTiming        = false;
+    printIMU           = true;
+    printCalibration   = true;
+    printCalibratedIMU = true;
+    printAngles        = false;
+    printVelocity      = false;
+    printPosition      = false;
+    printCommands      = false;
+    printPWM           = false;
+    
     // General Settings
     baudRate = 9600; // 9600, 38400, 115200
     
     // IMU Settings
-    accSensitivity  = accSensitivity_8g;
+    accSensitivity  = accSensitivity_4g;
     gyroSensitivity = gyroSensitivity_250dps;
     
     // Navigation Settings
@@ -98,7 +120,7 @@ void initialize(void)
     routineDelays[hz100] = 1.0/100.0;
     routineDelays[hz200] = 1.0/200.0;
     routineDelays[hz800] = 1.0/800.0;
-    routineDelays[printRoutine] = 0.5;
+    routineDelays[printRoutine] = 1.0;
     
     // Event Settings
     eventStartTimes[imuWarmup] = 1.0;
@@ -152,7 +174,6 @@ bool mainFlightSoftware(void)
         prevTime[hz200] = getTime();
         
         // Calibrate Navigation
-        FsNavigation_setIMUdata(pIMUdata);
         FsNavigation_calibrateIMU();
     }
     
@@ -183,6 +204,16 @@ bool mainFlightSoftware(void)
         // Set commands
         FsControls_setPWMCommands( FsPwmIn_getPWM() );
     }
+    
+    if (performRoutine[printRoutine])
+    {
+        //Timing Info
+        actualDelays[printRoutine] = getTime() - prevTime[printRoutine];
+        prevTime[printRoutine] = getTime();
+        
+        printData();
+    }
+    
 #ifdef SIMULATION
     // Print Variables
     fsTime = getTime();
@@ -199,6 +230,7 @@ bool mainFlightSoftware(void)
     altitudeError = -pNavError->position[2];
     cpwmCmd = getPwmCmd(THROTTLE);
 #endif
+    
     return true;
 }
 
@@ -207,12 +239,12 @@ bool mainFlightSoftware(void)
 // **********************************************************************
 void getModels()
 {
-    
     // Get Pointers
     pIMUdata = FsImu_getIMUdata();
     pNavData = FsNavigation_getNavData();
     pControlData = FsControls_getControlData();
     
+    FsNavigation_setIMUdata(pIMUdata);
 # ifdef SIMULATION
     pNavError = FsNavigation_getNavError();
     if(pMap)
@@ -233,16 +265,16 @@ void getModels()
 #endif
 }
 
+#ifdef SIMULATION
 void flightSoftware_setMapPointer(ModelMap* pMapInit)
 {
-#ifdef SIMULATION
     pMap = pMapInit;
-#endif
 }
+#endif
 
+#ifdef SIMULATION
 void setPrintVariables()
 {
-#ifdef SIMULATION
     // Timing
     //pMap->addLogVar("fsTime" , &fsTime, savePlot, 2);
     //pMap->addLogVar("countDelta50hz", &countDelta50hz, savePlot, 2);
@@ -308,8 +340,8 @@ void setPrintVariables()
     pMap->addLogVar("Ctrl PMW [1]", &pControlData->TPWM[1], savePlot, 2);
     pMap->addLogVar("Ctrl PMW [2]", &pControlData->TPWM[2], savePlot, 2);
     pMap->addLogVar("Ctrl PMW [3]", &pControlData->TPWM[3], savePlot, 2);
-#endif
 }
+#endif
 
 // **********************************************************************
 // Initialization
@@ -357,4 +389,207 @@ void setupIO(void)
     
     LEDoff();
     display("Setup Complete.\n");
+}
+
+void printData()
+{
+    bool anyPrint = false;
+    
+    if (printTiming)
+    {
+        display(getTime());
+        display(" ");
+        
+        display("50hz rate: ");
+        display( 1.0/actualDelays[hz50] );
+        display(", ");
+        
+        display("100hz rate: ");
+        display( 1.0/actualDelays[hz100] );
+        display(", ");
+        
+        display("200hz rate: ");
+        display( 1.0/actualDelays[hz200] );
+        display(", ");
+        
+        display("800hz rate: ");
+        display( 1.0/actualDelays[hz800] );
+        display("\n");
+        
+        anyPrint = true;
+    }
+    
+    if (printIMU)
+    {
+        display(getTime());
+        display(" ");
+        
+        display("gyro raw (deg/s): ");
+        display(pIMUdata->gyro[0]);
+        display(" ");
+        display(pIMUdata->gyro[1]);
+        display(" ");
+        display(pIMUdata->gyro[2]);
+        display(", ");
+        
+        display("accel raw (g): ");
+        display(pIMUdata->accel[0]);
+        display(" ");
+        display(pIMUdata->accel[1]);
+        display(" ");
+        display(pIMUdata->accel[2]);
+        display("\n");
+        
+        anyPrint = true;
+    }
+    
+    if (printCalibration && pNavData->state != Calibration)
+    {
+        display(getTime());
+        display(" ");
+        
+        display("gyro bias (deg/s): ");
+        display(pNavData->gyroBias[0]*radian2degree);
+        display(" ");
+        display(pNavData->gyroBias[1]*radian2degree);
+        display(" ");
+        display(pNavData->gyroBias[2]*radian2degree);
+        display(", ");
+        
+        display("accel bias (g): ");
+        display(pNavData->accBias[0]/pNavData->gravity);
+        display(" ");
+        display(pNavData->accBias[1]/pNavData->gravity);
+        display(" ");
+        display(pNavData->accBias[2]/pNavData->gravity);
+        display("\n");
+        
+        printCalibration = false;
+        
+        anyPrint = true;
+    }
+    
+    if (printCalibratedIMU)
+    {
+        display(getTime());
+        display(" ");
+        
+        display("gyro (deg/s): ");
+        display(pIMUdata->gyro[0] - pNavData->gyroBias[0]*radian2degree);
+        display(" ");
+        display(pIMUdata->gyro[1] - pNavData->gyroBias[1]*radian2degree);
+        display(" ");
+        display(pIMUdata->gyro[2] - pNavData->gyroBias[2]*radian2degree);
+        display(", ");
+        
+        display("accel (g): ");
+        display(pIMUdata->accel[0] - pNavData->accBias[0]/pNavData->gravity);
+        display(" ");
+        display(pIMUdata->accel[1] - pNavData->accBias[1]/pNavData->gravity);
+        display(" ");
+        display(pIMUdata->accel[2] - pNavData->accBias[2]/pNavData->gravity);
+        display("\n");
+        
+        anyPrint = true;
+    }
+    
+    if (printAngles)
+    {
+        display(getTime());
+        display(" ");
+        
+        display("Attitude (deg): ");
+        display(pNavData->eulerAngles[0]*radian2degree);
+        display(" ");
+        display(pNavData->eulerAngles[1]*radian2degree);
+        display(" ");
+        display(pNavData->eulerAngles[2]*radian2degree);
+        display("\n");
+        
+        anyPrint = true;
+    }
+    
+    if (printVelocity)
+    {
+        display(getTime());
+        display(" ");
+        
+        display("velBody (m/s): ");
+        display(pNavData->velBody[0]);
+        display(" ");
+        display(pNavData->velBody[1]);
+        display(" ");
+        display(pNavData->velBody[2]);
+        display(", ");
+        
+        display("velNED (m/s): ");
+        display(pNavData->velNED[0]);
+        display(" ");
+        display(pNavData->velNED[1]);
+        display(" ");
+        display(pNavData->velNED[2]);
+        display("\n");
+        
+        anyPrint = true;
+    }
+    
+    if (printPosition)
+    {
+        display(getTime());
+        display(" ");
+        
+        display("Lat/Lon/Alt (deg/deg/m): ");
+        display(pNavData->position[0]*radian2degree);
+        display(" ");
+        display(pNavData->position[1]*radian2degree);
+        display(" ");
+        display(pNavData->position[2]*radian2degree);
+        display("\n");
+        
+        anyPrint = true;
+    }
+    
+    if (printCommands)
+    {
+        display(getTime());
+        display(" ");
+        
+        display("velLL Cmds (m/s): ");
+        display(pControlData->VLLxCmd);
+        display(" ");
+        display(pControlData->VLLyCmd);
+        display(" ");
+        display(pControlData->VLLzCmd);
+        display(", ");
+        
+        display("Attitude Cmds (deg): ");
+        display(pControlData->rollCmd*radian2degree);
+        display(" ");
+        display(pControlData->pitchCmd*radian2degree);
+        display(" ");
+        display(pControlData->yawRateCmd*radian2degree);
+        display("\n");
+        
+        anyPrint = true;
+    }
+    
+    if (printPWM)
+    {
+        display(getTime());
+        display(" ");
+        
+        display("Motor PWM: ");
+        display(pControlData->TPWM[0]);
+        display(" ");
+        display(pControlData->TPWM[1]);
+        display(" ");
+        display(pControlData->TPWM[2]);
+        display(" ");
+        display(pControlData->TPWM[3]);
+        display("\n");
+        
+        anyPrint = true;
+    }
+    
+    if (anyPrint) { display("\n"); }
 }

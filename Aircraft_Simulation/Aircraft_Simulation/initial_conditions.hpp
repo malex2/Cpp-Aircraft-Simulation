@@ -22,7 +22,7 @@
 //#define RealTime
 
 // Time
-const double runTime_init          = 300.0;
+const double runTime_init          = 120.0;
 const double printInterval_init    = 1.0;
 const double saveInterval_init     = 0.1;
 const double dynamicsInterval_init = 1.0/800.0;
@@ -30,7 +30,7 @@ const double clock_dt              = 1.0/800.0; // time interval when not in rea
 
 // Print options
 const bool saveOutput  = true;
-const bool printOutput = true;
+const bool printOutput = false;
 const bool plotOutput  = false;
 const std::string savefile = "output.csv";
 

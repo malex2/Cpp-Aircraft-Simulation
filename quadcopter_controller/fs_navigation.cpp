@@ -9,19 +9,17 @@
 #include "fs_navigation.hpp"
 #include "fs_imu.hpp"
 #ifdef SIMULATION
-#include "dynamics_model.hpp"
-#include "atmosphere_model.hpp"
+    #include "dynamics_model.hpp"
+    #include "atmosphere_model.hpp"
 #endif
 
 // Data
 NavType NavData;
-
-#ifdef SIMULATION
-NavType truthNavData;
-NavType NavError;
-#endif
-
 IMUtype* nav_pIMUdata = 0;
+#ifdef SIMULATION
+    NavType truthNavData;
+    NavType NavError;
+#endif
 
 // Booleans
 bool navSetup = false;
@@ -39,8 +37,10 @@ double gyroVar;
 double accelVar;
 
 // Simulation Models
-class DynamicsModel*   pDyn = 0;
-class AtmosphereModel* pAtmo = 0;
+#ifdef SIMULATION
+    class DynamicsModel*   pDyn = 0;
+    class AtmosphereModel* pAtmo = 0;
+#endif
 
 void FsNavigation_setupNavigation(double *initialPosition, double initialHeading)
 {
@@ -75,7 +75,6 @@ void FsNavigation_setupNavigation(double *initialPosition, double initialHeading
     maxCalCounter = 100;
 
     navSetup = true;
-    
 }
 
 void FsNavigation_performNavigation( double &navDt )
@@ -93,9 +92,10 @@ void FsNavigation_performNavigation( double &navDt )
         // Update full Navigation solution
         performINS(navDt);
         
+#ifdef SIMULATION
         // Update Navigation Truth
         updateTruth();
-        
+#endif
         NavData.timestamp = getTime();
     }
     FsImu_zeroDelta(true);
@@ -113,8 +113,8 @@ void performARHS( double &navDt )
     // Update quaternion using gyroscope
     gyroUpdate(navDt);
     
-    // Apply attitude correction using accelerometer and/or magnetometer
-    compFilter(navDt);
+    // Apply attitude correction using accelerometer
+    compFilter();
 }
 
 void gyroUpdate( double &navDt)
@@ -165,7 +165,7 @@ void gyroUpdate( double &navDt)
     { NavData.q_B_NED[i] /= qMag; }
 }
 
-void compFilter( double &navDt )
+void compFilter()
 {
     // Variables
     double aMag;
@@ -219,11 +219,13 @@ void compFilter( double &navDt )
     // Update uncertainties
     predUnc = predUnc + gyroUnc;
     accUnc += absAmag * 40.0 * accUnc;
+    
     // Update gain
     if (predUnc != 0.0 && accUnc != 0.0 && absAmag < 0.1*NavData.gravity)
     {
         gain = predUnc/(predUnc + accUnc);
     }
+    
     // Update prediction uncertainty
     predUnc -= gain*predUnc;
     
@@ -247,10 +249,6 @@ void compFilter( double &navDt )
 
 void performINS( double &navDt )
 {
-    double cr;
-    double sr;
-    double tp;
-    double secp;
     union insArraysGroup1 {
         double bodyRates[3];
         double gravityNED[3];
@@ -268,12 +266,7 @@ void performINS( double &navDt )
     // Euler Angles
     updateEulerAngles();
     
-    // Euler Rates
-    cr = cos(NavData.eulerAngles[0]);     // cos(roll)
-    sr = sin(NavData.eulerAngles[0]);     // sin(roll)
-    tp = tan(NavData.eulerAngles[1]);     // tan(pitch)
-    secp = 1/cos(NavData.eulerAngles[1]); // sec(pitch)
-    
+    // Body Rates
     for (int i=0; i<3; i++)
     {
         a1.bodyRates[i] = nav_pIMUdata->gyro[i]*degree2radian - NavData.gyroBias[i];
@@ -390,22 +383,6 @@ void FsNavigation_calibrateIMU()
         accelVar = sqrt( accelError[0]->variance*accelError[0]->variance
                        + accelError[0]->variance*accelError[0]->variance
                        + accelError[0]->variance*accelError[0]->variance );
-
-        display("gyro bias: ");
-        display(NavData.gyroBias[0]);
-        display(" ");
-        display(NavData.gyroBias[1]);
-        display(" ");
-        display(NavData.gyroBias[2]);
-        display("\n");
-  
-        display("accel bias: ");
-        display(NavData.accBias[0]);
-        display(" ");
-        display(NavData.accBias[1]);
-        display(" ");
-        display(NavData.accBias[2]);
-        display("\n");
         
         for (int i=0; i<3; i++)
         {
@@ -417,8 +394,6 @@ void FsNavigation_calibrateIMU()
     }
 }
 
-void FsNavigation_calibrateMAG();
-
 NavType* FsNavigation_getNavData(bool useTruth)
 {
 #ifdef SIMULATION
@@ -429,30 +404,31 @@ NavType* FsNavigation_getNavData(bool useTruth)
 #endif
 }
 
+#ifdef SIMULATION
 NavType* FsNavigation_getNavError()
 {
-#ifdef SIMULATION
     return &NavError;
-#endif
 }
+#endif
 
 NavState FsNavigation_getNavState()
 {
     return NavData.state;
 }
 
+#ifdef SIMULATION
 void FsNavigation_setSimulationModels(ModelMap* pMap)
 {
-#ifdef SIMULATION
     pDyn  = (DynamicsModel*)   pMap->getModel("DynamicsModel");
     pAtmo = (AtmosphereModel*) pMap->getModel("AtmosphereModel");
-#endif
 }
+#endif
 
 void FsNavigation_setIMUdata(IMUtype* pIMUdataIn)
 {
     nav_pIMUdata = pIMUdataIn;
 }
+
 void FsNavigation_initNED(double* LLA, double* velNED, double heading, bool bypassInit)
 {
     double yawDelta;
@@ -489,9 +465,9 @@ void FsNavigation_initNED(double* LLA, double* velNED, double heading, bool bypa
     }
 }
 
+#ifdef SIMULATION
 void updateTruth()
 {
-#ifdef SIMULATION
     if (pDyn)
     {
         truthNavData.position[0] = pDyn->getPosBody()[0];
@@ -520,7 +496,7 @@ void updateTruth()
     {
         NavError.position[i]    = truthNavData.position[i]     - NavData.position[i];
         NavError.velNED[i]      = truthNavData.velNED[i]       - NavData.velNED[i];
-        NavError.velBody[i]     = truthNavData.velBody[i]       - NavData.velBody[i];
+        NavError.velBody[i]     = truthNavData.velBody[i]      - NavData.velBody[i];
         NavError.eulerAngles[i] = (truthNavData.eulerAngles[i] - NavData.eulerAngles[i]) * radian2degree;
         NavError.q_B_NED[i]     = truthNavData.q_B_NED[i]      - NavData.q_B_NED[i];
     }
@@ -528,9 +504,8 @@ void updateTruth()
     NavError.position[1] *= radian2degree;
     
     NavError.q_B_NED[3] = truthNavData.q_B_NED[3] - NavData.q_B_NED[3];
-    
-#endif
 }
+#endif
 
 inline void FsNavigation_bodyToNED(double* vNED, double* vB)
 {
@@ -580,7 +555,7 @@ inline void quaternionProduct(double *product, double *q1, double *q2)
 
 inline void updateEulerAngles()
 {
-    double * q = NavData.q_B_NED;
+    double* q = NavData.q_B_NED;
     NavData.eulerAngles[0] = atan2(2*q[2]*q[3] + 2*q[0]*q[1], 2*q[0]*q[0] + 2*q[3]*q[3] - 1);
     NavData.eulerAngles[1] = asin(-2*q[1]*q[3] + 2*q[0]*q[2]);
     NavData.eulerAngles[2] = atan2(2*q[1]*q[2] + 2*q[0]*q[3], 2*q[0]*q[0] + 2*q[1]*q[1] - 1);

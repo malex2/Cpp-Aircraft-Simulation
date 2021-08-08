@@ -16,24 +16,26 @@
 // IMU data
 IMUtype IMUdata;
 
+// Booleans
 bool imu_setup  = false;
-//double imuDt    = 1.0/800.0;
-bool print_wire = false;
-bool directIMU  = false; // Use direct IMU and not I2C
+# ifdef SIMULATION
+    bool print_wire = false;
+    bool directIMU  = false; // Use direct IMU and not I2C
+#endif
 
 // IMU Sensitivity
-const float accSensitivityLSB[nAccSensitivity] = {16483, 8192, 4096, 2048};
-const float gyroSensitivityLSB[nAccSensitivity] = {131, 65.5, 32.8, 16.4};
+const float accSensitivityLSB[nAccSensitivity] = {16483.0, 8192.0, 4096.0, 2048.0};
+const float gyroSensitivityLSB[nAccSensitivity] = {131.0, 65.5, 32.8, 16.4};
 const int sensitivityByte[nAccSensitivity] = {0b00000000, 0b00001000, 0b00010000, 0b00011000};
 float LSBg;
 float LSBdps;
 
 // Simulation
 #ifdef SIMULATION
-SimulationWire Wire;
+    SimulationWire Wire;
+    class IMUModelBase;
+    IMUModelBase* pIMUmodel = 0;
 #endif
-class IMUModelBase;
-IMUModelBase* pIMUmodel = 0;
 
 void FsImu_setupIMU(accSensitivityType accSensitivity, gyroSensitivityType gyroSensitivity)
 {
@@ -71,7 +73,6 @@ void FsImu_performIMU( double &imuDt )
     IMUdata.timestamp = getTime();
 }
 
-
 void readIMU()
 {
     // Get Raw Values
@@ -107,7 +108,7 @@ void readIMU()
             IMUdata.gyro[i] = pIMUmodel->getGyroscope()[i];
         }
         
-        // Protect against negative
+        // Adjust for negative
         short maxByte = 32767;
         if (IMUdata.accel[i] > maxByte) { IMUdata.accel[i] = IMUdata.accel[i] - 2*(maxByte+1); }
         if (IMUdata.gyro[i] > maxByte)  { IMUdata.gyro[i] = IMUdata.gyro[i] - 2*(maxByte+1); }
@@ -126,8 +127,7 @@ void updateDelta( double &imuDt )
     }
 
 #ifdef SIMULATION
-    if (pIMUmodel)
-    pIMUmodel->deltaIMU(imuDt);
+    if (pIMUmodel) { pIMUmodel->deltaIMU(imuDt); }
 #endif
 }
 
@@ -148,15 +148,14 @@ void FsImu_zeroDelta(bool zero)
     }
 
 #ifdef SIMULATION
-    if (pIMUmodel)
-        pIMUmodel->reset();
+    if (pIMUmodel) { pIMUmodel->reset(); }
 #endif
 }
 
+#ifdef SIMULATION
 void FsImu_setSimulationModels(ModelMap* pMap)
 {
-#ifdef SIMULATION
     Wire.wire_setSimulationModels(pMap, print_wire);
     pIMUmodel = (IMUModelBase*) pMap->getModel("IMUModel");
-#endif
 }
+#endif

@@ -23,14 +23,14 @@ struct ControlType {
     double pitchCmd;
     double yawRateCmd;
     
-    // roll/pitch/yaw motor commands
+    // roll/pitch/yaw/throttle motor commands
     double da;
     double de;
     double dr;
     double dT;
     double dTo;
     
-    //
+    // RPM
     double rpmSq[4];
     
     // PWM
@@ -54,9 +54,9 @@ struct ControlType {
         dT = 0.0;
         dTo = 1.2*4.0*MINRPM*MINRPM;
         
-        for (int i=0; i<3; i++)
+        for (int i=0; i<4; i++)
         {
-            TPWM[i]  = 0.0;
+            TPWM[i]  = PWMMIN;
             rpmSq[i] = 0.0;
         }
         
@@ -72,9 +72,10 @@ void FsControls_performControls();
 // Setters
 void FsControls_setMode(ControlMode mode);
 void FsControls_setPWMCommands(int* pwmIn);
-void FsControls_setSimulationModels(ModelMap* pMap);
-
 void FsControls_setControlsData(IMUtype* pIMUdataIn, NavType* pNavDataIn);
+#ifdef SIMULATION
+    void FsControls_setSimulationModels(ModelMap* pMap);
+#endif
 
 // Getters
 ControlType* FsControls_getControlData();

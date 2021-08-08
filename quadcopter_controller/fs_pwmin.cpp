@@ -221,9 +221,9 @@ void PwmIn::fallInterrupt()
 #endif
 
 #ifndef SIMULATION
-int PwmIn::iPin  = 0;
-int PwmIn::nPins = 0;
-int PwmIn::pinArray[PwmIn::maxPins] = {0};
-volatile long PwmIn::tRise = 0;
-volatile int PwmIn::pwm[PwmIn::maxPins] = {0};
+    int PwmIn::iPin  = 0;
+    int PwmIn::nPins = 0;
+    int PwmIn::pinArray[PwmIn::maxPins] = {0};
+    volatile int PwmIn::tRise = 0;
+    volatile int PwmIn::pwm[PwmIn::maxPins] = {0};
 #endif

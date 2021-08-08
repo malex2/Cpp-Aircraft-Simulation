@@ -13,7 +13,7 @@
 #include <math.h>
 
 // MACROS
-//#define SIMULATION
+#define SIMULATION
 
 #ifdef SIMULATION
     #include "model_mapping.hpp"
@@ -79,8 +79,7 @@ enum channelType {THROTTLE, ROLL, PITCH, YAW, nChannels};
 
 #define minDeg 0.5
 #define minDps 1.0
-#define minPWMΙncr 5.0
-
+#define minPWMIncr 5.0
 #define quadMass 0.5
 
 // GPS Pins
@@ -98,6 +97,8 @@ void display(TempType val);
 void LEDon();
 void LEDoff();
 
-void FsCommon_setSimulationModels(ModelMap* pMap);
+#ifdef SIMULATION
+    void FsCommon_setSimulationModels(ModelMap* pMap);
+#endif
 
 #endif /* fs_common_hpp */

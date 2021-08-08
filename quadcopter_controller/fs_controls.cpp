@@ -23,6 +23,7 @@ Servo T2esc;
 Servo T3esc;
 Servo T4esc;
 
+// PWM In
 int pwmCmd[nChannels];
 int prevPwmCmd[nChannels];
 
@@ -32,12 +33,6 @@ double velLL[3];
 
 // IMU Data
 double bodyRates[3];
-
-// Temp Limits for Monitoring
-double zeroLimitMin;
-double zeroLimitMax;
-double maxLimitMin;
-double maxLimitMax;
 
 // Limits
 int minPWM;
@@ -49,9 +44,9 @@ double maxRPM;
 
 // Gains
 // Velocity Channels
-#define kp_vx  1.0
-#define kp_vy  1.0
-#define kp_vz -1.0
+#define kp_vx  0.0
+#define kp_vy  0.0
+#define kp_vz -0.0
 
 // Attitude Channels
 #define kp_roll  148473976
@@ -75,12 +70,23 @@ void FsControls_setup()
     T1esc.writeMicroseconds(PWMMIN);
     T1esc.writeMicroseconds(PWMMIN);
     
+    // Data
     for (int i=0; i<3; i++)
     {
+        eulerAngles[i] = 0.0;
         bodyRates[i] = 0.0;
         velLL[i] = 0.0;
     }
     
+    // Limits
+    minPWM = PWMMIN;
+    maxPWM = PWMMINRPM;
+    minRPM = 0.0;
+    maxRPM = MINRPM;
+    minThrottle = 0.0;
+    maxThrottle = MINTHROTTLE;
+    
+    // PWM
     for (int iCh = THROTTLE; iCh != nChannels; iCh++)
     {
         pwmCmd[iCh]     = PWMMIN;
@@ -91,7 +97,7 @@ void FsControls_setup()
 
 void FsControls_performControls()
 {
-    // Not enough initialization to start controls
+    // Not initialization for controls
     if ( (controlData.mode == NoControl) ||
         (!controls_setup) ||
         (FsNavigation_getNavState() == Calibration)
@@ -113,7 +119,7 @@ void performControls()
     for (int iCh = THROTTLE; iCh != nChannels; iCh++)
     {
         prevPwmCmd[iCh] = pwmCmd[iCh];
-        pwmCmd[iCh] = discretize(pwmCmd[iCh], prevPwmCmd[iCh], PWMMIN, PWMMAX, minPWMΙncr);
+        pwmCmd[iCh] = discretize(pwmCmd[iCh], prevPwmCmd[iCh], PWMMIN, PWMMAX, minPWMIncr);
     }
     
     // Compute Throttle PWM Limits
@@ -158,20 +164,12 @@ void performControls()
         controlData.de = kp_pitch*(controlData.pitchCmd   - eulerAngles[1]) - kd_pitch*bodyRates[1];
         controlData.dr = kp_yaw  *(controlData.yawRateCmd - bodyRates[2]);
         
-        //std::cout << "dr: " << controlData.dr;
-        //std::cout << " yawRateCmd: " << controlData.yawRateCmd/ double(degree2radian);
-        //std::cout << " yawRate: " << bodyRates[2]/ double(degree2radian);
-        //std::cout << " yawRateError: " << (controlData.yawRateCmd - bodyRates[2])/ double(degree2radian) << std::endl;
-        
         // Increase throttle to allow attitude following
-        minAttitudeThrottle();
-        if (controlData.dT < minThrottle)
+        if (controlData.mode == VelocityControl)
         {
-            //display("Increasing throttle to ");
-            //display(minThrottle);
-            //display(" for attitude control.\n");
+            minAttitudeThrottle();
+            controlData.dT = limit(controlData.dT, minThrottle, maxThrottle);
         }
-        controlData.dT = limit(controlData.dT, minThrottle, maxThrottle);
     }
     else
     {
@@ -190,11 +188,6 @@ void performControls()
     controlData.da = limit(controlData.da, -(dMAX-controlData.dT)/3.0, (dMAX-controlData.dT)/3.0);
     controlData.de = limit(controlData.de, -(dMAX-controlData.dT)/3.0, (dMAX-controlData.dT)/3.0);
     controlData.dr = limit(controlData.dr, -(dMAX-controlData.dT)/3.0, (dMAX-controlData.dT)/3.0);
-    
-    zeroLimitMin = -controlData.dT/3.0;
-    zeroLimitMax = controlData.dT/2.0;
-    maxLimitMin  = (controlData.dT-dMAX)/2.0;
-    maxLimitMax  = (dMAX-controlData.dT)/3.0;
 }
 
 void setMotors()
@@ -239,21 +232,21 @@ void FsControls_setPWMCommands(int* pwmIn)
     }
 }
 
+#ifdef SIMULATION
 void FsControls_setSimulationModels(ModelMap* pMap)
 {
-#ifdef SIMULATION
     T1esc.servo_setSimulationModels(pMap);
     T2esc.servo_setSimulationModels(pMap);
     T3esc.servo_setSimulationModels(pMap);
     T4esc.servo_setSimulationModels(pMap);
-#endif
 }
+#endif
 
 void FsControls_setControlsData(IMUtype* pIMUdataIn, NavType* pNavDataIn)
 {
     for (int i=0; i<3; i++)
     {
-        bodyRates[i]   = pIMUdataIn->gyro[i]*degree2radian - pNavDataIn->gyroBias[i];
+        bodyRates[i] = pIMUdataIn->gyro[i]*degree2radian - pNavDataIn->gyroBias[i];
         eulerAngles[i] = pNavDataIn->eulerAngles[i];
     }
     FsNavigation_bodyToLL(velLL, pNavDataIn->velBody);
@@ -338,7 +331,7 @@ void minAttitudeThrottle()
     minThrottle = 3*dmax;
     
     // Limit minimum throttle to 0.8*dTo for VLL_z contorl
-    if ( (minThrottle > 0.8*controlData.dTo) && (controlData.mode == VelocityControl) )
+    if (minThrottle > 0.8*controlData.dTo)
     {
         minThrottle = 0.8*controlData.dTo;
     }

@@ -56,14 +56,11 @@ void display(TempType val)
 template void display(const char*);
 template void display(String);
 template void display(int);
-template void display(unsigned int);
-template void display(float);
 template void display(double);
-template void display(unsigned long);
 
+#ifdef SIMULATION
 void FsCommon_setSimulationModels(ModelMap* pMap)
 {
-#ifdef SIMULATION
     if (pMap) { pTime = (Time*) pMap->getModel("Time"); }
-#endif
 }
+#endif
