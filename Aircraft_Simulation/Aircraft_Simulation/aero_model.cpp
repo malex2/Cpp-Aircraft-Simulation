@@ -30,16 +30,16 @@ AeroModelBase::AeroModelBase(ModelMap *pMapInit, bool debugFlagIn)
     pTime   = NULL;
     pGnd    = NULL;
     pMap    = pMapInit;
-    /*
-    pMap->addLogVar("alpha", &alphaPrint, savePlot, 2);
-    pMap->addLogVar("beta", &betaPrint, savePlot, 2);
-    pMap->addLogVar("Lift  ", &aeroForce[2], savePlot, 2);
-    pMap->addLogVar("Drag  ", &aeroForce[0], savePlot, 2);
-    pMap->addLogVar("SideForce", &aeroForce[1], savePlot, 2);
-    pMap->addLogVar("Aero Roll Moment", &bodyMoment[0], savePlot, 2);
-    pMap->addLogVar("Aero Pitch Moment", &bodyMoment[1], savePlot, 2);
-    pMap->addLogVar("Aero Yaw Moment", &bodyMoment[2], savePlot, 2);
-    */
+    
+    //pMap->addLogVar("alpha", &alphaPrint, savePlot, 2);
+    //pMap->addLogVar("beta", &betaPrint, savePlot, 2);
+    //pMap->addLogVar("Lift  ", &aeroForce[2], savePlot, 2);
+    //pMap->addLogVar("Drag  ", &aeroForce[0], savePlot, 2);
+    //pMap->addLogVar("SideForce", &aeroForce[1], savePlot, 2);
+    //pMap->addLogVar("Aero Roll Moment", &bodyMoment[0], savePlot, 2);
+    //pMap->addLogVar("Aero Pitch Moment", &bodyMoment[1], savePlot, 2);
+    //pMap->addLogVar("Aero Yaw Moment", &bodyMoment[2], savePlot, 2);
+    
     util.setUnitClassArray(aeroEuler, zero_init, degrees, 3);
     util.setArray(aeroForce, zero_init, 3);
     alpha.convertUnit(radians);

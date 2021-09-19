@@ -152,18 +152,18 @@ QuadcopterPropulsionModel::QuadcopterPropulsionModel(ModelMap *pMapInit, bool de
     
     //pMap->addLogVar("propX", &bodyForce[0], savePlot, 2);
     //pMap->addLogVar("propY", &bodyForce[1], savePlot, 2);
-    //pMap->addLogVar("propZ", &bodyForce[2], savePlot, 2);
-    pMap->addLogVar("propMX", &bodyMoment[0], savePlot, 2);
-    pMap->addLogVar("propMY", &bodyMoment[1], savePlot, 2);
-    pMap->addLogVar("propMZ", &bodyMoment[2], savePlot, 2);
-    pMap->addLogVar("prop T1", &throttle[0], savePlot, 2);
-    pMap->addLogVar("prop T2", &throttle[1], savePlot, 2);
-    pMap->addLogVar("prop T3", &throttle[2], savePlot, 2);
-    pMap->addLogVar("prop T4", &throttle[3], savePlot, 2);
-    pMap->addLogVar("engineRPM1", &engineRPM[0], savePlot, 2);
-    pMap->addLogVar("engineRPM2", &engineRPM[1], savePlot, 2);
-    pMap->addLogVar("engineRPM3", &engineRPM[2], savePlot, 2);
-    pMap->addLogVar("engineRPM4", &engineRPM[3], savePlot, 2);
+    pMap->addLogVar("propZ", &bodyForce[2], savePlot, 2);
+    //pMap->addLogVar("propMX", &bodyMoment[0], savePlot, 2);
+    //pMap->addLogVar("propMY", &bodyMoment[1], savePlot, 2);
+    //pMap->addLogVar("propMZ", &bodyMoment[2], savePlot, 2);
+    //pMap->addLogVar("prop T1", &throttle[0], savePlot, 2);
+    //pMap->addLogVar("prop T2", &throttle[1], savePlot, 2);
+    //pMap->addLogVar("prop T3", &throttle[2], savePlot, 2);
+    //pMap->addLogVar("prop T4", &throttle[3], savePlot, 2);
+    //pMap->addLogVar("engineRPM1", &engineRPM[0], savePlot, 2);
+    //pMap->addLogVar("engineRPM2", &engineRPM[1], savePlot, 2);
+    //pMap->addLogVar("engineRPM3", &engineRPM[2], savePlot, 2);
+    //pMap->addLogVar("engineRPM4", &engineRPM[3], savePlot, 2);
     //pMap->addLogVar("propLLX", &LLForce[0], savePlot, 2);
  
     pPropulsors[0] = new Propeller(pMap, debugFlag, maxThrust, maxRPM);
@@ -218,6 +218,7 @@ PropulsionTypeBase::PropulsionTypeBase(ModelMap *pMapInit, bool debugFlagIn, dou
     Q         = 0.003; // 0.024 - 0.036
     maxThrust = maxThrust_in;
     maxTorque = Q*maxThrust;
+    rpm       = 0.0;
     minRPM    = 0.0;
     maxRPM    = maxRPM_in;
     direction = direction_in;

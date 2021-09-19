@@ -11,7 +11,7 @@
 
 #include "generic_model.hpp"
 
-class IMUModelBase : public GenericModel
+class IMUModelBase : public GenericSensorModel
 {
 public:
     // Constructor
@@ -45,8 +45,6 @@ protected:
     void gyroscopeModel(void);
     void accelerometerModel(void);
     void magnetometerModel(void);
-    double* noiseModel(double* maxNoise);
-    double noiseModel(double maxNoise);
     
     // units to LSB
     double LSBdps; // degress per second to LSB
@@ -67,12 +65,11 @@ protected:
     // accInUnits = accIMU + accError
     // accIMU = accInUnits / LSBg
     
-    // Noise
-    double noise[3];
-    
     double gyroBias[3];
     double gyroNoiseMax[3];
     double gyroError[3];
+    randomNoiseM gyroNoise[3];
+    randomNoiseM accNoise[3];
     
     double accBias[3];
     double accNoiseMax[3];

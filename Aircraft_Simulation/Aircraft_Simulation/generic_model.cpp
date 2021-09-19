@@ -50,6 +50,33 @@ GenericForceModel::GenericForceModel()
     util.setArray(bodyMoment, zero_init, 3);
 }
 
+GenericSensorModel::GenericSensorModel()
+{
+    util.initArray(randomNoise, 0.0, 3);
+}
+
+double* GenericSensorModel::randomNoiseModel(double* maxNoise)
+{
+    util.initArray(randomNoise, 0.0, 3);
+    for (int i=0; i<3; i++)
+    {
+        randomNoise[i] = randomNoiseModel( *(maxNoise+i) );
+    }
+    return &randomNoise[0];
+}
+
+double GenericSensorModel::randomNoiseModel(double maxNoise)
+{
+    // update random seed
+    static unsigned int count = 0;
+    srand(++count);
+    
+    int randInt = rand() % 100;
+    double randToMax = maxNoise*randInt / 100.0;
+    double randMinMax = randToMax*2.0 - maxNoise;
+    return randMinMax;
+}
+
 // Example class
 /*
 #include "initial_conditions.hpp"

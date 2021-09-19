@@ -57,7 +57,7 @@ void FsNavigation_setupNavigation(double *initialPosition, double initialHeading
     initPosition[1] = initialPosition[1]*degree2radian;
     initPosition[2] = initialPosition[2];
     initHeading = initialHeading * degree2radian;
-    FsNavigation_initNED(initPosition, initVelNED, initHeading, true);
+    FsNavigation_setNED(initPosition, initVelNED, initHeading, true);
     
     NavData.state = Calibration;
     
@@ -98,7 +98,7 @@ void FsNavigation_performNavigation( double &navDt )
 #endif
         NavData.timestamp = getTime();
     }
-    FsImu_zeroDelta(true);
+    FsImu_zeroDelta();
 }
 
 void updateGravity()
@@ -315,9 +315,14 @@ void FsNavigation_performGPSPVTUpdate(double* gps_LLA, double* gps_velNED, doubl
     
     if (!NavData.initNED)
     {
-        FsNavigation_initNED(gps_LLA, gps_velNED, gps_heading);
+        FsNavigation_setNED(gps_LLA, gps_velNED, gps_heading);
         return;
     }
+}
+
+void FsNavigation_performBarometerUpdate(barometerType* baroData)
+{
+    
 }
 
 void FsNavigation_calibrateIMU()
@@ -429,7 +434,7 @@ void FsNavigation_setIMUdata(IMUtype* pIMUdataIn)
     nav_pIMUdata = pIMUdataIn;
 }
 
-void FsNavigation_initNED(double* LLA, double* velNED, double heading, bool bypassInit)
+void FsNavigation_setNED(double* LLA, double* velNED, double heading, bool bypassInitFlag)
 {
     double yawDelta;
     double qOld[4];
@@ -459,7 +464,7 @@ void FsNavigation_initNED(double* LLA, double* velNED, double heading, bool bypa
     quaternionProduct(NavData.q_B_NED, qOld, qYawDelta);
     updateEulerAngles();
     
-    if (!bypassInit)
+    if (!bypassInitFlag)
     {
         NavData.initNED = true;
     }

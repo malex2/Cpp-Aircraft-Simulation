@@ -10,9 +10,10 @@
 #define fs_navigation_hpp
 
 #include "fs_common.hpp"
+#include "fs_barometer.hpp"
 
 // Types
-enum NavState {Calibration, INS, GPS};
+enum NavState {Calibration, INS, GPS, Barometer};
 
 struct SensorErrorType {
     double sum;
@@ -27,7 +28,7 @@ struct SensorErrorType {
 };
 
 struct NavType {
-    double position[3]; //Latitude, longitude, Altitude
+    double position[3]; //Latitude, Longitude, Altitude
     double velNED[3];
     bool   initNED;
     double eulerAngles[3];
@@ -71,7 +72,10 @@ void performARHS(double &navDt);
 void gyroUpdate(double &navDt);
 void compFilter();
 void performINS( double &navDt );
+
+// Filter Updates
 void FsNavigation_performGPSPVTUpdate(double* gps_LLA, double* gps_velNED, double gps_heading, double gps_timestamp);
+void FsNavigation_performBarometerUpdate(barometerType* baroData);
 
 // Calibration
 void FsNavigation_calibrateIMU();
@@ -83,7 +87,7 @@ NavState FsNavigation_getNavState();
 
 // Setters
 void FsNavigation_setIMUdata(IMUtype* pIMUdataIn);
-void FsNavigation_initNED(double* LLA, double* velNED, double heading, bool bypassInit = false);
+void FsNavigation_setNED(double* LLA, double* velNED, double heading, bool bypassInit = false);
 #ifdef SIMULATION
     void FsNavigation_setSimulationModels(ModelMap* pMap);
 #endif

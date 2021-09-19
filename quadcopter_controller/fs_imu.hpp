@@ -18,7 +18,7 @@ struct IMUtype {
     double gyro[3];
     double dTheta[3];
     
-    double temp;
+    double temperature;
     double timestamp;
     
     IMUtype()
@@ -30,28 +30,19 @@ struct IMUtype {
             gyro[i]      = 0.0;
             dTheta[i]    = 0.0;
         }
-        temp = 0;
-        timestamp = 0;
+        temperature = 0.0;
+        timestamp   = 0.0;
     }
 };
 
 enum accSensitivityType  {accSensitivity_2g, accSensitivity_4g, accSensitivity_8g, accSensitivity_16g, nAccSensitivity};
 enum gyroSensitivityType {gyroSensitivity_250dps, gyroSensitivity_500dps, gyroSensitivity_1000dps, gyroSensitivity_2000dps, nGyroSensitivity};
 
-// I2C Registers
-#define MPU_ADDR   0x68
-#define PWR_MGMT_1 0x6B // PWR_MGMT_1 register
-#define GYRO_REG   0x1B // Gryo register
-#define ACC_REG    0x1C // Accelerometer register
-#define ACC_OUT    0x3B // (ACCEL_XOUT_H) [MPU-6000 and MPU-6050 Register Map and Descriptions Revision 4.2, p.40]
-#define INT        0x37
-#define INT_ENABLE 0x38
-
 // External Functions
 void FsImu_performIMU( double &imuDt );
 void FsImu_setupIMU(accSensitivityType accSensitivity, gyroSensitivityType gyroSensitivity);
 IMUtype* FsImu_getIMUdata();
-void FsImu_zeroDelta(bool zero);
+void FsImu_zeroDelta();
 
 // Internal Functions
 void readIMU();

@@ -33,8 +33,6 @@ IMUModelBase::IMUModelBase(ModelMap *pMapInit, bool debugFlagIn)
     onlyGravity = false;
     
     // Noise
-    util.initArray(noise, 0.0, 3);
-    
     util.initArray(gyroBias, 0.0, 3);
     util.initArray(gyroNoiseMax, 0.0, 3);
     util.initArray(gyroError, 0.0, 3);
@@ -145,6 +143,12 @@ void IMUModelBase::initialize(void)
     pAtmo   = (AtmosphereModel*) pMap->getModel("AtmosphereModel");
     pRotate = (RotateFrame*)     pMap->getModel("RotateFrame");
     pTime   = (Time*)            pMap->getModel("Time");
+    
+    for (int i=0; i<3; i++)
+    {
+        gyroNoise[i] = gyroNoiseMax[i];
+        accNoise[i] = accNoiseMax[i];
+    }
 }
 
 bool IMUModelBase::update(void)
@@ -213,7 +217,7 @@ void IMUModelBase::gyroscopeModel(void)
     pRotate->bodyToImu(gyroIMU, bodyRates);
     
     // Add Error
-    util.vAdd(gyroError, gyroBias, noiseModel(gyroNoiseMax), 3);
+    for(int i=0; i<3; i++) { gyroError[i] = gyroNoise[i] + gyroBias[i]; }
     
     if (perfectSensor)
     {
@@ -249,6 +253,7 @@ void IMUModelBase::accelerometerModel(void)
     gravityNED[2] = gravity;
     pRotate->NEDToBody(gravityBody, gravityNED);
     pRotate->bodyToImu(gravityIMU, gravityBody);
+    
     // Gravity relative to free-fall
     util.vgain(gravityIMU, -1.0, 3);
     
@@ -265,7 +270,8 @@ void IMUModelBase::accelerometerModel(void)
     util.vgain(accIMU, 1/refGravity, 3);
     
     // Add Error
-    util.vAdd(accError, accBias, noiseModel(accNoiseMax), 3);
+    //util.vAdd(accError, accBias, randomNoiseModel(accNoiseMax), 3);
+    for(int i=0; i<3; i++) { accError[i] = accNoise[i] + accBias[i]; }
     
     if (perfectSensor)
     {
@@ -312,7 +318,7 @@ void IMUModelBase::magnetometerModel(void)
     pRotate->bodyToImu(magIMU, magBody);
 
     // Add Error
-    util.vAdd(magError, magBias, noiseModel(magNoiseMax), 3);
+    util.vAdd(magError, magBias, randomNoiseModel(magNoiseMax), 3);
     
     if (perfectSensor)
     {
@@ -327,28 +333,6 @@ void IMUModelBase::magnetometerModel(void)
     // Raw Magnetic Field
     util.setArray(magSensor, magInUnits, 3);
     util.vgain(magSensor, LSBg, 3);
-}
-
-double* IMUModelBase::noiseModel(double* maxNoise)
-{
-    util.initArray(noise, 0.0, 3);
-    for (int i=0; i<3; i++)
-    {
-        noise[i] = noiseModel( *(maxNoise+i) );
-    }
-    return &noise[0];
-}
-
-double IMUModelBase::noiseModel(double maxNoise)
-{
-    // update random seed
-    static int count = 0;
-    srand(++count);
-    
-    int randInt = rand() % 100;
-    double randToMax = maxNoise*randInt / 100.0;
-    double randMinMax = randToMax*2 - maxNoise;
-    return randMinMax;
 }
 
 QuadcopterIMUModel::QuadcopterIMUModel(ModelMap *pMapInit, bool debugFlagIn) : IMUModelBase(pMapInit, debugFlagIn)

@@ -23,14 +23,18 @@ SimulationWire::SimulationWire()
     
     pIMU  = 0;
     pAtmo = 0;
+    pBaro = 0;
     
     devices[MPU6050] = MPU_ADDR;
+    devices[BMP180]  = BMP180_ADDR;
     device = nDevices;
     
     for (int iDevice = MPU6050; iDevice != nDevices; iDevice++)
     {
         deviceAwake[iDevice] = false;
     }
+    
+    bmp180LastRequest = bmp180::NOREQUEST;
     
     print = false;
 }
@@ -44,6 +48,11 @@ void SimulationWire::beginTransmission(int deviceIn)
 {
     if (!active) { return; }
     
+    if (foundDevice && device != deviceIn)
+    {
+        std::cout << "Cannot transmit to " << deviceIn << ", currently in use by " << device << std::endl;
+    }
+    
     for (int iDevice = MPU6050; iDevice != nDevices; iDevice++)
     {
         if (!foundDevice && deviceIn == devices[iDevice])
@@ -53,6 +62,9 @@ void SimulationWire::beginTransmission(int deviceIn)
             if (print) { std::cout << "Device found: " << device << std::endl; }
         }
     }
+    
+    // bmp180 always awake once connected
+    if (device == BMP180 && !deviceAwake[device]) { deviceAwake[device] = true; }
 }
 
 void SimulationWire::write(int info)
@@ -83,12 +95,12 @@ void SimulationWire::write(int info)
             break;
             
         case MPU6050 :
-            if (address == PWR_MGMT_1 )
+            if (address == PWR_MGMT_1)
             {
                 if (info == 0) { deviceAwake[device] = true; }
             }
                     
-            else if (address == GYRO_REG )
+            else if (address == GYRO_REG)
             {
                 double LSBdps = MPU6050_gyroByteToLSB(info);
                 if (pIMU) pIMU->setLSBdps(LSBdps);
@@ -100,23 +112,60 @@ void SimulationWire::write(int info)
                 if (pIMU) pIMU->setLSBg(LSBg);
             }
             break;
+            
+        case BMP180:
+            if (address == BMP180_REG_CONTROL)
+            {
+                if (info == BMP180_COMMAND_TEMPERATURE)
+                {
+                    static_cast<bmp180*> (pBaro)->startTemperatureReading();
+                }
+                else if (info == BMP180_COMMAND_PRESSURE0)
+                {
+                    static_cast<bmp180*> (pBaro)->setPressureNoise(0);
+                    static_cast<bmp180*> (pBaro)->startPressureReading();
+                }
+                else if (info == BMP180_COMMAND_PRESSURE1)
+                {
+                    static_cast<bmp180*> (pBaro)->setPressureNoise(1);
+                    static_cast<bmp180*> (pBaro)->startPressureReading();
+                }
+                else if (info == BMP180_COMMAND_PRESSURE2)
+                {
+                    static_cast<bmp180*> (pBaro)->setPressureNoise(2);
+                    static_cast<bmp180*> (pBaro)->startPressureReading();
+                }
+                else if (info == BMP180_COMMAND_PRESSURE3)
+                {
+                    static_cast<bmp180*> (pBaro)->setPressureNoise(3);
+                    static_cast<bmp180*> (pBaro)->startPressureReading();
+                }
+            }
+            break;
     }
 }
 
-byte SimulationWire::read()
+short SimulationWire::read()
 {
     if (!active) { return 0; }
     
-    int val = buffer[iBuffer];
+    short val = buffer[iBuffer];
     iBuffer++;
     if (iBuffer == bufferSize) { clearBuffer(); }
     
     return val;
 }
 
-void SimulationWire::requestFrom(int device2, int numBytes, bool end)
+void SimulationWire::requestFrom(int deviceWrite, int numBytes, bool restart)
 {
     if (!active) { return; }
+    
+    if (!addressLatch) { std::cout << "Requesting from unknown I2C address" << std::endl; return; }
+    
+    if (deviceWrite != devices[device] )
+    {
+        std::cout << "Cannot request from " << deviceWrite << ", currently latched to " << device << "." << std::endl;
+    }
     
     switch (device) {
         case nDevices :
@@ -138,6 +187,7 @@ void SimulationWire::requestFrom(int device2, int numBytes, bool end)
                         rawGyro[i] = static_cast<short> ( pIMU->getGyroscope()[i] );
                         rawAcc[i]  = static_cast<short> ( pIMU->getAccelerometer()[i] );
                     }
+                    // rawTemp = static_cast<short>  ( pIMU->getTemperature() );
                 }
                 
                 if (pAtmo)
@@ -146,43 +196,122 @@ void SimulationWire::requestFrom(int device2, int numBytes, bool end)
                     rawTemp = static_cast<short> ( (tempC - 36.53) * 349 );
                 }
                 
-                buffer[0] = (byte) ((rawAcc[0] >> 8) & 0xFF);
-                buffer[1] = (byte) (rawAcc[0] & 0xFF);
-                buffer[2] = (byte) ((rawAcc[1] >> 8) & 0xFF);
-                buffer[3] = (byte) (rawAcc[1] & 0xFF);
-                buffer[4] = (byte) ((rawAcc[2] >> 8) & 0xFF);
-                buffer[5] = (byte) (rawAcc[2] & 0xFF);
+                buffer[0] = (byte) ((rawAcc[0] & 0xFF00) >> 8);
+                buffer[1] = (byte) (rawAcc[0] & 0x00FF);
+                buffer[2] = (byte) ((rawAcc[1] & 0xFF00) >> 8);
+                buffer[3] = (byte) (rawAcc[1] & 0x00FF);
+                buffer[4] = (byte) ((rawAcc[2] & 0xFF00) >> 8);
+                buffer[5] = (byte) (rawAcc[2] & 0x00FF);
                 
-                buffer[6] = (byte) ((rawTemp >> 8) & 0xFF);
-                buffer[7] = (byte) (rawTemp & 0xFF);
+                buffer[6] = (byte) ((rawTemp & 0xFF00) >> 8);
+                buffer[7] = (byte) (rawTemp & 0x00FF);
                 
-                buffer[8] = (byte) ((rawGyro[0] >> 8) & 0xFF);
-                buffer[9] = (byte) (rawGyro[0] & 0xFF);
-                buffer[10] = (byte) ((rawGyro[1] >> 8) & 0xFF);
-                buffer[11] = (byte) (rawGyro[1] & 0xFF);
-                buffer[12] = (byte) ((rawGyro[2] >> 8) & 0xFF);
-                buffer[13] = (byte) (rawGyro[2] & 0xFF);
+                buffer[8] = (byte)  ((rawGyro[0] & 0xFF00) >> 8);
+                buffer[9] = (byte)  (rawGyro[0] & 0x00FF);
+                buffer[10] = (byte) ((rawGyro[1] & 0xFF00) >> 8);
+                buffer[11] = (byte) (rawGyro[1] & 0x00FF);
+                buffer[12] = (byte) ((rawGyro[2] & 0xFF00) >> 8);
+                buffer[13] = (byte) (rawGyro[2] & 0x00FF);
                 
-                bufferSize = 14;
+                bufferSize = numBytes;
                 
                 // check
-                //int check = buffer[4] << 8 | buffer[5];
+                //short check = buffer[4] << 8 | buffer[5];
                 //std::cout << "Buffer check: ";
                 //std::cout << rawAcc[2]  << " ";
                 //std::cout << check << std::endl;
             }
             break;
+            
+        case BMP180:
+            
+            if (address == BMP180_REG_RESULT)
+            {
+                bmp180LastRequest = static_cast<bmp180*> (pBaro)->getLastRequest();
+                
+                if (bmp180LastRequest == bmp180::TEMPERATURE)
+                {
+                    int rawTemp = 0;
+                    
+                    if (pBaro) { rawTemp = pBaro->getTemperature(); }
+
+                    buffer[0] = (byte) ((rawTemp & 0xFF00) >> 8);
+                    buffer[1] = (byte) (rawTemp & 0x00FF);
+                    
+                    bufferSize = numBytes;
+                }
+                else if (bmp180LastRequest == bmp180::PRESSURE)
+                {
+                    float rawPres = pBaro->getPressure();
+                    short intRawPres = (short) rawPres;
+                    
+                    buffer[0] = (byte) ((intRawPres & 0xFF00) >> 8);
+                    buffer[1] = (byte) (intRawPres & 0x00FF);
+                    buffer[2] = (byte) ( (rawPres-intRawPres)*256.0 );
+                    
+                    bufferSize = numBytes;
+                }
+            }
+            else if (address == AC1_ADDR)
+            {
+                BMP180_request2bytes(bmp180::AC1, numBytes);
+            }
+            else if (address == AC2_ADDR)
+            {
+                BMP180_request2bytes(bmp180::AC2, numBytes);
+            }
+            else if (address == AC3_ADDR)
+            {
+                BMP180_request2bytes(bmp180::AC3, numBytes);
+            }
+            else if (address == AC4_ADDR)
+            {
+                BMP180_request2bytes(bmp180::AC4, numBytes);
+            }
+            else if (address == AC5_ADDR)
+            {
+                BMP180_request2bytes(bmp180::AC5, numBytes);
+            }
+            else if (address == AC6_ADDR)
+            {
+                BMP180_request2bytes(bmp180::AC6, numBytes);
+            }
+            else if (address == VB1_ADDR)
+            {
+                BMP180_request2bytes(bmp180::VB1, numBytes);
+            }
+            else if (address == VB2_ADDR)
+            {
+                BMP180_request2bytes(bmp180::VB2, numBytes);
+            }
+            else if (address == MB_ADDR)
+            {
+                BMP180_request2bytes(bmp180::MB, numBytes);
+            }
+            else if (address == MC_ADDR)
+            {
+                BMP180_request2bytes(bmp180::MC, numBytes);
+            }
+            else if (address == MD_ADDR)
+            {
+                BMP180_request2bytes(bmp180::MD, numBytes);
+            }
+            break;
     }
 
-    if (end)
-    {
-        endTransmission(true);
-    }
+    endTransmission(restart);
 }
 
-void SimulationWire::endTransmission(bool restart)
+
+int SimulationWire::available()
 {
-    if (!active) { return; }
+    return bufferSize-iBuffer;
+}
+
+int SimulationWire::endTransmission(bool restart)
+{
+    if (!active) { return 4; }
+    if (!foundDevice) { return 2;}
     
     if (restart)
     {
@@ -191,6 +320,8 @@ void SimulationWire::endTransmission(bool restart)
         foundDevice = false;
         addressLatch = false;
     }
+    
+    return 0;
 }
 
 void SimulationWire::clearBuffer()
@@ -227,13 +358,22 @@ double SimulationWire::MPU6050_accByteToLSB(int byte)
     return LSBg;
 }
 
+void SimulationWire::BMP180_request2bytes(bmp180::calibrationType calVal, int numBytes)
+{
+    int rawCal = ( static_cast<bmp180*> (pBaro)->getCalibrationParameter()[calVal] );
+    buffer[0] = (byte) ((rawCal & 0xFF00) >> 8);
+    buffer[1] = (byte) (rawCal & 0x00FF);
+    bufferSize = numBytes;
+}
+
 void SimulationWire::wire_setSimulationModels(ModelMap* pMap, bool print_wire)
 {
     print = print_wire;
     if (pMap)
     {
-        pIMU  = (IMUModelBase*)    pMap->getModel("IMUModel");
-        pAtmo = (AtmosphereModel*) pMap->getModel("AtmosphereModel");
+        pIMU  = (IMUModelBase*)       pMap->getModel("IMUModel");
+        pAtmo = (AtmosphereModel*)    pMap->getModel("AtmosphereModel");
+        pBaro = (BarometerModelBase*) pMap->getModel("BarometerModel");
     }
 }
 
@@ -301,3 +441,5 @@ ArduinoSerial::ArduinoSerial() { }
 void ArduinoSerial::begin(long baudRate) { }
 
 void pinMode(int pin, enum pinMode mode) { }
+
+SimulationWire Wire = SimulationWire();

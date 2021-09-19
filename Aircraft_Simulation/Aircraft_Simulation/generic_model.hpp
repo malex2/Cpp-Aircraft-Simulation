@@ -10,6 +10,7 @@
 #define general_model_hpp
 
 #include <stdio.h>
+#include <random>
 
 #include "utilities.hpp"
 #include "model_mapping.hpp"
@@ -56,6 +57,19 @@ public:
     double* getForce(void)   { return bodyForce; }
     double* getLLForce(void) { return LLForce; }
     double* getMoment(void)  { return bodyMoment; }
+};
+
+class GenericSensorModel : public GenericModel {
+protected:
+    
+    // Random Noise
+    double randomNoise[3];
+    double* randomNoiseModel(double* maxNoise);
+    double randomNoiseModel(double maxNoise);
+public:
+    // Constructor
+    GenericSensorModel();
+    
 };
 
 // Example class

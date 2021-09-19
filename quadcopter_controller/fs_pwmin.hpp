@@ -17,6 +17,7 @@ void FsPwmIn_performPwmIn();
 
 // Getters
 int* FsPwmIn_getPWM();
+bool FsPwmIn_valid();
 
 class PwmIn {
 #ifdef SIMULATION
@@ -27,6 +28,8 @@ public:
     void attach(int pinIn);
     
     int getPwm();
+    
+    static unsigned long getValidReadCount() { return validReadCount; }
 private:
     // Functions
     int mapToPwm(double value, double valueMin, double valueMax, int pwmMin, int pwmMax);
@@ -51,6 +54,8 @@ private:
     double maxValue;
     bool foundChannel;
     
+    static unsigned long validReadCount; // Number of valid reads from PWM;
+    
     // Tables
     static const int lengthTable = 5;
     
@@ -62,10 +67,10 @@ private:
     };
     
     double signalValues[nChannels][lengthTable] = {
-        {0.0, 70.0, 20.0 , 70.0 , 39.0}, // Throttle (%), 0-100
-        {0.0, 0.0 , 0.0  , 0.0  , 3.0 }, // Aileron  (deg)
-        {0.0, 0.0 , 0.0  , 0.0  , -3.0 }, // Pitch    (deg)
-        {0.0, -1.0 , 1.0  , 0.0  , 0.0 }  // YawRate  (deg/s)
+        {0.0, 60.0, 40.0 , 30.0 , 40.0}, // Throttle (%), 0-100
+        {0.0, 0.0 , 0.0  , 5.0  , 0.0 }, // Aileron  (deg)
+        {0.0, 0.0 , 0.0  , -5.0  , 5.0 }, // Pitch    (deg)
+        {0.0, 1.0 , -1.0  , 0.0  , 0.0 }  // YawRate  (deg/s)
     };
 #else
 public:
@@ -80,6 +85,7 @@ public:
     int getPin()    { return thisPin; }
     int getPinLoc() { return thisPinLoc; }
     static int getCurPin() { return pinArray[iPin]; }
+    static unsigned long getValidReadCount() { return validReadCount; }
     
     // Interrupts
     static void riseInterrupt();
@@ -97,9 +103,10 @@ private:
     // Pin Info
     static int iPin;  // Position of pin in pinArray
     static int nPins; // Number of interrupt pins
-    static int pinArray[maxPins];     // Array of interrupt pins
-    static volatile int tRise;        // Rise time for current interrupt
-    static volatile int pwm[maxPins]; // Array of interrupt pwms
+    static int pinArray[maxPins];        // Array of interrupt pins
+    static unsigned long validReadCount; // Number of valid reads from PWM;
+    static volatile int tRise;           // Rise time for current interrupt
+    static volatile int pwm[maxPins];    // Array of interrupt pwms
 #endif
 };
 

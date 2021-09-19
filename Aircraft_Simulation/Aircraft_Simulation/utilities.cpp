@@ -755,6 +755,50 @@ TempType Utilities::interpolate(const TempType *xvec, const TempType *yvec, Temp
     return y;
 }
 
+/* --------------------  Polynomial Math -------------------- */
+template<typename TempType>
+bool Utilities::solveQuadratic(TempType a, TempType b, TempType c, TempType* solnReal, TempType* solnImag)
+{
+    // solnReal[0] & solnImag[0] is + solution
+    // solnReal[0] & solnImag[0] is - solution
+    
+    bool realSolution = true;
+    TempType sqrtVal;
+    TempType part1;
+    TempType part2;
+    
+    // Part 1: -b/(2*a)
+    // Part 2: sqrt(b^2 - 4*a*c)/(2*a)
+    part1 = -b/(2*a);
+    sqrtVal = b*b - 4*a*c;
+    if (sqrtVal < 0)
+    {
+        part2 = sqrt(-sqrtVal)/(2*a);
+        realSolution = false;
+    }
+    else
+    {
+        part2 = sqrt(sqrtVal)/(2*a);
+    }
+    
+    if (realSolution)
+    {
+        solnReal[0] = part1 + part2;
+        solnReal[1] = part1 - part2;
+        solnImag[0] = 0.0;
+        solnImag[1] = 0.0;
+    }
+    else
+    {
+        solnReal[0] = part1;
+        solnReal[1] = part1;
+        solnImag[0] = part2;
+        solnImag[1] = -part2;
+    }
+    
+    return realSolution;
+}
+
 /* -------------------- Matrix Math -------------------- */
 template<typename TempType>
 void Utilities::mmult(TempType* result, TempType* matrix, TempType* vector, int nrow, int ncol)
@@ -1483,6 +1527,8 @@ template double Utilities::interpolate(double*, double*, double, int, bool, bool
 
 template float Utilities::interpolate(const float*, const float*, float, int, bool, bool);
 template double Utilities::interpolate(const double*, const double*, double, int, bool, bool);
+
+template bool Utilities::solveQuadratic(double, double, double, double*, double*);
 
 template void Utilities::mmult(int* , int* , int* , int, int);
 template void Utilities::mmult(float* , float* , float* , int, int);

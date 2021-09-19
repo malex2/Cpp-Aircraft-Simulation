@@ -19,30 +19,48 @@ PwmIn yawChannel;
 PwmIn pitchChannel;
 
 int pwmIn[nChannels];
+unsigned long validReads;
+bool pwmValid;
+bool pwmSetup = false;;
 
 void FsPwmIn_setup()
 {
-    for (int iCh = THROTTLE; iCh != nChannels; iCh++)
-    {
-        pwmIn[iCh]    = PWMMIN;
-    }
+    pwmIn[THROTTLE] = PWMMIN;
+    pwmIn[ROLL]     = (PWMMIN+PWMMAX)/2;
+    pwmIn[PITCH]    = (PWMMIN+PWMMAX)/2;
+    pwmIn[YAW]      = (PWMMIN+PWMMAX)/2;
     
     throttleChannel.attach(THROTTLEPIN);
     rollChannel.attach(ROLLPIN);
     pitchChannel.attach(PITCHPIN);
     yawChannel.attach(YAWPIN);
+    
+    validReads = 0;
+    pwmValid   = false;
+    pwmSetup   = true;
 }
 
 void FsPwmIn_performPwmIn()
 {
-    // Get Desired Aittutde
+    pwmValid = false;
+    if (!pwmSetup) { return; }
+    
+    // Get PWM readings
     pwmIn[THROTTLE] = throttleChannel.getPwm();
     pwmIn[ROLL]     = rollChannel.getPwm();
     pwmIn[PITCH]    = pitchChannel.getPwm();
     pwmIn[YAW]      = yawChannel.getPwm();
+    
+    // Determine if readings are valid
+    if(PwmIn::getValidReadCount() > validReads)
+    {
+        validReads = PwmIn::getValidReadCount();
+        pwmValid = true;
+    }
 }
 
 int* FsPwmIn_getPWM()    { return pwmIn; }
+bool FsPwmIn_valid()     { return pwmValid; }
 
 #ifdef SIMULATION
 PwmIn::PwmIn()
@@ -135,6 +153,7 @@ int PwmIn::getPwm()
     
     pwm = mapToPwm(value, minValue, maxValue, PWMMIN, PWMMAX);
     
+    if (channel == YAW) { validReadCount++; }
     /*
     display("Channel: ");
     display((int) channel);
@@ -214,12 +233,13 @@ void PwmIn::fallInterrupt()
         disableInterrupt(pinArray[iPin]);
         
         iPin++;
-        if (iPin >= nPins) { iPin = 0; }
+        if (iPin >= nPins) { iPin = 0; validReadCount++; }
         enableInterrupt(pinArray[iPin], PwmIn::riseInterrupt, RISING);
     }
 }
 #endif
 
+unsigned long PwmIn::validReadCount = 0;
 #ifndef SIMULATION
     int PwmIn::iPin  = 0;
     int PwmIn::nPins = 0;

@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <math.h>
 #include <termios.h>
+#include <random>
 
 // Mac key enum
 enum keyType {
@@ -439,6 +440,95 @@ public:
     
 };
 
+class NoiseM {
+public:
+    NoiseM(double noiseIn)
+    {
+        maxNoise = noiseIn;
+        count = 0;
+        noise = 0.0;
+    }
+    
+    virtual void setNoise(double noiseIn) { maxNoise = noiseIn; }
+    virtual double getNoise()             { return noise; }
+    
+    NoiseM operator=(double noiseIn)
+    {
+        this->setNoise(noiseIn);
+        return *this;
+    }
+    
+    double operator+(double value)
+    {
+        updateNoise();
+        return value + noise;
+    }
+    
+protected:
+    double maxNoise;
+    double noise;
+    int count;
+    
+    virtual void updateNoise() { noise = 0.0; }
+};
+
+class randomNoiseM : public NoiseM {
+public:
+    randomNoiseM(double maxNoiseIn = 0.0) : NoiseM(maxNoiseIn) {}
+    
+    virtual void updateNoise()
+    {
+        // update random seed
+        srand(++count);
+        
+        int randInt = rand() % 100;
+        double randToMax = maxNoise*randInt / 100.0;
+        noise = randToMax*2.0 - maxNoise;
+    }
+};
+
+class uniformNoiseM : public NoiseM {
+public:
+    uniformNoiseM(double maxNoiseIn = 0.0) : generator(randomDevice()), uniformDistribution(-maxNoiseIn, maxNoiseIn), NoiseM(maxNoiseIn) {}
+    
+    virtual void updateNoise()
+    {
+        noise = uniformDistribution(generator);
+    }
+    
+    virtual void setNoise(double noiseIn)
+    {
+        maxNoise = noiseIn;
+        uniformDistribution.param(std::uniform_real_distribution<double>::param_type(-maxNoise, maxNoise));
+    }
+    
+private:
+    std::random_device randomDevice;
+    std::mt19937 generator;
+    std::uniform_real_distribution<double> uniformDistribution;
+};
+
+class guassianNoiseM : public NoiseM {
+public:
+    guassianNoiseM(double maxNoiseIn = 0.0) : generator(randomDevice()), gaussianDistribution(0.0, maxNoiseIn/3.0), NoiseM(maxNoiseIn) {}
+    
+    virtual void updateNoise()
+    {
+        noise = gaussianDistribution(generator);
+    }
+    
+    virtual void setNoise(double noiseIn)
+    {
+        maxNoise = noiseIn;
+        gaussianDistribution.param(std::normal_distribution<double>::param_type(0.0, maxNoise/3.0));
+    }
+    
+private:
+    std::random_device randomDevice;
+    std::mt19937 generator;
+    std::normal_distribution<double> gaussianDistribution;
+};
+
 class Utilities : public UnitConversions {
     
 public:
@@ -595,6 +685,10 @@ public:
     
     template<typename TempType>
     TempType interpolate(const TempType *xvec, const TempType *yvec, TempType x, int n, bool extrapolate = false, bool print = false);
+    
+    // Polynomial Math
+    template<typename TempType>
+    bool solveQuadratic(TempType a, TempType b, TempType c, TempType* solnReal, TempType* solnImag);
     
     // Matrix math
     template<typename TempType>

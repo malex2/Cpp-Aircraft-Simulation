@@ -22,7 +22,9 @@
     #include <iomanip>
     #include <fstream>
     typedef std::string String;
+
 #else
+    #include "Wire.h"
     #include "arduino.h"
     #ifdef max
         #undef max
@@ -59,6 +61,14 @@ enum channelType {THROTTLE, ROLL, PITCH, YAW, nChannels};
 #define T3PIN  10
 #define T4PIN  11
 
+// GPS Pins
+#define GPSRXPIN 2
+#define GPSTXPIN 3
+
+// IMU Pins
+#define IMUSDAPIN A4
+#define IMUSCLPIN A5
+
 // PWM
 #define PWMMIN 1000
 #define PWMMAX 2000
@@ -71,20 +81,46 @@ enum channelType {THROTTLE, ROLL, PITCH, YAW, nChannels};
 
 // Min/Max Limits
 #define MAXVELOCITY  1.5 // m/s - 5 ft/s
-#define MAXROLL      20.0 * degree2radian // rad
-#define MAXPITCH     20.0 * degree2radian // rad
+#define MAXROLL      25.0 * degree2radian // rad
+#define MAXPITCH     25.0 * degree2radian // rad
 #define MAXYAWRATE   360.0 * degree2radian // rad/s
 #define MINTHROTTLE  dMIN
 #define MAXTHROTTLE  0.85*dMAX
+
+// IMU Addresses
+#define MPU_ADDR   0x68
+#define PWR_MGMT_1 0x6B // PWR_MGMT_1 register
+#define GYRO_REG   0x1B // Gryo register
+#define ACC_REG    0x1C // Accelerometer register
+#define ACC_OUT    0x3B // (ACCEL_XOUT_H) [MPU-6000 and MPU-6050 Register Map and Descriptions Revision 4.2, p.40]
+#define INT        0x37
+#define INT_ENABLE 0x38
+
+// Baramoter Addresses
+#define BMP180_ADDR                0x77 // 7-bit address
+#define BMP180_REG_CONTROL         0xF4
+#define BMP180_REG_RESULT          0xF6
+#define BMP180_COMMAND_TEMPERATURE 0x2E
+#define BMP180_COMMAND_PRESSURE0   0x34
+#define BMP180_COMMAND_PRESSURE1   0x74
+#define BMP180_COMMAND_PRESSURE2   0xB4
+#define BMP180_COMMAND_PRESSURE3   0xF4
+#define AC1_ADDR  0xAA
+#define AC2_ADDR  0xAC
+#define AC3_ADDR  0xAE
+#define AC4_ADDR  0xB0
+#define AC5_ADDR  0xB2
+#define AC6_ADDR  0xB4
+#define VB1_ADDR  0xB6
+#define VB2_ADDR  0xB8
+#define MB_ADDR   0xBA
+#define MC_ADDR   0xBC
+#define MD_ADDR   0xBE
 
 #define minDeg 0.5
 #define minDps 1.0
 #define minPWMIncr 5.0
 #define quadMass 0.5
-
-// GPS Pins
-#define GPSRXPIN 2
-#define GPSTXPIN 3
 
 // Time
 double getTime();

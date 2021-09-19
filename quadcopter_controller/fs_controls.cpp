@@ -24,7 +24,6 @@ Servo T3esc;
 Servo T4esc;
 
 // PWM In
-int pwmCmd[nChannels];
 int prevPwmCmd[nChannels];
 
 // Navigation Data
@@ -89,8 +88,7 @@ void FsControls_setup()
     // PWM
     for (int iCh = THROTTLE; iCh != nChannels; iCh++)
     {
-        pwmCmd[iCh]     = PWMMIN;
-        prevPwmCmd[iCh] = PWMMIN;
+        prevPwmCmd[iCh] = (PWMMIN+PWMMAX)/2.0;
     }
     controls_setup = true;
 }
@@ -118,33 +116,33 @@ void performControls()
     // Discritize Commands to Limit Unintentional Change
     for (int iCh = THROTTLE; iCh != nChannels; iCh++)
     {
-        prevPwmCmd[iCh] = pwmCmd[iCh];
-        pwmCmd[iCh] = discretize(pwmCmd[iCh], prevPwmCmd[iCh], PWMMIN, PWMMAX, minPWMIncr);
+        prevPwmCmd[iCh] = controlData.pwmCmd[iCh];
+        controlData.pwmCmd[iCh] = discretize(controlData.pwmCmd[iCh], prevPwmCmd[iCh], PWMMIN, PWMMAX, minPWMIncr);
     }
     
     // Compute Throttle PWM Limits
-    rpmPwmLimits( (float) pwmCmd[THROTTLE], (float) PWMMINRPM );
+    rpmPwmLimits( (float) controlData.pwmCmd[THROTTLE], (float) PWMMINRPM );
     
     // Convert PWM to values
     if (controlData.mode == ThrottleControl)
     {
-        controlData.dT = mapToValue(pwmCmd[THROTTLE], minPWM, maxPWM, minThrottle, maxThrottle);
+        controlData.dT = mapToValue(controlData.pwmCmd[THROTTLE], minPWM, maxPWM, minThrottle, maxThrottle);
     }
     
     if (controlData.mode == AttitudeControl)
     {
-        controlData.dT         = mapToValue(pwmCmd[THROTTLE] ,       minPWM,       maxPWM,          minThrottle,      maxThrottle);
-        controlData.rollCmd    = mapToValue(pwmCmd[ROLL]     , (int) PWMMIN, (int) PWMMAX, (double) -MAXROLL   , (double) MAXROLL);    // Roll (rad)
-        controlData.pitchCmd   = mapToValue(pwmCmd[PITCH]    , (int) PWMMIN, (int) PWMMAX, (double) -MAXPITCH  , (double) MAXPITCH);   // Pitch (rad)
-        controlData.yawRateCmd = mapToValue(pwmCmd[YAW]      , (int) PWMMIN, (int) PWMMAX, (double) -MAXYAWRATE, (double) MAXYAWRATE); // Yaw Rate (rad/s)
+        controlData.dT         = mapToValue(controlData.pwmCmd[THROTTLE] ,       minPWM,       maxPWM,          minThrottle,      maxThrottle);
+        controlData.rollCmd    = mapToValue(controlData.pwmCmd[ROLL]     , (int) PWMMIN, (int) PWMMAX, (double) -MAXROLL   , (double) MAXROLL);    // Roll (rad)
+        controlData.pitchCmd   = mapToValue(controlData.pwmCmd[PITCH]    , (int) PWMMIN, (int) PWMMAX, (double) -MAXPITCH  , (double) MAXPITCH);   // Pitch (rad)
+        controlData.yawRateCmd = mapToValue(controlData.pwmCmd[YAW]      , (int) PWMMIN, (int) PWMMAX, (double) -MAXYAWRATE, (double) MAXYAWRATE); // Yaw Rate (rad/s)
     }
     
     else if (controlData.mode == VelocityControl)
     {
-        controlData.VLLzCmd    = mapToValue(pwmCmd[THROTTLE], (int) PWMMIN, (int) PWMMAX, (double) -MAXVELOCITY, (double) MAXVELOCITY); // (m/s)
-        controlData.VLLyCmd    = mapToValue(pwmCmd[ROLL]    , (int) PWMMIN, (int) PWMMAX, (double) -MAXVELOCITY, (double) MAXVELOCITY); // (m/s)
-        controlData.VLLxCmd    = mapToValue(pwmCmd[PITCH]   , (int) PWMMIN, (int) PWMMAX, (double) -MAXVELOCITY, (double) MAXVELOCITY); // (m/s)
-        controlData.yawRateCmd = mapToValue(pwmCmd[YAW]     , (int) PWMMIN, (int) PWMMAX, (double) -MAXYAWRATE , (double) MAXYAWRATE);  // (rad/s)
+        controlData.VLLzCmd    = mapToValue(controlData.pwmCmd[THROTTLE], (int) PWMMIN, (int) PWMMAX, (double) -MAXVELOCITY, (double) MAXVELOCITY); // (m/s)
+        controlData.VLLyCmd    = mapToValue(controlData.pwmCmd[ROLL]    , (int) PWMMIN, (int) PWMMAX, (double) -MAXVELOCITY, (double) MAXVELOCITY); // (m/s)
+        controlData.VLLxCmd    = mapToValue(controlData.pwmCmd[PITCH]   , (int) PWMMIN, (int) PWMMAX, (double) -MAXVELOCITY, (double) MAXVELOCITY); // (m/s)
+        controlData.yawRateCmd = mapToValue(controlData.pwmCmd[YAW]     , (int) PWMMIN, (int) PWMMAX, (double) -MAXYAWRATE , (double) MAXYAWRATE);  // (rad/s)
         
         // Outer Velocity Loop to Generate Attitude Commands
         controlData.dT       = kp_vz*(controlData.VLLzCmd - velLL[2]) + controlData.dTo;
@@ -228,7 +226,7 @@ void FsControls_setPWMCommands(int* pwmIn)
 {
     for (int iCh = THROTTLE; iCh != nChannels; iCh++)
     {
-        pwmCmd[iCh] = pwmIn[iCh];
+        controlData.pwmCmd[iCh] = pwmIn[iCh];
     }
 }
 
@@ -359,5 +357,3 @@ inline TempType limit(TempType value, TempType valueMin, TempType valueMax)
 
 template int limit(int, int, int);
 template double limit(double, double, double);
-
-double getPwmCmd(channelType chn) { return double( pwmCmd[chn] ); }

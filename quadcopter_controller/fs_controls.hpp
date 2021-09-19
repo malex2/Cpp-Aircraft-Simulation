@@ -16,6 +16,8 @@ enum ControlMode {ThrottleControl, AttitudeControl, VelocityControl, NoControl};
 
 struct ControlType {
     // Command Input
+    int pwmCmd[nChannels];
+    
     double VLLxCmd;
     double VLLyCmd;
     double VLLzCmd;
@@ -56,6 +58,7 @@ struct ControlType {
         
         for (int i=0; i<4; i++)
         {
+            pwmCmd[i] = (PWMMIN+PWMMAX)/2.0;
             TPWM[i]  = PWMMIN;
             rpmSq[i] = 0.0;
         }
@@ -79,7 +82,6 @@ void FsControls_setControlsData(IMUtype* pIMUdataIn, NavType* pNavDataIn);
 
 // Getters
 ControlType* FsControls_getControlData();
-double getPwmCmd(channelType chn);
 
 // Internal Access
 void discretizeCommands();

@@ -16,21 +16,26 @@
     #include "dynamics_model.hpp"
 #endif
 
+//#define PRINT
+
 // General Settings
 int baudRate;
 bool intiailized = false;
 
 // Print
+#ifdef PRINT
 bool printTiming;
 bool printIMU;
 bool printCalibration;
 bool printCalibratedIMU;
+bool printBarometer;
 bool printAngles;
 bool printVelocity;
 bool printPosition;
+bool printPWMIn;
 bool printCommands;
-bool printPWM;
-
+bool printMotorPWM;
+#endif
 // Simulation Classes
 #ifdef SIMULATION
     class ModelMap* pMap = 0;
@@ -38,7 +43,7 @@ bool printPWM;
 #endif
 
 // Time keeping (s)
-enum {hz50, hz100, hz200, hz800, printRoutine, nRoutines};
+enum {hz1, hz50, hz100, hz200, hz800, printRoutine, nRoutines};
 double prevTime[nRoutines];
 double routineDelays[nRoutines];
 bool   performRoutine[nRoutines];
@@ -54,6 +59,10 @@ const double dtPad = 1e-10;
 IMUtype* pIMUdata = 0;
 accSensitivityType accSensitivity;
 gyroSensitivityType gyroSensitivity;
+
+// Barometer
+barometerType* pBaroData = 0;
+byte bmp180Resolution;
 
 // Navigation
 bool useTruthNav;
@@ -77,6 +86,7 @@ ControlMode controlMode;
     double navState = 0.0;
     double altitudeError = 0.0;
     double cpwmCmd;
+    double baroState = 0.0;
 #endif
 
 // **********************************************************************
@@ -88,22 +98,29 @@ void initialize(void)
     initializeVariables();
     
     // Print Settings
+#ifdef PRINT
     printTiming        = false;
     printIMU           = true;
-    printCalibration   = true;
-    printCalibratedIMU = true;
+    printCalibration   = false;
+    printCalibratedIMU = false;
+    printBarometer     = true;
     printAngles        = false;
     printVelocity      = false;
     printPosition      = false;
+    printPWMIn         = false;
     printCommands      = false;
-    printPWM           = false;
+    printMotorPWM      = false;
+#endif
     
     // General Settings
     baudRate = 9600; // 9600, 38400, 115200
     
     // IMU Settings
     accSensitivity  = accSensitivity_4g;
-    gyroSensitivity = gyroSensitivity_250dps;
+    gyroSensitivity = gyroSensitivity_500dps;
+    
+    // Barometer Settings
+    bmp180Resolution = BMP180_COMMAND_PRESSURE3;
     
     // Navigation Settings
     initialPosition[0] = 28.5997222;  // Latitude  (deg)
@@ -113,13 +130,14 @@ void initialize(void)
     useTruthNav = false;
     
     // Control Settings
-    controlMode = AttitudeControl;
+    controlMode = NoControl; //AttitudeControl;
     
     // Timing Settings
+    routineDelays[hz1]   = 1.0;
     routineDelays[hz50]  = 1.0/50.0;
-    routineDelays[hz100] = 1.0/100.0;
-    routineDelays[hz200] = 1.0/200.0;
-    routineDelays[hz800] = 1.0/800.0;
+    routineDelays[hz100] = 1.0/100.0;//1.0/100.0;
+    routineDelays[hz200] = 1.0/200.0;//1.0/200.0;
+    routineDelays[hz800] = 1.0/800.0;//1.0/800.0;
     routineDelays[printRoutine] = 1.0;
     
     // Event Settings
@@ -202,7 +220,28 @@ bool mainFlightSoftware(void)
         // Perform Guidance
   
         // Set commands
-        FsControls_setPWMCommands( FsPwmIn_getPWM() );
+        if (FsPwmIn_valid())
+        {
+            FsControls_setPWMCommands( FsPwmIn_getPWM() );
+        }
+        
+        // Update Barometer
+        FsBarometer_performBarometer();
+        if (FsBarometer_getBaroState() == baroReady)
+        {
+        //    FsNavigation_performBarometerUpdate(barometerType* baroData)
+           FsBarometer_setStandby();
+        }
+    }
+    
+    if (performRoutine[hz1])
+    {
+        //Timing Info
+        actualDelays[hz1] = getTime() - prevTime[hz1];
+        prevTime[hz1] = getTime();
+        
+        bool goodStart = FsBarometer_startBarometerMeasurement();
+        if (!goodStart) { display("Barometer not ready\n"); }
     }
     
     if (performRoutine[printRoutine])
@@ -220,6 +259,8 @@ bool mainFlightSoftware(void)
     
     navState = static_cast<double> (pNavData->state);
     
+    baroState = static_cast<double> (pBaroData->state);
+    
     for (int i=0; i<3; i++)
     {
         if (i != 3) { position[i] = pNavData->position[i]*radian2degree; }
@@ -228,7 +269,7 @@ bool mainFlightSoftware(void)
 
     pNavError = FsNavigation_getNavError();
     altitudeError = -pNavError->position[2];
-    cpwmCmd = getPwmCmd(THROTTLE);
+    cpwmCmd = (double) pControlData->pwmCmd[THROTTLE];
 #endif
     
     return true;
@@ -241,6 +282,7 @@ void getModels()
 {
     // Get Pointers
     pIMUdata = FsImu_getIMUdata();
+    pBaroData = FsBarometer_getBaroData();
     pNavData = FsNavigation_getNavData();
     pControlData = FsControls_getControlData();
     
@@ -280,13 +322,22 @@ void setPrintVariables()
     //pMap->addLogVar("countDelta50hz", &countDelta50hz, savePlot, 2);
     
     // IMU
-    pMap->addLogVar("IMU Acc X" , &pIMUdata->accel[0], savePlot, 2);
-    pMap->addLogVar("IMU Acc Y" , &pIMUdata->accel[1], savePlot, 2);
-    pMap->addLogVar("IMU Acc Z" , &pIMUdata->accel[2], savePlot, 2);
+    //pMap->addLogVar("IMU Acc X" , &pIMUdata->accel[0], savePlot, 2);
+    //pMap->addLogVar("IMU Acc Y" , &pIMUdata->accel[1], savePlot, 2);
+    //pMap->addLogVar("IMU Acc Z" , &pIMUdata->accel[2], savePlot, 2);
     
-    pMap->addLogVar("IMU Gyro X" , &pIMUdata->gyro[0], savePlot, 2);
-    pMap->addLogVar("IMU Gyro Y" , &pIMUdata->gyro[1], savePlot, 2);
-    pMap->addLogVar("IMU Gyro Z" , &pIMUdata->gyro[2], savePlot, 2);
+    //pMap->addLogVar("IMU Gyro X" , &pIMUdata->gyro[0], savePlot, 2);
+    //pMap->addLogVar("IMU Gyro Y" , &pIMUdata->gyro[1], savePlot, 2);
+    //pMap->addLogVar("IMU Gyro Z" , &pIMUdata->gyro[2], savePlot, 2);
+    
+    // Barometer
+    pMap->addLogVar("Baro Timestamp", &pBaroData->timestamp, savePlot, 2);
+    //pMap->addLogVar("baro state", &baroState, savePlot, 2);
+    //pMap->addLogVar("Baro Pressure", &pBaroData->pressure, savePlot, 2);
+    //pMap->addLogVar("Baro pu", &pBaroData->pu, printSavePlot, 3);
+    //pMap->addLogVar("Baro Temperature", &pBaroData->temperature, savePlot, 2);
+    //pMap->addLogVar("Baro tu", &pBaroData->tu, savePlot, 2);
+    pMap->addLogVar("Baro Altitude", &pBaroData->altitude, savePlot, 2);
     
     // Navigation
     //pMap->addLogVar("Nav Lat" , &position[0], savePlot, 2);
@@ -298,30 +349,30 @@ void setPrintVariables()
     //pMap->addLogVar("Nav vel D" , &pNavData->velNED[2], savePlot, 2);
 
     //pMap->addLogVar("navstate", &navState, savePlot, 2);
-    pMap->addLogVar("Nav Roll" , &eulerAnglesDeg[0], printSavePlot, 3);
-    pMap->addLogVar("Nav Pitch", &eulerAnglesDeg[1], printSavePlot, 3);
-    pMap->addLogVar("Nav Yaw"  , &eulerAnglesDeg[2], savePlot, 2);
+    pMap->addLogVar("Nav Roll" , &eulerAnglesDeg[0], savePlot, 2);
+    pMap->addLogVar("Nav Pitch", &eulerAnglesDeg[1], savePlot, 2);
+    //pMap->addLogVar("Nav Yaw"  , &eulerAnglesDeg[2], savePlot, 2);
     
     //pMap->addLogVar("q[0]", &pNavData->q_B_NED[0], savePlot, 2);
     //pMap->addLogVar("q[1]", &pNavData->q_B_NED[1], savePlot, 2);
     //pMap->addLogVar("q[2]", &pNavData->q_B_NED[2], savePlot, 2);
     //pMap->addLogVar("q[3]", &pNavData->q_B_NED[3], savePlot, 2);
     
-    pMap->addLogVar("Roll Error", &pNavError->eulerAngles[0], savePlot, 2);
-    pMap->addLogVar("Pitch Error", &pNavError->eulerAngles[1], savePlot, 2);
-    pMap->addLogVar("Yaw Error", &pNavError->eulerAngles[2], savePlot, 2);
+    //pMap->addLogVar("Roll Error", &pNavError->eulerAngles[0], savePlot, 2);
+    //pMap->addLogVar("Pitch Error", &pNavError->eulerAngles[1], savePlot, 2);
+    //pMap->addLogVar("Yaw Error", &pNavError->eulerAngles[2], savePlot, 2);
     
     //pMap->addLogVar("qError[0]", &pNavError->q_B_NED[0], savePlot, 2);
     //pMap->addLogVar("qError[1]", &pNavError->q_B_NED[1], savePlot, 2);
     //pMap->addLogVar("qError[2]", &pNavError->q_B_NED[2], savePlot, 2);
     //pMap->addLogVar("qError[3]", &pNavError->q_B_NED[3], savePlot, 2);
     
-    pMap->addLogVar("Vel Body X Error", &pNavError->velBody[0], savePlot, 2);
-    pMap->addLogVar("Vel Body Y Error", &pNavError->velBody[1], savePlot, 2);
-    pMap->addLogVar("Vel Body Z Error", &pNavError->velBody[2], savePlot, 2);
+    //pMap->addLogVar("Vel Body X Error", &pNavError->velBody[0], savePlot, 2);
+    //pMap->addLogVar("Vel Body Y Error", &pNavError->velBody[1], savePlot, 2);
+    //pMap->addLogVar("Vel Body Z Error", &pNavError->velBody[2], savePlot, 2);
     
-    pMap->addLogVar("Vel N Error", &pNavError->velNED[0], savePlot, 2);
-    pMap->addLogVar("Vel E Error", &pNavError->velNED[1], savePlot, 2);
+    //pMap->addLogVar("Vel N Error", &pNavError->velNED[0], savePlot, 2);
+    //pMap->addLogVar("Vel E Error", &pNavError->velNED[1], savePlot, 2);
     pMap->addLogVar("Vel D Error", &pNavError->velNED[2], savePlot, 2);
     
     //pMap->addLogVar("Lat Error (deg)", &pNavError->position[0], savePlot, 2);
@@ -333,13 +384,13 @@ void setPrintVariables()
     //pMap->addLogVar("Acc Body Z Error", &pNavError->accelBody[2], savePlot, 2);
     
     // Controls
-    pMap->addLogVar("da"          , &pControlData->da     , savePlot, 2);
-    pMap->addLogVar("de"          , &pControlData->de     , savePlot, 2);
-    pMap->addLogVar("dr"          , &pControlData->dr     , savePlot, 2);
-    pMap->addLogVar("Ctrl PMW [0]", &pControlData->TPWM[0], savePlot, 2);
-    pMap->addLogVar("Ctrl PMW [1]", &pControlData->TPWM[1], savePlot, 2);
-    pMap->addLogVar("Ctrl PMW [2]", &pControlData->TPWM[2], savePlot, 2);
-    pMap->addLogVar("Ctrl PMW [3]", &pControlData->TPWM[3], savePlot, 2);
+    //pMap->addLogVar("da"          , &pControlData->da     , savePlot, 2);
+    //pMap->addLogVar("de"          , &pControlData->de     , savePlot, 2);
+    //pMap->addLogVar("dr"          , &pControlData->dr     , savePlot, 2);
+    //pMap->addLogVar("Ctrl PMW [0]", &pControlData->TPWM[0], savePlot, 2);
+    //pMap->addLogVar("Ctrl PMW [1]", &pControlData->TPWM[1], savePlot, 2);
+    //pMap->addLogVar("Ctrl PMW [2]", &pControlData->TPWM[2], savePlot, 2);
+    //pMap->addLogVar("Ctrl PMW [3]", &pControlData->TPWM[3], savePlot, 2);
 }
 #endif
 
@@ -369,6 +420,7 @@ void setupIO(void)
 {
     // Serial
     Serial.begin(baudRate);
+    Wire.begin();
     display("Setup Begin.\n");
     
     // LED Pin
@@ -376,6 +428,10 @@ void setupIO(void)
     
     // IMU
     FsImu_setupIMU(accSensitivity, gyroSensitivity);
+    
+    // Barometer
+    FsBarometer_setupBarometer();
+    FsBarometer_setPressureResolution(bmp180Resolution);
     
     // Navigation
     FsNavigation_setupNavigation(initialPosition, initialHeading);
@@ -393,8 +449,9 @@ void setupIO(void)
 
 void printData()
 {
+    #ifdef PRINT
     bool anyPrint = false;
-    
+    /*
     if (printTiming)
     {
         display(getTime());
@@ -418,7 +475,7 @@ void printData()
         
         anyPrint = true;
     }
-    
+    */
     if (printIMU)
     {
         display(getTime());
@@ -442,7 +499,7 @@ void printData()
         
         anyPrint = true;
     }
-    
+    /*
     if (printCalibration && pNavData->state != Calibration)
     {
         display(getTime());
@@ -492,7 +549,23 @@ void printData()
         
         anyPrint = true;
     }
-    
+    */
+    if (printBarometer)
+    {
+        display(getTime());
+        display(" ");
+        
+        display("Baro timestamp/pressure/temperature/altitude: ");
+        display(pBaroData->timestamp);
+        display(" ");
+        display(pBaroData->pressure);
+        display(" ");
+        display(pBaroData->temperature);
+        display(" ");
+        display(pBaroData->altitude);
+        display("\n");
+    }
+    /*
     if (printAngles)
     {
         display(getTime());
@@ -549,6 +622,22 @@ void printData()
         anyPrint = true;
     }
     
+    if (printPWMIn)
+    {
+        display(getTime());
+        display(" ");
+        
+        display("pwmIn: ");
+        display(pControlData->pwmCmd[THROTTLE]);
+        display(" ");
+        display(pControlData->pwmCmd[ROLL]);
+        display(" ");
+        display(pControlData->pwmCmd[PITCH]);
+        display(" ");
+        display(pControlData->pwmCmd[YAW]);
+        display("\n");
+    }
+    
     if (printCommands)
     {
         display(getTime());
@@ -573,7 +662,7 @@ void printData()
         anyPrint = true;
     }
     
-    if (printPWM)
+    if (printMotorPWM)
     {
         display(getTime());
         display(" ");
@@ -590,6 +679,7 @@ void printData()
         
         anyPrint = true;
     }
-    
+    */
     if (anyPrint) { display("\n"); }
+    #endif
 }

@@ -57,6 +57,7 @@ template void display(const char*);
 template void display(String);
 template void display(int);
 template void display(double);
+template void display(byte);
 
 #ifdef SIMULATION
 void FsCommon_setSimulationModels(ModelMap* pMap)

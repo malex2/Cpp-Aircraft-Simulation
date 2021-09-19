@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <iostream>
 #include "model_mapping.hpp"
+#include "barometer_model.hpp"
 
 typedef unsigned char byte;
 enum pinMode {INPUT, OUTPUT};
@@ -25,23 +26,24 @@ public:
     void beginTransmission(int deviceIn);
     
     void write(int info);
-    byte read();
+    short read();
     void requestFrom(int address, int numBytes, bool request);
-    void endTransmission(bool restart);
+    int available();
+    int endTransmission(bool restart = true);
     
-    bool available() { return true; }
     
     void wire_setSimulationModels(ModelMap* pMap, bool print_wire = false);
 private:
-    class IMUModelBase*    pIMU;
-    class AtmosphereModel* pAtmo;
+    class IMUModelBase*       pIMU;
+    class AtmosphereModel*    pAtmo;
+    class BarometerModelBase* pBaro;
     
     bool active;
     
     // attached I2C devices
-    enum deviceType {MPU6050, nDevices};
+    enum deviceType {MPU6050, BMP180, nDevices};
     int devices[nDevices];
-    int deviceAwake[nDevices];
+    bool deviceAwake[nDevices];
     bool foundDevice;
     deviceType device;
     
@@ -65,6 +67,31 @@ private:
     
     double MPU6050_gyroByteToLSB(int byte);
     double MPU6050_accByteToLSB(int byte);
+    
+    //BMP180 addresses
+    static const int BMP180_ADDR                = 0x77;
+    static const int BMP180_REG_CONTROL         = 0xF4;
+    static const int BMP180_REG_RESULT          = 0xF6;
+    static const int BMP180_COMMAND_TEMPERATURE = 0x2E;
+    static const int BMP180_COMMAND_PRESSURE0   = 0x34;
+    static const int BMP180_COMMAND_PRESSURE1   = 0x74;
+    static const int BMP180_COMMAND_PRESSURE2   = 0xB4;
+    static const int BMP180_COMMAND_PRESSURE3   = 0xF4;
+    static const int AC1_ADDR = 0xAA;
+    static const int AC2_ADDR = 0xAC;
+    static const int AC3_ADDR = 0xAE;
+    static const int AC4_ADDR = 0xB0;
+    static const int AC5_ADDR = 0xB2;
+    static const int AC6_ADDR = 0xB4;
+    static const int VB1_ADDR = 0xB6;
+    static const int VB2_ADDR = 0xB8;
+    static const int MB_ADDR  = 0xBA;
+    static const int MC_ADDR  = 0xBC;
+    static const int MD_ADDR  = 0xBE;
+    
+    bmp180::requestStateType bmp180LastRequest;
+    
+    void BMP180_request2bytes(bmp180::calibrationType calVal, int numBytes);
     
     bool print;
 };
@@ -113,4 +140,5 @@ public:
 
 void pinMode(int pin, pinMode mode);
 
+extern SimulationWire Wire;
 #endif /* arduino_class_models_hpp */

@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		1E06A2762494733C00DD8972 /* generic_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E06A2742494733C00DD8972 /* generic_model.cpp */; };
 		1E17D5612495989C00338B14 /* data_logger.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E17D5602495989C00338B14 /* data_logger.cpp */; };
+		1E23B20126D932B400BF25DA /* barometer_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E23B1FF26D932B400BF25DA /* barometer_model.cpp */; };
 		1E23C68B24B2AFC800EC4335 /* actuator_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E23C68924B2AFC800EC4335 /* actuator_model.cpp */; };
 		1E29E0DE24A7989B00A8C31A /* atmosphere_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E29E0DC24A7989A00A8C31A /* atmosphere_model.cpp */; };
 		1E3009FB259CC79000F8494A /* mass_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3009F9259CC79000F8494A /* mass_model.cpp */; };
@@ -22,7 +23,9 @@
 		1E6C2E5E25FEA448007B3C48 /* fs_controls.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E6C2E5C25FEA448007B3C48 /* fs_controls.cpp */; };
 		1E6C2E62260684BC007B3C48 /* fs_navigation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E6C2E60260684BC007B3C48 /* fs_navigation.cpp */; };
 		1E99A4A322DFE684008BFEF8 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E99A4A222DFE684008BFEF8 /* main.cpp */; };
+		1EABB61726C9877D00F96CBD /* fs_barometer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EABB61526C9877D00F96CBD /* fs_barometer.cpp */; };
 		1EB22CBB24D4C5C400F50BF9 /* performance.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB22CB924D4C5C400F50BF9 /* performance.cpp */; };
+		1EBC1DBA26A258E80094E1B6 /* transfer_function_utilities.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EBC1DB826A258E80094E1B6 /* transfer_function_utilities.cpp */; };
 		1ECCA32A249FA96D00820C69 /* ground_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ECCA328249FA96D00820C69 /* ground_model.cpp */; };
 		1EE8DFDE25E9E4100063C83F /* fs_imu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EE8DFDC25E9E4100063C83F /* fs_imu.cpp */; };
 		1EE8DFE125E9EE840063C83F /* fs_common.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EE8DFDF25E9EE840063C83F /* fs_common.cpp */; };
@@ -49,6 +52,8 @@
 		1E06A2752494733C00DD8972 /* generic_model.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = generic_model.hpp; sourceTree = "<group>"; };
 		1E17D55F2495989C00338B14 /* data_logger.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = data_logger.hpp; sourceTree = "<group>"; };
 		1E17D5602495989C00338B14 /* data_logger.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = data_logger.cpp; sourceTree = "<group>"; };
+		1E23B1FF26D932B400BF25DA /* barometer_model.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = barometer_model.cpp; sourceTree = "<group>"; };
+		1E23B20026D932B400BF25DA /* barometer_model.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = barometer_model.hpp; sourceTree = "<group>"; };
 		1E23C68924B2AFC800EC4335 /* actuator_model.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = actuator_model.cpp; sourceTree = "<group>"; };
 		1E23C68A24B2AFC800EC4335 /* actuator_model.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = actuator_model.hpp; sourceTree = "<group>"; };
 		1E29E0DC24A7989A00A8C31A /* atmosphere_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = atmosphere_model.cpp; sourceTree = "<group>"; };
@@ -76,9 +81,13 @@
 		1E6C2E61260684BC007B3C48 /* fs_navigation.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = fs_navigation.hpp; path = ../quadcopter_controller/fs_navigation.hpp; sourceTree = "<group>"; };
 		1E99A49F22DFE684008BFEF8 /* Aircraft_Simulation */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Aircraft_Simulation; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E99A4A222DFE684008BFEF8 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		1EABB61526C9877D00F96CBD /* fs_barometer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = fs_barometer.cpp; path = ../quadcopter_controller/fs_barometer.cpp; sourceTree = "<group>"; };
+		1EABB61626C9877D00F96CBD /* fs_barometer.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = fs_barometer.hpp; path = ../quadcopter_controller/fs_barometer.hpp; sourceTree = "<group>"; };
 		1EB22CB924D4C5C400F50BF9 /* performance.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = performance.cpp; sourceTree = "<group>"; };
 		1EB22CBA24D4C5C400F50BF9 /* performance.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = performance.hpp; sourceTree = "<group>"; };
 		1EB8FEF924B36CE200A72E56 /* aircraft_simulation_types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = aircraft_simulation_types.h; sourceTree = "<group>"; };
+		1EBC1DB826A258E80094E1B6 /* transfer_function_utilities.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = transfer_function_utilities.cpp; sourceTree = "<group>"; };
+		1EBC1DB926A258E80094E1B6 /* transfer_function_utilities.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = transfer_function_utilities.hpp; sourceTree = "<group>"; };
 		1ECCA328249FA96D00820C69 /* ground_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ground_model.cpp; sourceTree = "<group>"; };
 		1ECCA329249FA96D00820C69 /* ground_model.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ground_model.hpp; sourceTree = "<group>"; };
 		1EE8DFDC25E9E4100063C83F /* fs_imu.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = fs_imu.cpp; path = ../quadcopter_controller/fs_imu.cpp; sourceTree = "<group>"; };
@@ -115,6 +124,8 @@
 				1E6C2E5A25FE8C9A007B3C48 /* fs_pwmin.hpp */,
 				1E6C2E60260684BC007B3C48 /* fs_navigation.cpp */,
 				1E6C2E61260684BC007B3C48 /* fs_navigation.hpp */,
+				1EABB61526C9877D00F96CBD /* fs_barometer.cpp */,
+				1EABB61626C9877D00F96CBD /* fs_barometer.hpp */,
 				1E6C2E5C25FEA448007B3C48 /* fs_controls.cpp */,
 				1E6C2E5D25FEA448007B3C48 /* fs_controls.hpp */,
 				1EE8DFDC25E9E4100063C83F /* fs_imu.cpp */,
@@ -137,13 +148,15 @@
 			children = (
 				1E99A4A222DFE684008BFEF8 /* main.cpp */,
 				1E3009FC259CE43D00F8494A /* flight_software.cpp */,
+				1E3009FD259CE43D00F8494A /* flight_software.hpp */,
 				1EE8DFE225E9F5580063C83F /* arduino_class_models.cpp */,
 				1EE8DFE325E9F5580063C83F /* arduino_class_models.hpp */,
-				1E3009FD259CE43D00F8494A /* flight_software.hpp */,
 				1EB22CB924D4C5C400F50BF9 /* performance.cpp */,
 				1EB22CBA24D4C5C400F50BF9 /* performance.hpp */,
 				1EFAAF3F259A1A5D007AEE56 /* imu_model.cpp */,
 				1EFAAF40259A1A5D007AEE56 /* imu_model.hpp */,
+				1E23B1FF26D932B400BF25DA /* barometer_model.cpp */,
+				1E23B20026D932B400BF25DA /* barometer_model.hpp */,
 				1EED09AB24A91A07007DC0C3 /* propulsion_model.cpp */,
 				1EED09AC24A91A07007DC0C3 /* propulsion_model.hpp */,
 				1EED09AF24A974DA007DC0C3 /* aero_model.cpp */,
@@ -168,6 +181,8 @@
 				1E56507D248D4E3A00EB0E51 /* time.hpp */,
 				1E565082248D5FDE00EB0E51 /* utilities.cpp */,
 				1E565083248D5FDE00EB0E51 /* utilities.hpp */,
+				1EBC1DB826A258E80094E1B6 /* transfer_function_utilities.cpp */,
+				1EBC1DB926A258E80094E1B6 /* transfer_function_utilities.hpp */,
 				1E56507C248D4DCE00EB0E51 /* initial_conditions.hpp */,
 				1E3009F9259CC79000F8494A /* mass_model.cpp */,
 				1E3009FA259CC79000F8494A /* mass_model.hpp */,
@@ -237,16 +252,19 @@
 				1E6C2E62260684BC007B3C48 /* fs_navigation.cpp in Sources */,
 				1EB22CBB24D4C5C400F50BF9 /* performance.cpp in Sources */,
 				1E6C2E5B25FE8C9A007B3C48 /* fs_pwmin.cpp in Sources */,
+				1EBC1DBA26A258E80094E1B6 /* transfer_function_utilities.cpp in Sources */,
 				1EE8DFE425E9F5580063C83F /* arduino_class_models.cpp in Sources */,
 				1E3009FB259CC79000F8494A /* mass_model.cpp in Sources */,
 				1E56508A248D819F00EB0E51 /* dynamics_model.cpp in Sources */,
 				1E29E0DE24A7989B00A8C31A /* atmosphere_model.cpp in Sources */,
 				1EFAAF41259A1A5D007AEE56 /* imu_model.cpp in Sources */,
+				1EABB61726C9877D00F96CBD /* fs_barometer.cpp in Sources */,
 				1E565084248D5FDE00EB0E51 /* utilities.cpp in Sources */,
 				1E6C2E5E25FEA448007B3C48 /* fs_controls.cpp in Sources */,
 				1E06A2762494733C00DD8972 /* generic_model.cpp in Sources */,
 				1EED09B024A974DA007DC0C3 /* aero_model.cpp in Sources */,
 				1E565081248D4EE200EB0E51 /* time.cpp in Sources */,
+				1E23B20126D932B400BF25DA /* barometer_model.cpp in Sources */,
 				1E3009FE259CE43D00F8494A /* flight_software.cpp in Sources */,
 				1ECCA32A249FA96D00820C69 /* ground_model.cpp in Sources */,
 				1E23C68B24B2AFC800EC4335 /* actuator_model.cpp in Sources */,

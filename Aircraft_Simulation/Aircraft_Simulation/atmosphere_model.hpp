@@ -25,6 +25,31 @@ public:
     
     // Enumeration
     enum airValues {density, pressure, dynPress, temp, dynVisc, specificHeat, R};
+    enum atmosphereType {TROPOSPHERE, STRATOSPHERE1, STRATOSPHERE2, STRATOSPHERE3, MESOSPHERE1, MESOSPHERE2, THERMOSPHERE1, THERMOSPHERE2, nATMOSPHERELAYERS};
+    enum temperatureGradientType {CONSTANT, SLOPE};
+    
+    struct layerInfoType {
+        atmosphereType layer;
+        temperatureGradientType gradient;
+        double basePressure;
+        double baseAltitude;
+        double baseTemperature;
+        double baseDensity;
+        double dTdH;
+        
+        layerInfoType()
+        {
+            layer = TROPOSPHERE;
+            gradient = SLOPE;
+            baseAltitude = 0.0;
+            baseDensity  = 1.225;
+            basePressure = 101325.0;
+            baseTemperature  = 288.16;
+            dTdH = 0.0;
+        }
+    };
+    
+    layerInfoType layerInfo;
     
     // Getters
     SpeedType<double>* getVelWindBody(void) { return velWindBody; }
@@ -47,6 +72,14 @@ private:
     
     void updateWind(void);
     
+    void updateLayerInfo(double altitude);
+    
+    double constantPressure(double basePressure, double baseAltitude, double altitude, double temperature);
+    double constantDensity(double baseDensity, double baseAltitude, double altitude, double temperature);
+    double gradientPressure(double basePressure, double baseTemperature, double temperature, double dTdH);
+    double gradientDensity(double baseDensity, double baseTemperature, double temperatre, double dTdH);
+    double gradientTemperature(double baseTemperature, double baseAltitude, double altitude, double dTdH);
+    
     SpeedType<double> velWindNED[3];
     SpeedType<double> velWindBody[3];
     
@@ -58,8 +91,24 @@ private:
     double Mach; // Mach number
     SpeedType<double> speedOfSound;
     
+    double ALTITUDE[nATMOSPHERELAYERS];
+    double TEMPERATURE[nATMOSPHERELAYERS];
+    double PRESSURE[nATMOSPHERELAYERS];
+    double DENSITY[nATMOSPHERELAYERS];
+    double DTDH[nATMOSPHERELAYERS];
+    temperatureGradientType GRADIENT[nATMOSPHERELAYERS];
+    
+    // Atmospheric References
+    const double gravitySL = 9.81;
+    const double spaceTempInShadow = 170.0;
+    const double spaceTempInSun = 393.0;
+    const double spaceTempDistant = 3.0;
+    
     // print variables
     double gravity;
+    double layer;
+    double pressureMB;
+    double tempC;
 };
 
 #endif /* Atmosphere_hpp */
