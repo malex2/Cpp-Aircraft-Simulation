@@ -27,8 +27,8 @@ IMUModelBase::IMUModelBase(ModelMap *pMapInit, bool debugFlagIn)
     LSBdps = 0.0;
     LSBg   = 0.0;
     LSBuT  = 0.0;
-    refGravity = 9.81;;
-    perfectSensor = false;;
+    refGravity = 9.80665;
+    perfectSensor = false;
     imuReady = false;
     onlyGravity = false;
     
@@ -343,19 +343,19 @@ QuadcopterIMUModel::QuadcopterIMUModel(ModelMap *pMapInit, bool debugFlagIn) : I
     LSBuT  = 16;
     
     // Noise
-    gyroBias[0] = 0.02;
-    gyroBias[1] = -0.08;
-    gyroBias[2] = 0.05;
-    gyroNoiseMax[0] = 0.23;//0.15;
-    gyroNoiseMax[1] = 0.27;//0.35;
-    gyroNoiseMax[2] = 0.26;//0.15;
+    gyroBias[0] = 0.02;  // deg/s
+    gyroBias[1] = -0.08; // deg/s
+    gyroBias[2] = 0.05;  // deg/s
+    gyroNoiseMax[0] = 0.23;//0.15;  // deg/s
+    gyroNoiseMax[1] = 0.27;//0.35;  // deg/s
+    gyroNoiseMax[2] = 0.26;//0.15;  // deg/s
     
-    accBias[0] = 0.01;
-    accBias[1] = -0.03;
-    accBias[2] = 0.08;
-    accNoiseMax[0] = 0.02;
-    accNoiseMax[1] = 0.02;
-    accNoiseMax[2] = 0.02;
+    accBias[0] = 0.01;     // g's
+    accBias[1] = -0.03;    // g's
+    accBias[2] = 0.08;     // g's
+    accNoiseMax[0] = 0.02; // g's
+    accNoiseMax[1] = 0.02; // g's
+    accNoiseMax[2] = 0.02; // g's
 
     magBias[0] = 1.0;
     magBias[1] = -2.0;

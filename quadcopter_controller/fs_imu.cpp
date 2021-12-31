@@ -37,6 +37,7 @@ short rawTemp;
 short errorCodeIMU;
 
 float toBody[3] = {1.0, -1.0, -1.0};
+const double refGravity = 9.80665;
 
 // Simulation
 #ifdef SIMULATION
@@ -117,7 +118,7 @@ void readIMU()
             rawGyro[i]  = pIMUmodel->getGyroscope()[i];
         }
 #endif
-        IMUdata.accel[i] = (double) toBody[i]*rawAccel[i]/LSBg;
+        IMUdata.accel[i] = (double) toBody[i]*rawAccel[i]/LSBg * refGravity;
         IMUdata.gyro[i]  = (double) toBody[i]*rawGyro[i]/LSBdps;
     }
 }

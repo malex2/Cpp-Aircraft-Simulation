@@ -55,5 +55,5 @@ void FsBarometer_setPressureResolution(byte pressureResolutionIn);
 // Getters
 barometerType* FsBarometer_getBaroData();
 baroStateType FsBarometer_getBaroState();
-
+double FsBarometer_getAltitudeVariance();
 #endif /* fs_barometer_hpp */

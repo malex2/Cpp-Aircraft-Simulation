@@ -67,10 +67,10 @@ private:
     };
     
     double signalValues[nChannels][lengthTable] = {
-        {0.0, 60.0, 40.0 , 30.0 , 40.0}, // Throttle (%), 0-100
-        {0.0, 0.0 , 0.0  , 5.0  , 0.0 }, // Aileron  (deg)
-        {0.0, 0.0 , 0.0  , -5.0  , 5.0 }, // Pitch    (deg)
-        {0.0, 1.0 , -1.0  , 0.0  , 0.0 }  // YawRate  (deg/s)
+        {0.0, 0.0, 0.0 , 0.0 , 0.0}, // Throttle (%), 0-100
+        {0.0, 0.0 , 0.0  , 0.0  , 0.0 }, // Aileron  (deg)
+        {0.0, 0.0 , 0.0  , 0.0  , 0.0 }, // Pitch    (deg)
+        {0.0, 0.0 , 0.0  , 0.0  , 0.0 }  // YawRate  (deg/s)
     };
 #else
 public:

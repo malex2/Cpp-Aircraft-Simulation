@@ -911,6 +911,33 @@ void Utilities::mgain(TempType *matrix, TempType gain, int nrow, int ncol)
     }
 }
 
+
+template<typename TempType>
+void Utilities::minv(TempType *matrix_inv, TempType *matrix, int n)
+{
+    TempType b[n];
+    TempType x[n];
+    for (int i = 0; i < n; i++)
+    {
+        b[i] = 0.0;
+        x[i] = 0.0;
+    }
+    
+    for (int icol = 0; icol < n; icol++)
+    {
+        // matrix_inv[1:n,icol] = A\b
+        // where b[icol] = 1 and b[!icol] = 0
+        
+        b[icol] = 1.0;
+        LUdecomp(x, matrix, b, n);
+        for (int irow = 0; irow < n; irow++)
+        {
+            *(matrix_inv+irow*n+icol) = x[irow];
+        }
+        b[icol] = 0.0;
+    }
+}
+
 template<typename TempType>
 void Utilities::LUdecomp(TempType *x, TempType *A, TempType *b, int n)
 {
@@ -1561,6 +1588,9 @@ template void Utilities::mtran(double* , const double* ,int ,int);
 template void Utilities::mgain(int* , int, int, int);
 template void Utilities::mgain(float* , float, int, int);
 template void Utilities::mgain(double* , double, int, int);
+
+template void Utilities::minv(float* matrix_inv, float* matrix, int n);
+template void Utilities::minv(double* matrix_inv, double* matrix, int n);
 
 template void Utilities::LUdecomp(int*, int* , int* , int);
 template void Utilities::LUdecomp(float*, float* , float* , int);

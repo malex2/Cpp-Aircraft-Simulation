@@ -26,6 +26,7 @@ double c5, c6, mc, md, x0, x1, x2, py0, py1, py2, p0, p1, p2;
 byte pressureResolution;
 double refPressure;
 short errorCodeBaro;
+double altitudeRMS;
 
 void FsBarometer_setupBarometer()
 {
@@ -49,6 +50,7 @@ void FsBarometer_setupBarometer()
     pressureResolution = BMP180_COMMAND_PRESSURE0;
     pressDelay = 5.0 / 1000.0;
     tempDelay = 5.0 / 1000.0;
+    altitudeRMS = 0.5;
     
     // Calibrate
     AC1 = readCalVal(AC1_ADDR);
@@ -62,7 +64,6 @@ void FsBarometer_setupBarometer()
     MB = readCalVal(MB_ADDR);
     MC = readCalVal(MC_ADDR);
     MD = readCalVal(MD_ADDR);
-    
     
     // Compute floating-point polynominals:
     c3 = 160.0 * pow(2, -15) * AC3;
@@ -108,19 +109,23 @@ void FsBarometer_setPressureResolution(byte pressureResolutionIn)
     switch (pressureResolution)
     {
         case BMP180_COMMAND_PRESSURE0:
-            pressDelay = 5.0 / 1000.0;
+            pressDelay  = 5.0 / 1000.0;
+            altitudeRMS = 0.5;
             break;
             
         case BMP180_COMMAND_PRESSURE1:
-            pressDelay = 8.0 / 1000.0;
+            pressDelay  = 8.0 / 1000.0;
+            altitudeRMS = 0.4;
             break;
             
         case BMP180_COMMAND_PRESSURE2:
-            pressDelay = 14.0 / 1000.0;
+            pressDelay  = 14.0 / 1000.0;
+            altitudeRMS = 0.3;
             break;
             
         case BMP180_COMMAND_PRESSURE3:
-            pressDelay = 26.0 / 1000.0;
+            pressDelay  = 26.0 / 1000.0;
+            altitudeRMS = 0.25;
             break;
             
         default:
@@ -293,3 +298,5 @@ void FsBarometer_setStandby()
 barometerType* FsBarometer_getBaroData() { return &baroData; }
 
 baroStateType FsBarometer_getBaroState() { return baroData.state; }
+
+double FsBarometer_getAltitudeVariance() { return altitudeRMS*altitudeRMS; }

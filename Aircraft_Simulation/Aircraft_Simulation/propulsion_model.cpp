@@ -152,7 +152,7 @@ QuadcopterPropulsionModel::QuadcopterPropulsionModel(ModelMap *pMapInit, bool de
     
     //pMap->addLogVar("propX", &bodyForce[0], savePlot, 2);
     //pMap->addLogVar("propY", &bodyForce[1], savePlot, 2);
-    pMap->addLogVar("propZ", &bodyForce[2], savePlot, 2);
+    //pMap->addLogVar("propZ", &bodyForce[2], savePlot, 2);
     //pMap->addLogVar("propMX", &bodyMoment[0], savePlot, 2);
     //pMap->addLogVar("propMY", &bodyMoment[1], savePlot, 2);
     //pMap->addLogVar("propMZ", &bodyMoment[2], savePlot, 2);

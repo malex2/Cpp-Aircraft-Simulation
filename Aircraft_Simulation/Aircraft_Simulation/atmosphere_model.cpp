@@ -29,10 +29,10 @@ AtmosphereModel::AtmosphereModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("Wz  ", &bodyForce[2], savePlot, 2);
     //pMap->addLogVar("W   ", &LLForce[2], savePlot, 2);
     //pMap->addLogVar("desnity", &air[density], printSavePlot, 3);
-    pMap->addLogVar("pressure", &air[pressure], savePlot, 2);
-    pMap->addLogVar("temperature", &air[temp], savePlot, 2);
-    pMap->addLogVar("pressure (mb)", &pressureMB, savePlot, 2);
-    pMap->addLogVar("temperature (C)", &tempC, savePlot, 2);
+    //pMap->addLogVar("pressure", &air[pressure], savePlot, 2);
+    //pMap->addLogVar("temperature", &air[temp], savePlot, 2);
+    //pMap->addLogVar("pressure (mb)", &pressureMB, savePlot, 2);
+    //pMap->addLogVar("temperature (C)", &tempC, savePlot, 2);
     //pMap->addLogVar("dynamic pressure", &air[dynPress], printSavePlot, 3);
     //pMap->addLogVar("layer", &layer, printSavePlot, 3);
     //pMap->addLogVar("Re  ", &Re, savePlot, 2);

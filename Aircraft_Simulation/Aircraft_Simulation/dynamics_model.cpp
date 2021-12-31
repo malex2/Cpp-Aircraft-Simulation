@@ -319,7 +319,7 @@ bool DynamicsModel::update(void)
     dPosBody[1] = prevVelNED[1].mps()*dt + 0.5*accNED[1]*dt*dt;  // Longitude rate in rad/s
     
     posBody[0] = posBody[0] + dPosBody[0]/hCenter.m(); // L = L + distance/radius
-    posBody[1] = posBody[1] + dPosBody[1]/hCenter.m();
+    posBody[1] = posBody[1] + dPosBody[1]/( hCenter.m() * cos(posBody[0]) );
     
     // Store print variables
     posBodyPrint[0] = posBody[0]/util.deg2rad;

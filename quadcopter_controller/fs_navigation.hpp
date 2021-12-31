@@ -12,8 +12,14 @@
 #include "fs_common.hpp"
 #include "fs_barometer.hpp"
 
+#define FILTERTEST
+
 // Types
-enum NavState {Calibration, INS, GPS, Barometer};
+enum NavState {Calibration, INS, GPSUpdate, BaroUpdate};
+enum StateType {Q0, Q1, Q2, Q3, VN, VE, VD, LAT, LON, ALT , NSTATES};
+enum VECTORTYPE {X, Y, Z};
+enum GPSMeasurementType {GPS_LAT, GPS_LON, GPS_ALT, GPS_VN, GPS_VE, GPS_VD, NGPSSTATES};
+enum BAROMeasurementType {BARO_ALT, NBAROSTATES};
 
 struct SensorErrorType {
     double sum;
@@ -27,6 +33,20 @@ struct SensorErrorType {
     SensorErrorType() : sum(0), mean(0), max(-999), min(999), std(0), sumSqr(0), variance(0) {}
 };
 
+struct StateInputType {
+    double dTheta[3];
+    double dVelocity[3];
+    
+    StateInputType()
+    {
+        for (int i=0; i<3; i++)
+        {
+            dTheta[i] = 0.0;
+            dVelocity[i] = 0.0;
+        }
+    }
+};
+
 struct NavType {
     double position[3]; //Latitude, Longitude, Altitude
     double velNED[3];
@@ -37,6 +57,7 @@ struct NavType {
     double gyroBias[3];
     double gravity;
     double velBody[3];
+    StateInputType stateInputs;
     
     NavState state;
     double timestamp;
@@ -72,10 +93,19 @@ void performARHS(double &navDt);
 void gyroUpdate(double &navDt);
 void compFilter();
 void performINS( double &navDt );
+void propogateVariance( double &navDt );
+void applyCorrections();
 
 // Filter Updates
 void FsNavigation_performGPSPVTUpdate(double* gps_LLA, double* gps_velNED, double gps_heading, double gps_timestamp);
 void FsNavigation_performBarometerUpdate(barometerType* baroData);
+
+// Filter Testing
+#ifdef FILTERTEST
+void nonlinearStateModel(double &navDt);
+void linearStateModel(double &navDt);
+void compareNonlinearStates();
+#endif
 
 // Calibration
 void FsNavigation_calibrateIMU();
@@ -84,6 +114,13 @@ void FsNavigation_calibrateIMU();
 NavType* FsNavigation_getNavData(bool useTruth = false);
 NavType* FsNavigation_getNavError();
 NavState FsNavigation_getNavState();
+NavType* FsNavigation_getNavStateError();
+NavType* FsNavigation_getLinStateError();
+double*  FsNavigation_getCovariance();
+double*  FsNavigation_getProcessNoise();
+double*  FsNavigation_getStateError();
+double*  FsNavigation_getBaroKalmanGain();
+double*  FsNavigation_getBaroError();
 
 // Setters
 void FsNavigation_setIMUdata(IMUtype* pIMUdataIn);
@@ -102,5 +139,15 @@ inline void FsNavigation_NEDToBody(double* vB, double* vNED);
 void FsNavigation_bodyToLL(double* vLL, double* vBody);
 inline void quaternionProduct(double *product, double *q1, double *q2);
 inline void updateEulerAngles();
+
+// Math
+void math_mgain(double *result, double *matrix, double gain, int nrow, int ncol);
+void math_madd(double *result, double *A, double *B, int nrows, int ncols);
+void math_msubtract(double *result, double *A, double *B, int nrows, int ncols);
+void math_mmult(double *result, double *A, int nrows1, int ncols1, double *B, int nrows2, int ncols2);
+void math_mmult(double *result, double *matrix, double *vector, int nrow, int ncol);
+void math_mtran(double *matrix_t, double *matrix, int nrow_t, int ncol_t);
+void math_minv(double *matrix_inv, double *matrix, int n);
+void math_LUdecomp(double *x, double *A, double *b, int n);
 
 #endif /* fs_navigation_hpp */

@@ -63,6 +63,10 @@ gyroSensitivityType gyroSensitivity;
 // Barometer
 barometerType* pBaroData = 0;
 byte bmp180Resolution;
+bool useBarometer;
+
+// GPS
+bool useGPS;
 
 // Navigation
 bool useTruthNav;
@@ -71,6 +75,10 @@ double initialHeading;
 NavType* pNavData = 0;
 #ifdef SIMULATION
     NavType* pNavError = 0;
+#endif
+#ifdef FILTERTEST
+NavType* pStateError = 0;
+NavType* pLinStateError = 0;
 #endif
 
 // Controls
@@ -87,6 +95,11 @@ ControlMode controlMode;
     double altitudeError = 0.0;
     double cpwmCmd;
     double baroState = 0.0;
+
+    double Cov[NSTATES][NSTATES];
+    double PN[NSTATES][NSTATES];
+    double KB[NSTATES][NBAROSTATES];
+    double filterStateError[NSTATES];
 #endif
 
 // **********************************************************************
@@ -121,6 +134,7 @@ void initialize(void)
     
     // Barometer Settings
     bmp180Resolution = BMP180_COMMAND_PRESSURE3;
+    useBarometer     = true;
     
     // Navigation Settings
     initialPosition[0] = 28.5997222;  // Latitude  (deg)
@@ -129,8 +143,11 @@ void initialize(void)
     initialHeading = 0.0;
     useTruthNav = false;
     
+    // GPS
+    useGPS = false;
+    
     // Control Settings
-    controlMode = NoControl; //AttitudeControl;
+    controlMode = AttitudeControl; //NoControl, ThrottleControl, AttitudeControl;
     
     // Timing Settings
     routineDelays[hz1]   = 1.0;
@@ -229,8 +246,8 @@ bool mainFlightSoftware(void)
         FsBarometer_performBarometer();
         if (FsBarometer_getBaroState() == baroReady)
         {
-        //    FsNavigation_performBarometerUpdate(barometerType* baroData)
-           FsBarometer_setStandby();
+            if (useBarometer) { FsNavigation_performBarometerUpdate(pBaroData); }
+            FsBarometer_setStandby();
         }
     }
     
@@ -270,6 +287,21 @@ bool mainFlightSoftware(void)
     pNavError = FsNavigation_getNavError();
     altitudeError = -pNavError->position[2];
     cpwmCmd = (double) pControlData->pwmCmd[THROTTLE];
+    
+    double* Ptemp = FsNavigation_getCovariance();
+    double* Qtemp = FsNavigation_getProcessNoise();
+    double* Ktemp = FsNavigation_getBaroKalmanGain();
+    double* stemp = FsNavigation_getStateError();
+    for (int i=0; i<NSTATES; i++)
+    {
+        filterStateError[i] = *(stemp+i);
+        for (int j=0; j<NSTATES; j++)
+        {
+            if (j < NBAROSTATES){ KB[i][j] = *(Ktemp+i*NBAROSTATES+j); }
+            PN[i][j]  = *(Qtemp+i*NSTATES+j);
+            Cov[i][j] = *(Ptemp+i*NSTATES+j);
+        }
+    }
 #endif
     
     return true;
@@ -281,12 +313,18 @@ bool mainFlightSoftware(void)
 void getModels()
 {
     // Get Pointers
-    pIMUdata = FsImu_getIMUdata();
+    pIMUdata  = FsImu_getIMUdata();
     pBaroData = FsBarometer_getBaroData();
-    pNavData = FsNavigation_getNavData();
+    pNavData  = FsNavigation_getNavData();
     pControlData = FsControls_getControlData();
     
     FsNavigation_setIMUdata(pIMUdata);
+    
+#ifdef FILTERTEST
+    pStateError = FsNavigation_getNavStateError();
+    pLinStateError = FsNavigation_getLinStateError();
+#endif
+    
 # ifdef SIMULATION
     pNavError = FsNavigation_getNavError();
     if(pMap)
@@ -324,7 +362,7 @@ void setPrintVariables()
     // IMU
     //pMap->addLogVar("IMU Acc X" , &pIMUdata->accel[0], savePlot, 2);
     //pMap->addLogVar("IMU Acc Y" , &pIMUdata->accel[1], savePlot, 2);
-    //pMap->addLogVar("IMU Acc Z" , &pIMUdata->accel[2], savePlot, 2);
+    pMap->addLogVar("IMU Acc Z" , &pIMUdata->accel[2], savePlot, 2);
     
     //pMap->addLogVar("IMU Gyro X" , &pIMUdata->gyro[0], savePlot, 2);
     //pMap->addLogVar("IMU Gyro Y" , &pIMUdata->gyro[1], savePlot, 2);
@@ -342,15 +380,15 @@ void setPrintVariables()
     // Navigation
     //pMap->addLogVar("Nav Lat" , &position[0], savePlot, 2);
     //pMap->addLogVar("Nav Lon" , &position[1], savePlot, 2);
-    //pMap->addLogVar("Nav wgs84 Alt", &pNavData->position[2], printSavePlot, 3);
+    pMap->addLogVar("Nav wgs84 Alt", &pNavData->position[2], printSavePlot, 3);
     
     //pMap->addLogVar("Nav vel N" , &pNavData->velNED[0], savePlot, 2);
     //pMap->addLogVar("Nav vel E" , &pNavData->velNED[1], savePlot, 2);
-    //pMap->addLogVar("Nav vel D" , &pNavData->velNED[2], savePlot, 2);
+    pMap->addLogVar("Nav vel D" , &pNavData->velNED[2], savePlot, 2);
 
     //pMap->addLogVar("navstate", &navState, savePlot, 2);
-    pMap->addLogVar("Nav Roll" , &eulerAnglesDeg[0], savePlot, 2);
-    pMap->addLogVar("Nav Pitch", &eulerAnglesDeg[1], savePlot, 2);
+    //pMap->addLogVar("Nav Roll" , &eulerAnglesDeg[0], savePlot, 2);
+    //pMap->addLogVar("Nav Pitch", &eulerAnglesDeg[1], savePlot, 2);
     //pMap->addLogVar("Nav Yaw"  , &eulerAnglesDeg[2], savePlot, 2);
     
     //pMap->addLogVar("q[0]", &pNavData->q_B_NED[0], savePlot, 2);
@@ -382,6 +420,84 @@ void setPrintVariables()
     //pMap->addLogVar("Acc Body X Error", &pNavError->accelBody[0], savePlot, 2);
     //pMap->addLogVar("Acc Body Y Error", &pNavError->accelBody[1], savePlot, 2);
     //pMap->addLogVar("Acc Body Z Error", &pNavError->accelBody[2], savePlot, 2);
+#ifdef FILTERTEST
+    /*
+    pMap->addLogVar("q0 Lin State Error", &pLinStateError->q_B_NED[0], savePlot, 2);
+    pMap->addLogVar("q1 Lin State Error", &pLinStateError->q_B_NED[1], savePlot, 2);
+    pMap->addLogVar("q2 Lin State Error", &pLinStateError->q_B_NED[2], savePlot, 2);
+    pMap->addLogVar("q3 Lin State Error", &pLinStateError->q_B_NED[3], savePlot, 2);
+    pMap->addLogVar("Roll Lin State Error (deg)", &pLinStateError->eulerAngles[0], savePlot, 2);
+    pMap->addLogVar("Pitch Lin State Error (deg)", &pLinStateError->eulerAngles[1], savePlot, 2);
+    pMap->addLogVar("Yaw Lin State Error (deg)", &pLinStateError->eulerAngles[2], savePlot, 2);
+    pMap->addLogVar("Vel N Lin State Error", &pLinStateError->velNED[0], savePlot, 2);
+    pMap->addLogVar("Vel E Lin State Error", &pLinStateError->velNED[1], savePlot, 2);
+    pMap->addLogVar("Vel D Lin State Error", &pLinStateError->velNED[2], savePlot, 2);
+    pMap->addLogVar("Lat Lin State Error (deg)", &pLinStateError->position[0], savePlot, 2);
+    pMap->addLogVar("Lon Lin State Error (deg)", &pLinStateError->position[1], savePlot, 2);
+    pMap->addLogVar("Alt Lin State Err (m)"    , &pLinStateError->position[2], savePlot, 2);
+    */
+    
+    //pMap->addLogVar("P[Q0][Q0]"    , &Cov[Q0][Q0], savePlot, 2);
+    //pMap->addLogVar("P[Q1][Q1]"    , &Cov[Q1][Q1], savePlot, 2);
+    //pMap->addLogVar("P[Q2][Q2]"    , &Cov[Q2][Q2], savePlot, 2);
+    //pMap->addLogVar("P[Q3][Q3]"    , &Cov[Q3][Q3], savePlot, 2);
+    //pMap->addLogVar("P[VN][VN]"    , &Cov[VN][VN], savePlot, 2);
+    //pMap->addLogVar("P[VE][VE]"    , &Cov[VE][VE], savePlot, 2);
+    pMap->addLogVar("P[VD][VD]"    , &Cov[VD][VD], savePlot, 2);
+    //pMap->addLogVar("P[LAT][LAT]"  , &Cov[LAT][LAT], savePlot, 2);
+    //pMap->addLogVar("P[LON][LON]"  , &Cov[LON][LON], savePlot, 2);
+    pMap->addLogVar("P[ALT][ALT]"  , &Cov[ALT][ALT], savePlot, 2);
+    
+    //pMap->addLogVar("Q[Q0][Q0]"    , &PN[Q0][Q0], savePlot, 2);
+    //pMap->addLogVar("Q[Q1][Q1]"    , &PN[Q1][Q1], savePlot, 2);
+    //pMap->addLogVar("Q[Q2][Q2]"    , &PN[Q2][Q2], savePlot, 2);
+    //pMap->addLogVar("Q[Q3][Q3]"    , &PN[Q3][Q3], savePlot, 2);
+    //pMap->addLogVar("Q[VN][VN]"    , &PN[VN][VN], savePlot, 2);
+    //pMap->addLogVar("Q[VE][VE]"    , &PN[VE][VE], savePlot, 2);
+    //pMap->addLogVar("Q[VD][VD]"    , &PN[VD][VD], savePlot, 2);
+    //pMap->addLogVar("Q[LAT][LAT]"  , &PN[LAT][LAT], savePlot, 2);
+    //pMap->addLogVar("Q[LON][LON]"  , &PN[LON][LON], savePlot, 2);
+    pMap->addLogVar("Q[ALT][ALT]"  , &PN[ALT][ALT], savePlot, 2);
+    
+    
+    //pMap->addLogVar("KB[Q0][BARO_ALT]"    , &KB[Q0][BARO_ALT], savePlot, 2);
+    //pMap->addLogVar("KB[Q1][BARO_ALT]"    , &KB[Q1][BARO_ALT], savePlot, 2);
+    //pMap->addLogVar("KB[Q2][BARO_ALT]"    , &KB[Q2][BARO_ALT], savePlot, 2);
+    //pMap->addLogVar("KB[Q3][BARO_ALT]"    , &KB[Q3][BARO_ALT], savePlot, 2);
+    //pMap->addLogVar("KB[VN][BARO_ALT]"    , &KB[VN][BARO_ALT], savePlot, 2);
+    //pMap->addLogVar("KB[VE][BARO_ALT]"    , &KB[VE][BARO_ALT], savePlot, 2);
+    pMap->addLogVar("KB[VD][BARO_ALT]"    , &KB[VD][BARO_ALT], savePlot, 2);
+    //pMap->addLogVar("KB[LAT][BARO_ALT]"  , &KB[LAT][BARO_ALT], savePlot, 2);
+    //pMap->addLogVar("KB[LON][BARO_ALT]"  , &KB[LON][BARO_ALT], savePlot, 2);
+    pMap->addLogVar("KB[ALT][BARO_ALT]"  , &KB[ALT][BARO_ALT], savePlot, 2);
+    
+    //pMap->addLogVar("stateError[Q0]"  , &filterStateError[Q0], savePlot, 2);
+    //pMap->addLogVar("stateError[Q1]"  , &filterStateError[Q1], savePlot, 2);
+    //pMap->addLogVar("stateError[Q2]"  , &filterStateError[Q2], savePlot, 2);
+    //pMap->addLogVar("stateError[Q3]"  , &filterStateError[Q3], savePlot, 2);
+    //pMap->addLogVar("stateError[VN]"  , &filterStateError[VN], savePlot, 2);
+    //pMap->addLogVar("stateError[VE]"  , &filterStateError[VE], savePlot, 2);
+    pMap->addLogVar("stateError[VD]"  , &filterStateError[VD], savePlot, 2);
+    //pMap->addLogVar("stateError[LAT]" , &filterStateError[LAT], savePlot, 2);
+    //pMap->addLogVar("stateError[LON]" , &filterStateError[LON], savePlot, 2);
+    pMap->addLogVar("stateError[ALT]" , &filterStateError[ALT], savePlot, 2);
+    
+    /*
+    pMap->addLogVar("q0 State Error", &pStateError->q_B_NED[0], savePlot, 2);
+    pMap->addLogVar("q1 State Error", &pStateError->q_B_NED[1], savePlot, 2);
+    pMap->addLogVar("q2 State Error", &pStateError->q_B_NED[2], savePlot, 2);
+    pMap->addLogVar("q3 State Error", &pStateError->q_B_NED[3], savePlot, 2);
+    pMap->addLogVar("Roll State Error (deg)", &pStateError->eulerAngles[0], savePlot, 2);
+    pMap->addLogVar("Pitch State Error (deg)", &pStateError->eulerAngles[1], savePlot, 2);
+    pMap->addLogVar("Yaw State Error (deg)", &pStateError->eulerAngles[2], savePlot, 2);
+    pMap->addLogVar("Vel N State Error", &pStateError->velNED[0], savePlot, 2);
+    pMap->addLogVar("Vel E State Error", &pStateError->velNED[1], savePlot, 2);
+    pMap->addLogVar("Vel D State Error", &pStateError->velNED[2], savePlot, 2);
+    pMap->addLogVar("Lat State Error (deg)", &pStateError->position[0], savePlot, 2);
+    pMap->addLogVar("Lon State Error (deg)", &pStateError->position[1], savePlot, 2);
+    pMap->addLogVar("Alt State Err (m)"    , &pStateError->position[2], savePlot, 2);
+     */
+#endif
     
     // Controls
     //pMap->addLogVar("da"          , &pControlData->da     , savePlot, 2);
