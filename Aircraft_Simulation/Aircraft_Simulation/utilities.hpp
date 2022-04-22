@@ -713,6 +713,9 @@ public:
     void mgain(TempType *matrix, TempType gain, int nrow, int ncol);
     
     template<typename TempType>
+    int mrank(TempType *matrix, int nrow, int ncol);
+    
+    template<typename TempType>
     void minv(TempType *matrix_inv, TempType *matrix, int n);
     
     template<typename TempType>

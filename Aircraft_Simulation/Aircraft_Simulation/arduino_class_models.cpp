@@ -338,8 +338,8 @@ void SimulationWire::clearBuffer()
 
 double SimulationWire::MPU6050_gyroByteToLSB(int byte)
 {
-    double LSBdps = 131;
-    if      (byte == 0b00000000) { LSBdps = 131;  }
+    double LSBdps = 131.0;
+    if      (byte == 0b00000000) { LSBdps = 131.0;  }
     else if (byte == 0b00001000) { LSBdps = 65.5; }
     else if (byte == 0b00010000) { LSBdps = 32.8; }
     else if (byte == 0b00011000) { LSBdps = 16.4; }
@@ -349,11 +349,11 @@ double SimulationWire::MPU6050_gyroByteToLSB(int byte)
 
 double SimulationWire::MPU6050_accByteToLSB(int byte)
 {
-    double LSBg = 16483;
-    if      (byte == 0b00000000) { LSBg = 16483; }
-    else if (byte == 0b00001000) { LSBg = 8192;  }
-    else if (byte == 0b00010000) { LSBg = 4096;  }
-    else if (byte == 0b00011000) { LSBg = 2048;  }
+    double LSBg = 16483.0;
+    if      (byte == 0b00000000) { LSBg = 16483.0; }
+    else if (byte == 0b00001000) { LSBg = 8192.0;  }
+    else if (byte == 0b00010000) { LSBg = 4096.0;  }
+    else if (byte == 0b00011000) { LSBg = 2048.0;  }
     else { std::cout << "Invalid LSBg byte: " << byte << std::endl; }
     return LSBg;
 }

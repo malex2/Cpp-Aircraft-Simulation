@@ -16,9 +16,9 @@ GenericModel::GenericModel()
     
     debugFlag = false;
     
-    time     = 0;
-    prevTime = 0;
-    counter  = 0;
+    time     = 0.0;
+    prevTime = 0.0;
+    counter  = 0.0;
 }
 
 void GenericModel::initialize(Time* pTime)

@@ -31,6 +31,9 @@ public:
     double* getAccelerometer(void) { return accSensor; }
     double* getMagnetometer(void)  { return magSensor; }
     
+    double* getGyroscopeDps(void)      { return gyroInUnits; }
+    double* getAccelerometerMps2(void) { return accInUnits; }
+    
     AngleType<double>* getIMUEuler(void) { return sensorFrameEuler; }
     bool getIMUReady(void)               { return imuReady; }
     

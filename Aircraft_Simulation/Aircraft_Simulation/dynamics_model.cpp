@@ -25,11 +25,11 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("Dyn deltaCount", &deltaCount, savePlot, 2);
     //pMap->addLogVar("Lat", &posBodyPrint[0], savePlot, 2);
     //pMap->addLogVar("Lon", &posBodyPrint[1], savePlot, 2);
-    pMap->addLogVar("Alt", &posBody[2], printSavePlot, 3);
+    //pMap->addLogVar("Alt", &posBody[2], printSavePlot, 3);
     
     //pMap->addLogVar("N (m)", &posRelNED[0].val, savePlot, 2);
     //pMap->addLogVar("E (m)", &posRelNED[1].val, savePlot, 2);
-    //pMap->addLogVar("Alt  ", &posBodyPrint[2], printSavePlot, 3);
+    pMap->addLogVar("Alt  ", &posBodyPrint[2], printSavePlot, 3);
     //pMap->addLogVar("gndAlt", &hGroundft, printSavePlot, 3);
     
     //pMap->addLogVar("speed", &gndVel.val, savePlot, 2);
@@ -50,13 +50,13 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("qdot", &bodyAngularAcc[1], savePlot, 2);
     //pMap->addLogVar("rdot", &bodyAngularAcc[2], printSavePlot, 3);
     
-    //pMap->addLogVar("p", &bodyRatesDeg[0].val, savePlot, 2);
-    //pMap->addLogVar("q", &bodyRatesDeg[1].val, savePlot, 2);
+    pMap->addLogVar("p", &bodyRatesDeg[0].val, savePlot, 2);
+    pMap->addLogVar("q", &bodyRatesDeg[1].val, savePlot, 2);
     //pMap->addLogVar("r", &bodyRatesDeg[2].val, savePlot, 2);
     
     pMap->addLogVar("Roll ", &eulerAnglesDeg[0].val, savePlot, 2);
     pMap->addLogVar("Pitch", &eulerAnglesDeg[1].val, savePlot, 2);
-    pMap->addLogVar("Yaw  ", &eulerAnglesDeg[2].val, savePlot, 2);
+    //pMap->addLogVar("Yaw  ", &eulerAnglesDeg[2].val, savePlot, 2);
     
     //pMap->addLogVar("q_B_NED[0]", &q_B_NED[0], savePlot, 2);
     //pMap->addLogVar("q_B_NED[1]", &q_B_NED[1], savePlot, 2);
@@ -73,9 +73,9 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("SumYLL", &LLForce[1], savePlot, 2);
     //pMap->addLogVar("SumZLL", &LLForce[2], savePlot, 2);
  
-    //pMap->addLogVar("Body Accel X", &accBody[0], savePlot, 2);
-    //pMap->addLogVar("Body Accel Y", &accBody[1], savePlot, 2);
-    //pMap->addLogVar("Body Accel Z", &accBody[2], savePlot, 2);
+    pMap->addLogVar("Body Accel X", &accBody[0], savePlot, 2);
+    pMap->addLogVar("Body Accel Y", &accBody[1], savePlot, 2);
+    pMap->addLogVar("Body Accel Z", &accBody[2], savePlot, 2);
     pMap->addLogVar("Accel Mag", &accMag, savePlot, 2);
     
     //pMap->addLogVar("SumMX", &bodyMoment[0], savePlot, 2);
@@ -151,6 +151,7 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     mass = mass_init;
     
     dt = dynamicsInterval_init;
+    timestamp = 0.0;
     
     debugFlag = debugFlagIn;
     
@@ -320,6 +321,9 @@ bool DynamicsModel::update(void)
     
     posBody[0] = posBody[0] + dPosBody[0]/hCenter.m(); // L = L + distance/radius
     posBody[1] = posBody[1] + dPosBody[1]/( hCenter.m() * cos(posBody[0]) );
+    
+    // Timestamp
+    timestamp = time;
     
     // Store print variables
     posBodyPrint[0] = posBody[0]/util.deg2rad;

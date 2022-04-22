@@ -41,13 +41,14 @@ class ModelMap;
 class Utilities;
 
 // Types
-enum channelType {THROTTLE, ROLL, PITCH, YAW, nChannels};
+enum channelType {THROTTLE_CHANNEL, ROLL_CHANNEL, PITCH_CHANNEL, YAW_CHANNEL, nChannels};
 
 // Constants
 #define degree2radian M_PI/180.0
 #define radian2degree 180.0/M_PI
 #define RE  6371e+3
 #define GMe 3.9857e+14
+#define Gravity 9.80665
 
 // Pulse In Pins
 #define THROTTLEPIN  7  // CH3
@@ -122,8 +123,15 @@ enum channelType {THROTTLE, ROLL, PITCH, YAW, nChannels};
 #define minPWMIncr 5.0
 #define quadMass 0.5
 
+#define highRate 5.0
+#define highAccel 30.0
+#define zeroAngle 30.0*degree2radian
+
 // Time
 double getTime();
+
+// Errors
+double errorToVariance(double maxError);
 
 // Printing
 template<typename TempType>

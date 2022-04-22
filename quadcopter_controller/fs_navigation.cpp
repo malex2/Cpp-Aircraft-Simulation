@@ -11,6 +11,8 @@
 #ifdef SIMULATION
     #include "dynamics_model.hpp"
     #include "atmosphere_model.hpp"
+    #include "utilities.hpp"
+    Utilities util;
 #endif
 
 // Data
@@ -62,11 +64,12 @@ double R_BARO[NBAROSTATES][NBAROSTATES];
 double H_BARO[NBAROSTATES][NSTATES];
 double K_BARO[NSTATES][NBAROSTATES];
 double baroRefAltitude;
-double baroError[NBAROSTATES];
+double baroResidual[NBAROSTATES];
 
 #ifdef FILTERTEST
 double linNavStates[NSTATES];
 double navStates[NSTATES];
+double Pcorrection[NSTATES][NSTATES];
 NavType NavStateError;
 NavType linNavStateError;
 #endif
@@ -87,6 +90,8 @@ void FsNavigation_setupNavigation(double *initialPosition, double initialHeading
     initPosition[2] = initialPosition[2];
     initHeading = initialHeading * degree2radian;
     FsNavigation_setNED(initPosition, initVelNED, initHeading, true);
+    
+    updateGravity();
     
     baroRefAltitude = NavData.position[2];
     
@@ -138,39 +143,43 @@ void FsNavigation_setupNavigation(double *initialPosition, double initialHeading
     H_BARO[BARO_ALT][ALT] = 1.0;
     
     // State Covariance (State Uncertainties)
-    P[Q0][Q0]   = 0.0;
-    P[Q1][Q1]   = 0.0;
-    P[Q2][Q2]   = 0.0;
-    P[Q3][Q3]   = 0.0;
-    P[VN][VN]   = 0.0;
-    P[VE][VE]   = 0.0;
-    P[VD][VD]   = 0.0;
-    P[LAT][LAT] = 0.0;
-    P[LON][LON] = 0.0;
-    P[ALT][ALT] = 0.0;
-    
+    P[ROLL][ROLL]   = 0.0;//(5*degree2radian)*(5*degree2radian)*1000.0;
+    P[PITCH][PITCH] = 0.0;//(5*degree2radian)*(5*degree2radian)*1000.0;
+    P[YAW][YAW]     = 0.0;
+    P[VN][VN]       = 0.0;
+    P[VE][VE]       = 0.0;
+    P[VD][VD]       = 0.0;
+    P[N][N]         = 0.0;
+    P[E][E]         = 0.0;
+    P[ALT][ALT]     = 0.0;
+    P[GBIAS_X][GBIAS_X] = 0.0;//(0.002*degree2radian)*(0.002*degree2radian);
+    P[GBIAS_Y][GBIAS_Y] = 0.0;//(0.002*degree2radian)*(0.002*degree2radian);
+    P[GBIAS_Z][GBIAS_Z] = 0.0;//(0.002*degree2radian)*(0.002*degree2radian);
+    P[ABIAS_X][ABIAS_X] = 0.0;//0.0008*0.0008; //0.01*0.01;
+    P[ABIAS_Y][ABIAS_Y] = 0.0;//0.0008*0.0008;  //0.01*0.01;
+    P[ABIAS_Z][ABIAS_Z] = 0.0;//0.0008*0.0008; //0.1*0.1;
+    P[GRAVITY][GRAVITY] = 0.0;//0.01*0.1;//0.1*0.1;
+
 #ifdef FILTERTEST
-    linNavStates[Q0] = NavData.q_B_NED[0];
-    linNavStates[Q1] = NavData.q_B_NED[1];
-    linNavStates[Q2] = NavData.q_B_NED[2];
-    linNavStates[Q3] = NavData.q_B_NED[3];
-    linNavStates[VN] = NavData.velNED[0];
-    linNavStates[VE] = NavData.velNED[1];
-    linNavStates[VD] = NavData.velNED[2];
-    linNavStates[LAT] = NavData.position[0];
-    linNavStates[LON] = NavData.position[1];
-    linNavStates[ALT] = NavData.position[2];
+    linNavStates[ROLL]  = NavData.eulerAngles[0];
+    linNavStates[PITCH] = NavData.eulerAngles[1];
+    linNavStates[YAW]   = NavData.eulerAngles[2];
+    linNavStates[VN]    = NavData.velNED[0];
+    linNavStates[VE]    = NavData.velNED[1];
+    linNavStates[VD]    = NavData.velNED[2];
+    linNavStates[N]     = NavData.position[0];
+    linNavStates[E]     = NavData.position[1];
+    linNavStates[ALT]   = NavData.position[2];
     
-    navStates[Q0] = NavData.q_B_NED[0];
-    navStates[Q1] = NavData.q_B_NED[1];
-    navStates[Q2] = NavData.q_B_NED[2];
-    navStates[Q3] = NavData.q_B_NED[3];
-    navStates[VN] = NavData.velNED[0];
-    navStates[VE] = NavData.velNED[1];
-    navStates[VD] = NavData.velNED[2];
-    navStates[LAT] = NavData.position[0];
-    navStates[LON] = NavData.position[1];
-    navStates[ALT] = NavData.position[2];
+    navStates[ROLL]  = NavData.q_B_NED[0];
+    navStates[PITCH] = NavData.q_B_NED[1];
+    navStates[YAW]   = NavData.q_B_NED[2];
+    navStates[VN]    = NavData.velNED[0];
+    navStates[VE]    = NavData.velNED[1];
+    navStates[VD]    = NavData.velNED[2];
+    navStates[N]     = NavData.position[0];
+    navStates[E]     = NavData.position[1];
+    navStates[ALT]   = NavData.position[2];
 #endif
 }
 
@@ -188,6 +197,8 @@ void FsNavigation_performNavigation( double &navDt )
     // Inertial Navigation
     if (NavData.state == INS)
     {
+        NavData.imuTimestamp = nav_pIMUdata->timestamp;
+        
         updateGravity();
         
         // Update Attitude
@@ -198,18 +209,16 @@ void FsNavigation_performNavigation( double &navDt )
         
         // Propogate Covariance Matrix
         propogateVariance(navDt);
-        
+   
+        NavData.timestamp = getTime();
+        NavData.InsUpdateCount++;
+
 #ifdef SIMULATION
         // Update Navigation Truth
         updateTruth();
 #endif
-        NavData.timestamp = getTime();
-        
-#ifdef FILTERTEST
-        nonlinearStateModel(navDt);
-        compareNonlinearStates();
-#endif
     }
+    
     FsImu_zeroDelta();
 }
 
@@ -224,19 +233,15 @@ void performARHS( double &navDt )
 {
     // Update quaternion using gyroscope
     gyroUpdate(navDt);
-    
-    // Apply attitude correction using accelerometer
-    compFilter();
 }
 
 void gyroUpdate( double &navDt)
 {
     // Variables
     double dThetaMag;
-    double qMag;
     double unitDir[3];
-    double dqGyro[4];
     double qOld[4];
+    double dqGyro[4];
     
     // Store quaternion
     for (int i=0; i<4; i++)
@@ -247,13 +252,14 @@ void gyroUpdate( double &navDt)
     NavData.stateInputs.dTheta[i] = nav_pIMUdata->dTheta[i]*degree2radian - NavData.gyroBias[i]*navDt;
 
     // Angle change magnitude
+    
     dThetaMag = sqrt( NavData.stateInputs.dTheta[0]*NavData.stateInputs.dTheta[0] +
                      NavData.stateInputs.dTheta[1]*NavData.stateInputs.dTheta[1] +
                      NavData.stateInputs.dTheta[2]*NavData.stateInputs.dTheta[2] );
     
     for (int i=0; i<3; i++)
     {
-        if (dThetaMag > 0.00001) { unitDir[i]  = NavData.stateInputs.dTheta[i] / dThetaMag; }
+        if (dThetaMag > 0.0) { unitDir[i]  = NavData.stateInputs.dTheta[i] / dThetaMag; }
         else                     { unitDir[i] = 0.0; }
     }
     
@@ -266,96 +272,8 @@ void gyroUpdate( double &navDt)
     // Update quaternion
     quaternionProduct(NavData.q_B_NED, qOld, dqGyro);
     
-    // Quarantee unit vector
-    qMag = sqrt( NavData.q_B_NED[0]*NavData.q_B_NED[0] +
-                NavData.q_B_NED[1]*NavData.q_B_NED[1] +
-                NavData.q_B_NED[2]*NavData.q_B_NED[2] +
-                NavData.q_B_NED[3]*NavData.q_B_NED[3] );
-    
-    for (int i=0; i<4; i++)
-    { NavData.q_B_NED[i] /= qMag; }
-}
-
-void compFilter()
-{
-    // Variables
-    double aMag;
-    double dThetaMag;
-    double gain = 0.0;
-    double unitDir[3];
-    double accelBody[3];
-    double accelNEDNoGravity[3];
-    double accelUnitNED[3];
-    double qOld[4];
-    double dqAccel[4];
-    double absAmag;
-    static double predUnc = 0.0;
-    double gyroUnc = gyroVar;
-    double accUnc = accelVar;
-    
-    // Store quaternion
-    for (int i=0; i<4; i++)
-    { qOld[i] = NavData.q_B_NED[i]; }
-    
-    // Rotate acceleration into NED frame using gyroscope prediction
-    for (int i=0; i<3; i++)
-    {
-        accelBody[i] = nav_pIMUdata->accel[i] - NavData.accBias[i];
-    }
-    FsNavigation_bodyToNED(accelUnitNED, accelBody);
-    
-    accelNEDNoGravity[0] = accelUnitNED[0];
-    accelNEDNoGravity[1] = accelUnitNED[1];
-    accelNEDNoGravity[2] = accelUnitNED[2] + NavData.gravity;
-    
-    // Magnitudes and Unit Vectors
-    // Acceleration magnitude without gravity
-    absAmag = fabs(
-                sqrt( accelNEDNoGravity[0]*accelNEDNoGravity[0] +
-                accelNEDNoGravity[1]*accelNEDNoGravity[1] +
-                accelNEDNoGravity[2]*accelNEDNoGravity[2] )
-                );
-    
-    // Acceleration magnitude with gravity
-    aMag = sqrt( accelUnitNED[0]*accelUnitNED[0] +
-                accelUnitNED[1]*accelUnitNED[1] +
-                accelUnitNED[2]*accelUnitNED[2] );
-    
-    for (int i=0; i<3; i++)
-    {
-        if (aMag > 0.01) { accelUnitNED[i]  = accelUnitNED[i] / aMag; }
-        else             { accelUnitNED[i] = 0.0; }
-    }
-    
-    // Update uncertainties
-    predUnc = predUnc + gyroUnc;
-    accUnc += absAmag * 40.0 * accUnc;
-    
-    // Update gain
-    if (predUnc != 0.0 && accUnc != 0.0 && absAmag < 0.1*NavData.gravity)
-    {
-        gain = predUnc/(predUnc + accUnc);
-    }
-    
-    // Update prediction uncertainty
-    predUnc -= gain*predUnc;
-    
-    // Accelerometer Angle Correction
-    dThetaMag = gain * acos( -accelUnitNED[2] );
-    
-    // Accelerometer Correction Direction
-    unitDir[0] = -accelUnitNED[1];
-    unitDir[1] = accelUnitNED[0];
-    unitDir[2] = 0;
-    
-    // Compute change in quaternion
-    dqAccel[0] = cos(dThetaMag/2.0);
-    dqAccel[1] = unitDir[0]*sin(dThetaMag/2.0);
-    dqAccel[2] = unitDir[1]*sin(dThetaMag/2.0);
-    dqAccel[3] = unitDir[2]*sin(dThetaMag/2.0);
-    
-    // Apply accelerometer correction
-    quaternionProduct(NavData.q_B_NED, qOld, dqAccel);
+    // Guarantee unit vector
+    unitVector(NavData.q_B_NED, 4);
 }
 
 void performINS( double &navDt )
@@ -395,7 +313,10 @@ void performINS( double &navDt )
     {
         // correct for gravity and bias
         NavData.stateInputs.dVelocity[i] = nav_pIMUdata->dVelocity[i] - NavData.accBias[i]*navDt + a2.gravityBody[i]*navDt;
+        NavData.accelBody[i] = nav_pIMUdata->accel[i] - NavData.accBias[i] + a2.gravityBody[i];//NavData.stateInputs.dVelocity[i]/navDt;
+        NavData.bodyRates[i] = nav_pIMUdata->gyro[i]*degree2radian - NavData.gyroBias[i]; //NavData.stateInputs.dTheta[i]/navDt;
     }
+    
     // Body Velocity
     for (int i=0; i<3; i++)
     {
@@ -413,8 +334,8 @@ void performINS( double &navDt )
     }
     
     // Latitude, Longitude, Altitude
-    NavData.position[0] = NavData.position[0] + a1.dPosition[0]/(NavData.position[2] + RE);
-    NavData.position[1] = NavData.position[1] + a1.dPosition[1]/( (NavData.position[2] + RE)*cos(NavData.position[0]) );
+    NavData.position[0] = NavData.position[0] + a1.dPosition[0];///(NavData.position[2] + RE);
+    NavData.position[1] = NavData.position[1] + a1.dPosition[1];///( (NavData.position[2] + RE)*cos(NavData.position[0]) );
     NavData.position[2] = NavData.position[2] - a1.dPosition[2];
 }
 
@@ -422,183 +343,200 @@ void performINS( double &navDt )
 void propogateVariance( double &navDt )
 {
     // Intermidiate variables
-    double q00;
-    double q01;
-    double q02;
-    double q03;
-    double q11;
-    double q12;
-    double q13;
-    double q22;
-    double q23;
-    double q33;
-    double dThetaMag;
-    double unitTheta[3] = {0.0};
-    double c2;
-    double s2;
-    double* q = NavData.q_B_NED;
-    double invR;
-    double invR2;
-    double secLat;
     double Qc[NSTATES][NSTATES] = {0.0};
-    double PHI_V[3][3] = {0.0};
     double Qc_PHItrans[NSTATES][NSTATES] = {0.0};
     double PHI_Qc_PHItrans[NSTATES][NSTATES] = {0.0};
     double prevLinNavStates[NSTATES] = {0.0};
     double PHItrans[NSTATES][NSTATES] = {0.0};
     double P_PHItrans[NSTATES][NSTATES] = {0.0};
     double PHI_P_PHItrans[NSTATES][NSTATES] = {0.0};
+ 
+    double sr    = sin(NavData.eulerAngles[0]);
+    double cr    = cos(NavData.eulerAngles[0]);
+    double sp    = sin(NavData.eulerAngles[1]);
+    double cp    = cos(NavData.eulerAngles[1]);
+    double sy    = sin(NavData.eulerAngles[2]);
+    double cy    = cos(NavData.eulerAngles[2]);
+    double tp    = tan(NavData.eulerAngles[1]);
+    double secp  = 1.0/cos(NavData.eulerAngles[1]);
+    double sec2p = secp*secp;
+    double RH_h3 = (RE + NavData.position[2])*(RE + NavData.position[2])*(RE + NavData.position[2]);
+    double RH_h4 = RH_h3*(RE + NavData.position[2]);
     
-    q00 = q[0]*q[0];
-    q01 = q[0]*q[1];
-    q02 = q[0]*q[2];
-    q03 = q[0]*q[3];
-    q11 = q[1]*q[1];
-    q12 = q[1]*q[2];
-    q13 = q[1]*q[3];
-    q22 = q[2]*q[2];
-    q23 = q[2]*q[3];
-    q33 = q[3]*q[3];
+    // Roll
+    PHI[ROLL][ROLL]    = 1.0 + cr*tp*NavData.stateInputs.dTheta[Y] - sr*tp*NavData.stateInputs.dTheta[Z];
+    PHI[ROLL][PITCH]   = sr*sec2p*NavData.stateInputs.dTheta[Y] + cr*sec2p*NavData.stateInputs.dTheta[Z];
+    PHI[ROLL][GBIAS_X] = -1.0*navDt;
+    PHI[ROLL][GBIAS_Y] = (-sr*tp)*navDt;
+    PHI[ROLL][GBIAS_Z] = (-cr*tp)*navDt;
+    //Pitch
+    PHI[PITCH][ROLL]   = -sr*NavData.stateInputs.dTheta[Y]- cr*NavData.stateInputs.dTheta[Z];
+    PHI[PITCH][PITCH]  = 1.0;
+    PHI[PITCH][GBIAS_Y] = -cr*navDt;
+    PHI[PITCH][GBIAS_Z] = sr*navDt;
+    // Yaw
+    PHI[YAW][ROLL]    = cr*secp*NavData.stateInputs.dTheta[Y] - sr*secp*NavData.stateInputs.dTheta[Z];
+    PHI[YAW][PITCH]   = secp*tp*sr*NavData.stateInputs.dTheta[Y] + secp*tp*cr*NavData.stateInputs.dTheta[Z];
+    PHI[YAW][YAW]     = 1.0;
+    PHI[YAW][GBIAS_Y] = -sr*secp*navDt;
+    PHI[YAW][GBIAS_Z] = -cr*secp*navDt;
     
-    PHI_V[0][0] = 2.0*q00 - 1.0 + 2.0*q11; PHI_V[0][1] =      2.0*(q12 - q03)     ;  PHI_V[0][2] = 2.0*(q13 + q02);
-    PHI_V[1][0] =     2.0*(q12 + q03)    ; PHI_V[1][1] = (2.0*q00 - 1.0 + 2.0*q22);  PHI_V[1][2] = 2.0*(q23 - q01);
-    PHI_V[2][0] =     2.0*(q13 - q02)    ; PHI_V[2][1] =      2.0*(q23 + q01)     ;  PHI_V[2][2] = (2.0*q00 - 1.0 + 2.0*q33);
+    // VN
+    PHI[VN][ROLL]    = (cy*sp*cr+sr*sy)*NavData.stateInputs.dVelocity[Y] + (-cy*sp*sr+cr*sy)*NavData.stateInputs.dVelocity[Z];
+    PHI[VN][PITCH]   = -sp*cy*NavData.stateInputs.dVelocity[X] + cy*cp*sr*NavData.stateInputs.dVelocity[Y] + cy*cp*cr*NavData.stateInputs.dVelocity[Z];
+    PHI[VN][YAW]     = -cp*sy*NavData.stateInputs.dVelocity[X] + (-sy*sp*sr-cr*cy)*NavData.stateInputs.dVelocity[Y] + (-sy*sp*cr+sr*cy)*NavData.stateInputs.dVelocity[Z];
+    PHI[VN][VN]      = 1.0;
+    PHI[VN][ABIAS_X] = -cp*cy*navDt;
+    PHI[VN][ABIAS_Y] = -(cy*sp*sr-cr*sy)*navDt;
+    PHI[VN][ABIAS_Z] = -(cy*sp*cr+sr*sy)*navDt;
     
-    dThetaMag = sqrt( NavData.stateInputs.dTheta[0]*NavData.stateInputs.dTheta[0] +
-                     NavData.stateInputs.dTheta[1]*NavData.stateInputs.dTheta[1] +
-                     NavData.stateInputs.dTheta[2]*NavData.stateInputs.dTheta[2] );
-    
-    for (int i=0; i<3; i++)
-    {
-        if (dThetaMag > 0.00001) { unitTheta[i]  = NavData.stateInputs.dTheta[i] / dThetaMag; }
-        else                     { unitTheta[i] = 0.0; }
-    }
-    
-    c2 = cos(dThetaMag / 2.0);
-    s2 = sin(dThetaMag / 2.0);
-    
-    invR   = 1.0/(RE + NavData.position[2]);
-    invR2  = invR*invR;
-    secLat = 1.0 / cos(NavData.position[0]);
-    
-    // Update State Transition Matrix
-    // Q0
-    PHI[Q0][Q0] = c2;
-    PHI[Q0][Q1] = -unitTheta[0] * s2;
-    PHI[Q0][Q2] = -unitTheta[1] * s2;
-    PHI[Q0][Q3] = -unitTheta[2] * s2;
-    // Q1
-    PHI[Q1][Q0] = unitTheta[0] * s2;
-    PHI[Q1][Q1] = c2;
-    PHI[Q1][Q2] = unitTheta[2] * s2;
-    PHI[Q1][Q3] = -unitTheta[1] * s2;
-    // Q2
-    PHI[Q2][Q0] = unitTheta[1] * s2;
-    PHI[Q2][Q1] = -unitTheta[2] * s2;
-    PHI[Q2][Q2] = c2;
-    PHI[Q2][Q3] = unitTheta[0] * s2;
-    // Q3
-    PHI[Q3][Q0] = unitTheta[2] * s2;
-    PHI[Q3][Q1] = unitTheta[1] * s2;
-    PHI[Q3][Q2] = -unitTheta[0] * s2;
-    PHI[Q3][Q3] = c2;
-    //VN
-    PHI[VN][Q0] = 4.0*q[0]*NavData.stateInputs.dVelocity[0] - 2.0*q[3]*NavData.stateInputs.dVelocity[1] + 2.0*q[2]*NavData.stateInputs.dVelocity[2];
-    PHI[VN][Q1] = 4.0*q[1]*NavData.stateInputs.dVelocity[0] + 2.0*q[2]*NavData.stateInputs.dVelocity[1] + 2.0*q[3]*NavData.stateInputs.dVelocity[2];
-    PHI[VN][Q2] = 2.0*q[1]*NavData.stateInputs.dVelocity[1] + 2.0*q[0]*NavData.stateInputs.dVelocity[2];
-    PHI[VN][Q3] = -2.0*q[0]*NavData.stateInputs.dVelocity[1] + 2.0*q[1]*NavData.stateInputs.dVelocity[2];
-    PHI[VN][VN] = 1.0;
-    //VE
-    PHI[VE][Q0] = 2.0*q[3]*NavData.stateInputs.dVelocity[0] + 4.0*q[0]*NavData.stateInputs.dVelocity[1] - 2.0*q[1]*NavData.stateInputs.dVelocity[2];
-    PHI[VE][Q1] = 2.0*q[2]*NavData.stateInputs.dVelocity[0] - 2.0*q[0]*NavData.stateInputs.dVelocity[2];
-    PHI[VE][Q2] = 2.0*q[1]*NavData.stateInputs.dVelocity[0] + 4.0*q[2]*NavData.stateInputs.dVelocity[1] + 2.0*q[3]*NavData.stateInputs.dVelocity[2];
-    PHI[VE][Q3] = 2.0*q[0]*NavData.stateInputs.dVelocity[0] + 2.0*q[2]*NavData.stateInputs.dVelocity[2];
-    PHI[VE][VE] = 1.0;
-    //VD
-    PHI[VD][Q0] = -2.0*q[2]*NavData.stateInputs.dVelocity[0] + 2.0*q[1]*NavData.stateInputs.dVelocity[1] + 4.0*q[0]*NavData.stateInputs.dVelocity[2];
-    PHI[VD][Q1] = 2.0*q[3]*NavData.stateInputs.dVelocity[0] + 2.0*q[0]*NavData.stateInputs.dVelocity[1];
-    PHI[VD][Q2] = -2.0*q[0]*NavData.stateInputs.dVelocity[0] + 2.0*q[3]*NavData.stateInputs.dVelocity[1];
-    PHI[VD][Q3] = 2.0*q[1]*NavData.stateInputs.dVelocity[0] + 2.0*q[2]*NavData.stateInputs.dVelocity[1] + 4.0*q[3]*NavData.stateInputs.dVelocity[2];
-    PHI[VD][VD] = 1.0;
-    //LAT
-    PHI[LAT][VN] = invR * navDt;
-    PHI[LAT][LAT] = 1.0;
-    PHI[LAT][ALT] = -2.0 * NavData.velNED[0] * invR2 * navDt;
-    //LON
-    PHI[LON][VE] = invR * secLat * navDt;
-    PHI[LON][LAT] = NavData.velNED[1] * tan(NavData.position[0]) * invR * secLat * navDt;
-    PHI[LON][LON] = 1.0;
-    PHI[LON][ALT] = -2.0 * NavData.velNED[1] * invR2 * secLat * navDt;
-    //ALT
-    PHI[ALT][VD] = -navDt;
+    // VE
+    PHI[VE][ROLL]    = (-sr*cy+sp*cr*sy)*NavData.stateInputs.dVelocity[Y] + (-cr*cy-sp*sr*sy)*NavData.stateInputs.dVelocity[Z];
+    PHI[VE][PITCH]   = -sp*sy*NavData.stateInputs.dVelocity[X] + cp*sr*sy*NavData.stateInputs.dVelocity[Y] + cp*cr*sy*NavData.stateInputs.dVelocity[Z];
+    PHI[VE][YAW]     = cp*cy*NavData.stateInputs.dVelocity[X]+ + (-cr*sy+sp*sr*cy)*NavData.stateInputs.dVelocity[Y] + (sr*sy+sp*cr*sy)*NavData.stateInputs.dVelocity[Z];
+    PHI[VE][VE]      = 1.0;
+    PHI[VE][ABIAS_X] = -cp*sy*navDt;
+    PHI[VE][ABIAS_Y] = -(cr*cy+sp*sr*sy)*navDt;
+    PHI[VE][ABIAS_Z] = -(sr*cy+sp*cr*sy)*navDt;
+    // VD
+    PHI[VD][ROLL]    = cp*cr*NavData.stateInputs.dVelocity[Y] - cp*sr*NavData.stateInputs.dVelocity[Z];
+    PHI[VD][PITCH]   = -cp*NavData.stateInputs.dVelocity[X] - sp*sr*NavData.stateInputs.dVelocity[Y] - sp*cr*NavData.stateInputs.dVelocity[Z];
+    PHI[VD][VD]      = 1.0;
+    PHI[VD][ABIAS_X] = sp*navDt;
+    PHI[VD][ABIAS_Y] = -cp*sr*navDt;
+    PHI[VD][ABIAS_Z] = -cp*cr*navDt;
+    PHI[VD][GRAVITY] = 1.0*navDt;
+    // N
+    PHI[N][VN] = 1.0*navDt;
+    PHI[N][N]  = 1.0;
+    // E
+    PHI[E][VE] = 1.0*navDt;
+    PHI[E][E]  = 1.0;
+    // ALT
+    PHI[ALT][VD]  = -1.0*navDt;
     PHI[ALT][ALT] = 1.0;
+    // BIAS
+    PHI[GBIAS_X][GBIAS_X] = 1.0;
+    PHI[GBIAS_Y][GBIAS_Y] = 1.0;
+    PHI[GBIAS_Z][GBIAS_Z] = 1.0;
+    PHI[ABIAS_X][ABIAS_X] = 1.0;
+    PHI[ABIAS_Y][ABIAS_Y] = 1.0;
+    PHI[ABIAS_Z][ABIAS_Z] = 1.0;
+    // Gravity
+    PHI[GRAVITY][VD]      = 2.0*GMe/RH_h3*navDt;
+    PHI[GRAVITY][ALT]     = -6.0*GMe/RH_h4*NavData.velNED[2]*navDt;
+    PHI[GRAVITY][GRAVITY] = 1.0;
     
     math_mtran(*PHItrans, *PHI, NSTATES, NSTATES);
     
     // Update Process Noise
-    Qc[Q0][Q0] = 0.25*q11*gyroCov[X][X] + 0.25*q22*gyroCov[Y][Y] + 0.25*q33*gyroCov[Z][Z] + 0.5*q12*gyroCov[X][Y] + 0.5*q23*gyroCov[Y][Z] + q13*gyroCov[X][Z];
-    
-    Qc[Q1][Q1] = 0.25*q00*gyroCov[X][X] + 0.25*q33*gyroCov[Y][Y] + 0.25*q22*gyroCov[Z][Z] - 0.5*q03*gyroCov[X][Y] - 0.5*q23*gyroCov[Y][Z] + q02*gyroCov[X][Z];
-    
-    Qc[Q2][Q2] = 0.25*q33*gyroCov[X][X] + 0.25*q00*gyroCov[Y][Y] + 0.25*q11*gyroCov[Z][Z] + 0.5*q03*gyroCov[X][Y] - 0.5*q01*gyroCov[Y][Z] - q13*gyroCov[X][Z];
-    
-    Qc[Q3][Q3] = 0.25*q22*gyroCov[X][X] + 0.25*q11*gyroCov[Y][Y] + 0.25*q00*gyroCov[Z][Z] - 0.5*q12*gyroCov[X][Y] + 0.5*q01*gyroCov[Y][Z] - q02*gyroCov[X][Z];
-    
-    Qc[VN][VN] = PHI_V[0][0]*PHI_V[0][0]*accelCov[X][X] + PHI_V[0][1]*PHI_V[0][1]*accelCov[Y][Y] + PHI_V[0][2]*PHI_V[0][2]*accelCov[Z][Z] + PHI_V[0][0]*PHI_V[0][1]*accelCov[X][Y] + PHI_V[0][1]*PHI_V[0][2]*accelCov[Y][Z] + PHI_V[0][0]*PHI_V[0][2]*accelCov[X][Z];
-    
-    Qc[VE][VE] = PHI_V[1][0]*PHI_V[1][0]*accelCov[X][X] + PHI_V[1][1]*PHI_V[1][1]*accelCov[Y][Y] + PHI_V[1][2]*PHI_V[1][2]*accelCov[Z][Z] + PHI_V[1][0]*PHI_V[1][1]*accelCov[X][Y] + PHI_V[1][1]*PHI_V[1][2]*accelCov[Y][Z] + PHI_V[1][0]*PHI_V[1][2]*accelCov[X][Z];
-    
-    Qc[VD][VD] = PHI_V[2][0]*PHI_V[2][0]*accelCov[X][X] + PHI_V[2][1]*PHI_V[2][1]*accelCov[Y][Y] + PHI_V[2][2]*PHI_V[2][2]*accelCov[Z][Z] + PHI_V[2][0]*PHI_V[2][1]*accelCov[X][Y] + PHI_V[2][1]*PHI_V[2][2]*accelCov[Y][Z] + PHI_V[2][0]*PHI_V[2][2]*accelCov[X][Z];
-    
-    Qc[LAT][LAT] = 0.0;
-    Qc[LON][LON] = 0.0;
-    Qc[ALT][ALT] = 0.0;
+    Qc[ROLL][ROLL]   = gyroCov[X][X];
+    Qc[PITCH][PITCH] = gyroCov[Y][Y];
+    Qc[YAW][YAW]     = gyroCov[Z][Z];
+    Qc[VN][VN]       = accelCov[X][X];
+    Qc[VE][VE]       = accelCov[Y][Y];
+    Qc[VD][VD]       = accelCov[Z][Z];
     
     //Q = PHI*Qc*PHI^T dt;
     math_mmult(*Qc_PHItrans, *Qc, NSTATES, NSTATES, *PHItrans, NSTATES, NSTATES);
     math_mmult(*PHI_Qc_PHItrans, *PHI, NSTATES, NSTATES, *Qc_PHItrans, NSTATES, NSTATES);
-    math_mgain(*Q, *PHI_Qc_PHItrans, navDt, NSTATES, NSTATES);
+    math_mgain(*Q, *PHI_Qc_PHItrans, navDt/2.0, NSTATES, NSTATES);
     
     // Propogate Covariance
     //P = PHI*P*PHI^T + Q;
     math_mmult(*P_PHItrans, *P, NSTATES, NSTATES, *PHItrans, NSTATES, NSTATES);
     math_mmult(*PHI_P_PHItrans, *PHI, NSTATES, NSTATES, *P_PHItrans, NSTATES, NSTATES);
     math_madd(*P, *PHI_P_PHItrans, *Q, NSTATES, NSTATES);
-    
-#ifdef FILTERTEST
-    for (int i=0; i<NSTATES; i++)
-    {
-        prevLinNavStates[i] = linNavStates[i];
-    }
-    
-    // xk1 = f(xk, u)
-    // xk1 = f(xk0, u0) + dfdx * (xk - xk0) + dfdu * (u - u0)
-    // 
-    // linNavStates = PHI * prevLinNavStates
-    math_mmult(linNavStates, *PHI, prevLinNavStates, NSTATES, NSTATES);
-#endif
 }
 
 void applyCorrections()
 {
-    NavData.q_B_NED[0] += stateError[Q0];
-    NavData.q_B_NED[1] += stateError[Q1];
-    NavData.q_B_NED[2] += stateError[Q2];
-    NavData.q_B_NED[3] += stateError[Q3];
+    if (NavData.state == BaroUpdate)
+    {
+        filterUpdate(baroResidual, *R_BARO, *H_BARO, *K_BARO, NBAROSTATES);
+        NavData.BaroUpdateCount++;
+    }
+    else if (NavData.state == GPSUpdate)
+    {
+        NavData.GpsUpdateCount++;
+    }
     
     NavData.velNED[0] += stateError[VN];
     NavData.velNED[1] += stateError[VE];
     NavData.velNED[2] += stateError[VD];
+    FsNavigation_NEDToBody(NavData.velBody, NavData.velNED);
     
-    NavData.position[0] += stateError[LAT];
-    NavData.position[1] += stateError[LON];
+    NavData.position[0] += stateError[N];
+    NavData.position[1] += stateError[E];
     NavData.position[2] += stateError[ALT];
+
+    NavData.eulerAngles[0] += stateError[ROLL];
+    NavData.eulerAngles[1] += stateError[PITCH];
+    NavData.eulerAngles[2] += stateError[YAW];
+    updateQuaternions();
     
-    updateEulerAngles();
+    NavData.gyroBias[0] += stateError[GBIAS_X];
+    NavData.gyroBias[1] += stateError[GBIAS_Y];
+    NavData.gyroBias[2] += stateError[GBIAS_Z];
+    
+    NavData.accBias[0] += stateError[ABIAS_X];
+    NavData.accBias[1] += stateError[ABIAS_Y];
+    NavData.accBias[2] += stateError[ABIAS_Z];
+    
+    NavData.gravity += stateError[GRAVITY];
     
     for (int i = 0; i < NSTATES; i++)
     {
-        //stateError[i] = 0.0;
+        stateError[i] = 0.0;
+    }
+}
+
+void filterUpdate(double* residual, double* R, double* H, double* K, int nMeas)
+{
+    double HT[NSTATES][nMeas];
+    double P_HT[nMeas][NSTATES];
+    double H_P_HT[nMeas][nMeas];
+    double H_P_HT_R[nMeas][nMeas];
+    double inv_H_P_HT_R[nMeas][nMeas];
+    double HT_inv_H_P_HT_R[NSTATES][nMeas];
+    
+    double K_H[NSTATES][NSTATES];
+    double diagOnes_K_H[NSTATES][NSTATES];
+    double Pprev[NSTATES][NSTATES];
+    
+    for (int i = 0; i < NSTATES; i++)
+    {
+        for (int j = 0; j < NSTATES; j++)
+        { Pprev[i][j] = P[i][j]; }
+    }
+    
+    // NSTATES x NMESAUREMENTS
+    // 10x1   = (10x10) * (10x1)  *    (  1x10  * 10x10 *  10x1   +   1x1 )
+    // K =    P    * H' * inv( H *   P   * H' + R);
+    math_mtran(*HT, H, NSTATES, nMeas);
+    math_mmult(*P_HT, *P, NSTATES, NSTATES, *HT, NSTATES, nMeas);
+    math_mmult(*H_P_HT, H, nMeas, NSTATES, *P_HT, NSTATES, nMeas);
+    math_madd(*H_P_HT_R, *H_P_HT, R, nMeas, nMeas);
+    math_minv(*inv_H_P_HT_R, *H_P_HT_R, nMeas);
+    math_mmult(*HT_inv_H_P_HT_R, *HT, NSTATES, nMeas, *inv_H_P_HT_R, nMeas, nMeas);
+    math_mmult(K, *P, NSTATES, NSTATES, *HT_inv_H_P_HT_R, NSTATES, nMeas);
+    
+    //    10x1    =  10x1  *   1x1
+    // stateError = K * Residual
+    math_mmult(stateError, K, residual, NSTATES, nMeas);
+    
+    //10x10 = (10x10 -  10x1  *  1x10 ) * 10x10
+    // P    =  (  I  - K * H) *   P
+    math_mmult(*K_H, K, NSTATES, nMeas, H, nMeas, NSTATES);
+    math_msubtract(*diagOnes_K_H, *diagOnes, *K_H, NSTATES, NSTATES);
+    math_mmult(*P, *diagOnes_K_H, NSTATES, NSTATES, *Pprev, NSTATES, NSTATES);
+    
+    for (int i = 0; i < NSTATES; i++)
+    {
+        for (int j = 0; j < NSTATES; j++)
+        {
+            Pcorrection[i][j] = diagOnes_K_H[i][j];
+        }
     }
 }
 
@@ -639,204 +577,11 @@ void FsNavigation_performBarometerUpdate(barometerType* baroData)
         //return;
     }
     
-    NavData.state = BaroUpdate;
-    
-    double HBAROT[NSTATES][NBAROSTATES];
-    double P_HBAROT[NBAROSTATES][NSTATES];
-    double HBARO_P_HBAROT[NBAROSTATES][NBAROSTATES];
-    double HBARO_P_HBAROT_R[NBAROSTATES][NBAROSTATES];
-    double inv_HBARO_P_HBAROT_R[NBAROSTATES][NBAROSTATES];
-    double HBAROT_inv_HBARO_P_HBAROT_R[NSTATES][NBAROSTATES];
-    
-    double KBARO_HBARO[NSTATES][NSTATES];
-    double diagOnes_KBARO_HBARO[NSTATES][NSTATES];
-    double Pprev[NSTATES][NSTATES];
-    
-    for (int i = 0; i < NSTATES; i++)
-    {
-        for (int j = 0; j < NSTATES; j++)
-        {
-            Pprev[i][j] = P[i][j];
-        }
-    }
-    
     R_BARO[BARO_ALT][BARO_ALT] = FsBarometer_getAltitudeVariance();
-    
-    baroError[BARO_ALT] = baroData->altitude + baroRefAltitude - NavData.position[2];
+    baroResidual[BARO_ALT]     = baroData->altitude + baroRefAltitude - NavData.position[2];
 
-    // NSTATES x NMESAUREMENTS
-    // 10x1   = (10x10) * (10x1)  *    (  1x10  * 10x10 *  10x1   +   1x1 )
-    // K_BARO =    P    * H_BARO' * inv( H_BARO *   P   * H_BARO' + R_BARO);
-    math_mtran(*HBAROT, *H_BARO, NSTATES, NBAROSTATES);
-    math_mmult(*P_HBAROT, *P, NSTATES, NSTATES, *HBAROT, NSTATES, NBAROSTATES);
-    math_mmult(*HBARO_P_HBAROT, *H_BARO, NBAROSTATES, NSTATES, *P_HBAROT, NSTATES, NBAROSTATES);
-    math_madd(*HBARO_P_HBAROT_R, *HBARO_P_HBAROT, *R_BARO, NBAROSTATES, NBAROSTATES);
-    math_minv(*inv_HBARO_P_HBAROT_R, *HBARO_P_HBAROT_R, NBAROSTATES);
-    math_mmult(*HBAROT_inv_HBARO_P_HBAROT_R, *HBAROT, NSTATES, NBAROSTATES, *inv_HBARO_P_HBAROT_R, NBAROSTATES, NBAROSTATES);
-    math_mmult(*K_BARO, *P, NSTATES, NSTATES, *HBAROT_inv_HBARO_P_HBAROT_R, NSTATES, NBAROSTATES);
-
-    //    10x1    =  10x1  *   1x1
-    // stateError = K_Baro * baroError
-    math_mmult(stateError, *K_BARO, baroError, NSTATES, NBAROSTATES);
-    
-    //10x10 = (10x10 -   10x1 *   1x10) * 10x10
-    // P    =  (  I   - K_BARO * H_BARO) *   P
-    math_mmult(*KBARO_HBARO, *K_BARO, NSTATES, NBAROSTATES, *H_BARO, NBAROSTATES, NSTATES);
-    math_msubtract(*diagOnes_KBARO_HBARO, *diagOnes, *KBARO_HBARO, NSTATES, NSTATES);
-    math_mmult(*P, *diagOnes_KBARO_HBARO, NSTATES, NSTATES, *Pprev, NSTATES, NSTATES);
+    NavData.state = BaroUpdate;
 }
-
-#ifdef FILTERTEST
-void nonlinearStateModel(double &navDt)
-{
-    double dTheta[3];
-    double dThetaMag;
-    double c2;
-    double s2;
-    double unitTheta[3];
-    double dVelocity[3];
-    double prevState[NSTATES];
-    double q00;
-    double q01;
-    double q02;
-    double q03;
-    double q11;
-    double q12;
-    double q13;
-    double q22;
-    double q23;
-    double q33;
-    
-    // State Inputs
-    for (int i=0; i<3; i++)
-    {
-        dTheta[i] = NavData.stateInputs.dTheta[i];
-        dVelocity[i] = NavData.stateInputs.dVelocity[i];
-    }
-    
-    // Store previous state
-    for (int i=0; i<NSTATES; i++)
-    {
-        prevState[i] = navStates[i];
-    }
-    
-    // Intermidiate variables
-    dThetaMag = sqrt( dTheta[0]*dTheta[0] +
-                     dTheta[1]*dTheta[1] +
-                     dTheta[2]*dTheta[2] );
-    for (int i=0; i<3; i++)
-    {
-        for (int i=0; i<3; i++)
-        {
-            if (dThetaMag > 0.00001) { unitTheta[i]  = dTheta[i] / dThetaMag; }
-            else                     { unitTheta[i] = 0.0; }
-        }
-    }
-    
-    c2 = cos(dThetaMag/2.0);
-    s2 = sin(dThetaMag/2.0);
-    
-    q00 = prevState[Q0]*prevState[Q0];
-    q01 = prevState[Q0]*prevState[Q1];
-    q02 = prevState[Q0]*prevState[Q2];
-    q03 = prevState[Q0]*prevState[Q3];
-    q11 = prevState[Q1]*prevState[Q1];
-    q12 = prevState[Q1]*prevState[Q2];
-    q13 = prevState[Q1]*prevState[Q3];
-    q22 = prevState[Q2]*prevState[Q2];
-    q23 = prevState[Q2]*prevState[Q3];
-    q33 = prevState[Q3]*prevState[Q3];
-    
-    navStates[Q0] = prevState[Q0]*c2              - prevState[Q1]*unitTheta[0]*s2 - prevState[Q2]*unitTheta[1]*s2 - prevState[Q3]*unitTheta[2]*s2;
-    navStates[Q1] = prevState[Q0]*unitTheta[0]*s2 + prevState[Q1]*c2              + prevState[Q2]*unitTheta[2]*s2 - prevState[Q3]*unitTheta[1]*s2;
-    navStates[Q2] = prevState[Q0]*unitTheta[1]*s2 - prevState[Q1]*unitTheta[2]*s2 + prevState[Q2]*c2              + prevState[Q3]*unitTheta[0]*s2;
-    navStates[Q3] = prevState[Q0]*unitTheta[2]*s2 + prevState[Q1]*unitTheta[1]*s2 - prevState[Q2]*unitTheta[0]*s2 + prevState[Q3]*c2;
-    navStates[VN] = prevState[VN] + (2.0*q00 - 1.0 + 2.0*q11)*dVelocity[0] + 2.0*(q12 - q03)          *dVelocity[1] + 2.0*(q13 + q02)          *dVelocity[2];
-    navStates[VE] = prevState[VE] + 2.0*(q12 + q03)          *dVelocity[0] + (2.0*q00 - 1.0 + 2.0*q22)*dVelocity[1] + 2.0*(q23 - q01)          *dVelocity[2];
-    navStates[VD] = prevState[VD] + 2.0*(q13 - q02)          *dVelocity[0] + 2.0*(q23 + q01)          *dVelocity[1] + (2.0*q00 - 1.0 + 2.0*q33)*dVelocity[2];
-    navStates[LAT] = prevState[LAT] + prevState[VN] * navDt / (RE + prevState[ALT]);
-    navStates[LON] = prevState[LON] + prevState[VE] * navDt / ( (RE + prevState[ALT])*cos(prevState[LAT]) );
-    navStates[ALT] = prevState[ALT] - prevState[VD] * navDt;
-}
-
-void compareNonlinearStates()
-{
-    double q[4];
-    double eulerAngles[3];
-    double linEulerAngles[3];
-    
-    q[0] = navStates[Q0];
-    q[1] = navStates[Q1];
-    q[2] = navStates[Q2];
-    q[3] = navStates[Q3];
-    eulerAngles[0] = atan2(2*q[2]*q[3] + 2*q[0]*q[1], 2*q[0]*q[0] + 2*q[3]*q[3] - 1);
-    eulerAngles[1] = asin(-2*q[1]*q[3] + 2*q[0]*q[2]);
-    eulerAngles[2] = atan2(2*q[1]*q[2] + 2*q[0]*q[3], 2*q[0]*q[0] + 2*q[1]*q[1] - 1);
-    
-    // Nonlinear Nav State Error
-    NavStateError.eulerAngles[0] = (NavData.eulerAngles[0] - eulerAngles[0]) * radian2degree;
-    NavStateError.eulerAngles[1] = (NavData.eulerAngles[1] - eulerAngles[1]) * radian2degree;
-    NavStateError.eulerAngles[2] = (NavData.eulerAngles[2] - eulerAngles[2]) * radian2degree;
-    
-    NavStateError.q_B_NED[0] = NavData.q_B_NED[0] - navStates[Q0];
-    NavStateError.q_B_NED[1] = NavData.q_B_NED[1] - navStates[Q1];
-    NavStateError.q_B_NED[2] = NavData.q_B_NED[2] - navStates[Q2];
-    NavStateError.q_B_NED[3] = NavData.q_B_NED[3] - navStates[Q3];
-    
-    NavStateError.position[0] = (NavData.position[0] - navStates[LAT]) * radian2degree;
-    NavStateError.position[1] = (NavData.position[1] - navStates[LON]) * radian2degree;
-    NavStateError.position[2] = (NavData.position[2] - navStates[ALT]);
-    
-    NavStateError.velNED[0] = NavData.velNED[0] - navStates[VN];
-    NavStateError.velNED[1] = NavData.velNED[1] - navStates[VE];
-    NavStateError.velNED[2] = NavData.velNED[2] - navStates[VD];
-    
-    // Linear Error
-    q[0] = linNavStates[Q0];
-    q[1] = linNavStates[Q1];
-    q[2] = linNavStates[Q2];
-    q[3] = linNavStates[Q3];
-    linEulerAngles[0] = atan2(2*q[2]*q[3] + 2*q[0]*q[1], 2*q[0]*q[0] + 2*q[3]*q[3] - 1);
-    linEulerAngles[1] = asin(-2*q[1]*q[3] + 2*q[0]*q[2]);
-    linEulerAngles[2] = atan2(2*q[1]*q[2] + 2*q[0]*q[3], 2*q[0]*q[0] + 2*q[1]*q[1] - 1);
-    
-    linNavStateError.eulerAngles[0] = (eulerAngles[0] - linEulerAngles[0]) * radian2degree;
-    linNavStateError.eulerAngles[1] = (eulerAngles[1] - linEulerAngles[1]) * radian2degree;
-    linNavStateError.eulerAngles[2] = (eulerAngles[2] - linEulerAngles[2]) * radian2degree;
-    
-    linNavStateError.q_B_NED[0] = navStates[Q0] - linNavStates[Q0];
-    linNavStateError.q_B_NED[1] = navStates[Q1] - linNavStates[Q1];
-    linNavStateError.q_B_NED[2] = navStates[Q2] - linNavStates[Q2];
-    linNavStateError.q_B_NED[3] = navStates[Q3] - linNavStates[Q3];
-    
-    linNavStateError.position[0] = (navStates[LAT] - linNavStates[LAT]) * radian2degree;
-    linNavStateError.position[1] = (navStates[LON] - linNavStates[LON]) * radian2degree;
-    linNavStateError.position[2] = (navStates[ALT] - linNavStates[ALT]);
-    
-    linNavStateError.velNED[0] = navStates[VN] - linNavStates[VN];
-    linNavStateError.velNED[1] = navStates[VE] - linNavStates[VE];
-    linNavStateError.velNED[2] = navStates[VD] - linNavStates[VD];
-    /*
-    linNavStateError.eulerAngles[0] = (NavData.eulerAngles[0] - linEulerAngles[0]) * radian2degree;
-    linNavStateError.eulerAngles[1] = (NavData.eulerAngles[1] - linEulerAngles[1]) * radian2degree;
-    linNavStateError.eulerAngles[2] = (NavData.eulerAngles[2] - linEulerAngles[2]) * radian2degree;
-    
-    linNavStateError.q_B_NED[0] = NavData.q_B_NED[0] - linNavStates[Q0];
-    linNavStateError.q_B_NED[1] = NavData.q_B_NED[1] - linNavStates[Q1];
-    linNavStateError.q_B_NED[2] = NavData.q_B_NED[2] - linNavStates[Q2];
-    linNavStateError.q_B_NED[3] = NavData.q_B_NED[3] - linNavStates[Q3];
-    
-    linNavStateError.position[0] = (NavData.position[0] - linNavStates[LAT]) * radian2degree;
-    linNavStateError.position[1] = (NavData.position[1] - linNavStates[LON]) * radian2degree;
-    linNavStateError.position[2] = (NavData.position[2] - linNavStates[ALT]);
-    
-    linNavStateError.velNED[0] = NavData.velNED[0] - linNavStates[VN];
-    linNavStateError.velNED[1] = NavData.velNED[1] - linNavStates[VE];
-    linNavStateError.velNED[2] = NavData.velNED[2] - linNavStates[VD];
-     */
-}
-
-#endif
 
 void FsNavigation_calibrateIMU()
 {
@@ -894,14 +639,17 @@ void FsNavigation_calibrateIMU()
             NavData.gyroBias[i] = gyroError[i]->mean;
             NavData.accBias[i]  = accelError[i]->mean;
         }
+
+        double gyroQuatizationVariance = errorToVariance(nav_pIMUdata->gyroQuantizationError_dps*degree2radian);
+        double accelQuatizationVariance = errorToVariance(nav_pIMUdata->accelQuantizationError_g*Gravity);
         
-        gyroCov[0][0]  = gyroError[0]->variance;
-        gyroCov[1][1]  = gyroError[1]->variance;
-        gyroCov[2][2]  = gyroError[2]->variance;
-        accelCov[0][0] = accelError[0]->variance;
-        accelCov[1][1] = accelError[1]->variance;
-        accelCov[2][2] = accelError[2]->variance;
-        
+        gyroCov[0][0]  = gyroError[0]->variance + gyroQuatizationVariance;
+        gyroCov[1][1]  = gyroError[1]->variance + gyroQuatizationVariance;
+        gyroCov[2][2]  = gyroError[2]->variance + gyroQuatizationVariance;
+        accelCov[0][0] = accelError[0]->variance + accelQuatizationVariance;
+        accelCov[1][1] = accelError[1]->variance + accelQuatizationVariance;
+        accelCov[2][2] = accelError[2]->variance + accelQuatizationVariance;
+
         gyroVar = sqrt( gyroError[0]->variance*gyroError[0]->variance
                         + gyroError[1]->variance*gyroError[1]->variance
                         + gyroError[2]->variance*gyroError[2]->variance );
@@ -958,22 +706,20 @@ double* FsNavigation_getBaroKalmanGain()
     return *K_BARO;
 }
 
+double* FsNavigation_getBaroResidual()
+{
+    return baroResidual;
+}
+
 double* FsNavigation_getStateError()
 {
     return stateError;
 }
 
-#ifdef FILTERTEST
-NavType* FsNavigation_getNavStateError()
+double* FsNavigation_getCovarianceCorrection()
 {
-    return &NavStateError;
+    return *Pcorrection;
 }
-
-NavType* FsNavigation_getLinStateError()
-{
-    return &linNavStateError;
-}
-#endif
 
 #ifdef SIMULATION
 void FsNavigation_setSimulationModels(ModelMap* pMap)
@@ -1049,20 +795,31 @@ void updateTruth()
         truthNavData.q_B_NED[1] = pDyn->get_q_B_NED()[1];
         truthNavData.q_B_NED[2] = pDyn->get_q_B_NED()[2];
         truthNavData.q_B_NED[3] = pDyn->get_q_B_NED()[3];
+        
+        truthNavData.accelBody[0] = pDyn->getAccBody()[0];
+        truthNavData.accelBody[1] = pDyn->getAccBody()[1];
+        truthNavData.accelBody[2] = pDyn->getAccBody()[2];
+        
+        truthNavData.bodyRates[0] = pDyn->getBodyRates()[0].rps();
+        truthNavData.bodyRates[1] = pDyn->getBodyRates()[1].rps();
+        truthNavData.bodyRates[2] = pDyn->getBodyRates()[2].rps();
+        
+        truthNavData.imuTimestamp = pDyn->getTimestamp();
     }
     
     for (int i=0; i<3; i++)
     {
-        NavError.position[i]    = truthNavData.position[i]     - NavData.position[i];
-        NavError.velNED[i]      = truthNavData.velNED[i]       - NavData.velNED[i];
-        NavError.velBody[i]     = truthNavData.velBody[i]      - NavData.velBody[i];
-        NavError.eulerAngles[i] = (truthNavData.eulerAngles[i] - NavData.eulerAngles[i]) * radian2degree;
-        NavError.q_B_NED[i]     = truthNavData.q_B_NED[i]      - NavData.q_B_NED[i];
+        NavError.position[i]    = NavData.position[i]     - truthNavData.position[i];
+        NavError.velNED[i]      = NavData.velNED[i]       - truthNavData.velNED[i];
+        NavError.velBody[i]     = NavData.velBody[i]      - truthNavData.velBody[i];
+        NavError.eulerAngles[i] = (NavData.eulerAngles[i] - truthNavData.eulerAngles[i]) * radian2degree;
+        NavError.q_B_NED[i]     = NavData.q_B_NED[i]      - truthNavData.q_B_NED[i];
+        NavError.accelBody[i]   = NavData.accelBody[i]    - truthNavData.accelBody[i];
+        NavError.bodyRates[i]   = (NavData.bodyRates[i]   - truthNavData.bodyRates[i]) * radian2degree;
     }
-    NavError.position[0] *= radian2degree;
-    NavError.position[1] *= radian2degree;
-    
     NavError.q_B_NED[3] = truthNavData.q_B_NED[3] - NavData.q_B_NED[3];
+    
+    NavError.imuTimestamp = (NavData.imuTimestamp - truthNavData.imuTimestamp)*1000.0;
 }
 #endif
 
@@ -1118,6 +875,49 @@ inline void updateEulerAngles()
     NavData.eulerAngles[0] = atan2(2*q[2]*q[3] + 2*q[0]*q[1], 2*q[0]*q[0] + 2*q[3]*q[3] - 1);
     NavData.eulerAngles[1] = asin(-2*q[1]*q[3] + 2*q[0]*q[2]);
     NavData.eulerAngles[2] = atan2(2*q[1]*q[2] + 2*q[0]*q[3], 2*q[0]*q[0] + 2*q[1]*q[1] - 1);
+}
+
+inline void updateQuaternions()
+{
+    double cr2;
+    double cp2;
+    double cy2;
+    double sr2;
+    double sp2;
+    double sy2;
+    
+    cr2 = cos(NavData.eulerAngles[0]/2);
+    cp2 = cos(NavData.eulerAngles[1]/2);
+    cy2 = cos(NavData.eulerAngles[2]/2);
+        
+    sr2 = sin(NavData.eulerAngles[0]/2);
+    sp2 = sin(NavData.eulerAngles[1]/2);
+    sy2 = sin(NavData.eulerAngles[2]/2);
+        
+    NavData.q_B_NED[0] = cr2*cp2*cy2 + sr2*sp2*sy2;
+    NavData.q_B_NED[1] = sr2*cp2*cy2 - cr2*sp2*sy2;
+    NavData.q_B_NED[2] = cr2*sp2*cy2 + sr2*cp2*sy2;
+    NavData.q_B_NED[3] = cr2*cp2*sy2 - sr2*sp2*cy2;
+    
+    unitVector(NavData.q_B_NED, 4);
+}
+
+inline void unitVector(double* vector, int n)
+{
+    // Magnitude
+    double mag = 0.0;
+    for (int i = 0; i < n; i++)
+    {
+        mag += vector[i]*vector[i];
+    }
+    mag = sqrt(mag);
+    if (mag == 0) return;
+    
+    // Unit vector
+    for (int i = 0; i < n; i++)
+    {
+        vector[i] = vector[i]/mag;
+    }
 }
 
 // Math
@@ -1266,7 +1066,7 @@ void math_LUdecomp(double *x, double *A, double *b, int n)
     // Initialize L and U
     for(int i=0;i<n;i++){
         L[i][0] = *(A+i*n+0); //L[i][0] = A[i][0]
-        U[i][i] = 1; // U diagonals = 1
+        U[i][i] = 1.0; // U diagonals = 1
         if(i > 0) {
             U[0][i] = *(A+0*n+i)/L[0][0]; // U[0][i] = A[0][i]/L[0][0]
         }
@@ -1278,7 +1078,7 @@ void math_LUdecomp(double *x, double *A, double *b, int n)
         for(int j=i;j<n;j++){
             // j is row of L, col of U
             // i is row of U, col of L
-            sum = 0;
+            sum = 0.0;
             for(int k=0;k<i;k++){
                 sum += L[j][k]*U[k][i];
             }
@@ -1312,5 +1112,16 @@ void math_LUdecomp(double *x, double *A, double *b, int n)
             sum += U[i][k]*x[k];
         }
         x[i] = xstar[i] - sum; //x[i] = (xstar[i] - sum)/U[i][i];
+    }
+}
+
+inline void symmetric(double* matrix, int nrow, int ncol)
+{
+    for (int i = 0; i < nrow; i++)
+    {
+        for (int j = 0; j < ncol; j++)
+        {
+            *(matrix + j*ncol + i) = *(matrix + i*ncol + j);// matrix[i][j]
+        }
     }
 }

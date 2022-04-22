@@ -51,6 +51,8 @@ public:
     
     double                 getMass(void)           { return mass; }
     
+    double                 getTimestamp(void)      { return timestamp; }
+    
     // Setters
     void setEulerAngles(AngleType<double>* angles_in);
     
@@ -113,6 +115,7 @@ private:
     
     double inertia[3][3];
     double mass;
+    double timestamp;
     
     // print variables
     AngleType<double> eulerAnglesDeg[3];

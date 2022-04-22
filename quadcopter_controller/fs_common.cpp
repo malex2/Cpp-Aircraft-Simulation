@@ -28,6 +28,20 @@ double getTime()
 #endif
 }
 
+// Errors
+double errorToVariance(double maxError)
+{
+    double std;
+    double variance;
+    
+    // max error is 3 standard deviations
+    std = maxError / 3.0;
+    // variance is std^2
+    variance = std*std;
+    
+    return variance;
+}
+
 // LED
 void LEDon()
 {

@@ -156,10 +156,10 @@ QuadcopterPropulsionModel::QuadcopterPropulsionModel(ModelMap *pMapInit, bool de
     //pMap->addLogVar("propMX", &bodyMoment[0], savePlot, 2);
     //pMap->addLogVar("propMY", &bodyMoment[1], savePlot, 2);
     //pMap->addLogVar("propMZ", &bodyMoment[2], savePlot, 2);
-    //pMap->addLogVar("prop T1", &throttle[0], savePlot, 2);
-    //pMap->addLogVar("prop T2", &throttle[1], savePlot, 2);
-    //pMap->addLogVar("prop T3", &throttle[2], savePlot, 2);
-    //pMap->addLogVar("prop T4", &throttle[3], savePlot, 2);
+    pMap->addLogVar("prop T1", &throttle[0], savePlot, 2);
+    pMap->addLogVar("prop T2", &throttle[1], savePlot, 2);
+    pMap->addLogVar("prop T3", &throttle[2], savePlot, 2);
+    pMap->addLogVar("prop T4", &throttle[3], savePlot, 2);
     //pMap->addLogVar("engineRPM1", &engineRPM[0], savePlot, 2);
     //pMap->addLogVar("engineRPM2", &engineRPM[1], savePlot, 2);
     //pMap->addLogVar("engineRPM3", &engineRPM[2], savePlot, 2);

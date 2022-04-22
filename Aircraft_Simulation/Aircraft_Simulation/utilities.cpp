@@ -911,6 +911,67 @@ void Utilities::mgain(TempType *matrix, TempType gain, int nrow, int ncol)
     }
 }
 
+template<typename TempType>
+int Utilities::mrank(TempType *matrix, int nrow, int ncol)
+{
+    TempType mik;
+    TempType reduceEcl[nrow][ncol];
+    int nFullRank;
+    int nRank;
+    TempType sumRow;
+    TempType temp;
+    
+    // Find smallest dimension
+    if (nrow < ncol) { nFullRank = nrow; }
+    else { nFullRank = ncol; }
+    
+    print(matrix, nrow, ncol, "A:");
+    
+    // Copy matrix
+    for (int i = 0; i < nrow; i++)
+    {
+        for (int j = 0; j < ncol; j++)
+        {
+            reduceEcl[i][j] = *(matrix+i*ncol+j);
+        }
+    }
+    
+    // Go through rows, starting at second row
+    for (int irow = 1; irow < nrow; irow++)
+    {
+        for (int k = 0; k < irow; k++)
+        {
+            if (reduceEcl[k][k] > zeroTolerance || reduceEcl[k][k] < -zeroTolerance)
+            { mik = reduceEcl[irow][k]/reduceEcl[k][k]; }
+            else { mik = 0; }
+
+            for (int icol = k; icol < ncol; icol++)
+            {
+                reduceEcl[irow][icol] -= reduceEcl[k][icol] * mik;
+            }
+        }
+        //print(*reduceEcl, nrow, ncol, "reduced echelon form:");
+        // Condition reduceEcl matrix with zero's on bottom
+    }
+    
+    print(*reduceEcl, nrow, ncol, "reduced echelon form:");
+    
+    nRank = nrow;
+    for (int irow = 0; irow < nrow; irow++)
+    {
+        sumRow = 0;
+        
+        for (int icol = 0; icol < ncol; icol++)
+        {
+            temp = reduceEcl[irow][icol];
+            if ( reduceEcl[irow][icol] < 0) { temp *= -1; }
+            sumRow += temp;
+        }
+        if (sumRow < zeroTolerance) { nRank--; }
+    }
+    print(&nRank, 1, "Rank:");
+    return nRank;
+}
 
 template<typename TempType>
 void Utilities::minv(TempType *matrix_inv, TempType *matrix, int n)
@@ -1588,6 +1649,8 @@ template void Utilities::mtran(double* , const double* ,int ,int);
 template void Utilities::mgain(int* , int, int, int);
 template void Utilities::mgain(float* , float, int, int);
 template void Utilities::mgain(double* , double, int, int);
+
+template int Utilities::mrank(double* matrix, int nrow, int ncol);
 
 template void Utilities::minv(float* matrix_inv, float* matrix, int n);
 template void Utilities::minv(double* matrix_inv, double* matrix, int n);

@@ -16,10 +16,13 @@
 
 // Types
 enum NavState {Calibration, INS, GPSUpdate, BaroUpdate};
-enum StateType {Q0, Q1, Q2, Q3, VN, VE, VD, LAT, LON, ALT , NSTATES};
+enum StateType {ROLL, PITCH, YAW, VN, VE, VD, N, E, ALT, GBIAS_X, GBIAS_Y, GBIAS_Z, ABIAS_X, ABIAS_Y, ABIAS_Z, GRAVITY, NSTATES};
 enum VECTORTYPE {X, Y, Z};
-enum GPSMeasurementType {GPS_LAT, GPS_LON, GPS_ALT, GPS_VN, GPS_VE, GPS_VD, NGPSSTATES};
+enum GPSMeasurementType {GPS_N, GPS_E, GPS_ALT, GPS_VN, GPS_VE, GPS_VD, NGPSSTATES};
 enum BAROMeasurementType {BARO_ALT, NBAROSTATES};
+
+const int NSTATES_BARO = 4;
+//StateType BaroKFStates[NSTATES_BARO] = {VD, ALT, ABIAS_Z, GRAVITY};
 
 struct SensorErrorType {
     double sum;
@@ -48,7 +51,7 @@ struct StateInputType {
 };
 
 struct NavType {
-    double position[3]; //Latitude, Longitude, Altitude
+    double position[3]; // North, East, Altitude
     double velNED[3];
     bool   initNED;
     double eulerAngles[3];
@@ -57,10 +60,16 @@ struct NavType {
     double gyroBias[3];
     double gravity;
     double velBody[3];
+    double accelBody[3];
+    double bodyRates[3];
     StateInputType stateInputs;
     
     NavState state;
     double timestamp;
+    double imuTimestamp;
+    unsigned int InsUpdateCount;
+    unsigned int BaroUpdateCount;
+    unsigned int GpsUpdateCount;
     
     NavType()
     {
@@ -68,6 +77,9 @@ struct NavType {
         timestamp = 0.0;
         gravity = 9.81;
         initNED = false;
+        InsUpdateCount  = 0;
+        BaroUpdateCount = 0;
+        GpsUpdateCount  = 0;
         for (int i=0; i<3; i++)
         {
             position[i]    = 0.0;
@@ -77,6 +89,7 @@ struct NavType {
             accBias[i]     = 0.0;
             gyroBias[i]    = 0.0;
             q_B_NED[i]     = 0.0;
+            accelBody[i]   = 0.0;
         }
         q_B_NED[3] = 0.0;
     }
@@ -91,21 +104,14 @@ void FsNavigation_performNavigation( double &navDt );
 void updateGravity();
 void performARHS(double &navDt);
 void gyroUpdate(double &navDt);
-void compFilter();
 void performINS( double &navDt );
 void propogateVariance( double &navDt );
 void applyCorrections();
 
 // Filter Updates
+void filterUpdate(double* residual, double* R, double* H, double* K, int nMeas);
 void FsNavigation_performGPSPVTUpdate(double* gps_LLA, double* gps_velNED, double gps_heading, double gps_timestamp);
 void FsNavigation_performBarometerUpdate(barometerType* baroData);
-
-// Filter Testing
-#ifdef FILTERTEST
-void nonlinearStateModel(double &navDt);
-void linearStateModel(double &navDt);
-void compareNonlinearStates();
-#endif
 
 // Calibration
 void FsNavigation_calibrateIMU();
@@ -114,13 +120,12 @@ void FsNavigation_calibrateIMU();
 NavType* FsNavigation_getNavData(bool useTruth = false);
 NavType* FsNavigation_getNavError();
 NavState FsNavigation_getNavState();
-NavType* FsNavigation_getNavStateError();
-NavType* FsNavigation_getLinStateError();
 double*  FsNavigation_getCovariance();
 double*  FsNavigation_getProcessNoise();
 double*  FsNavigation_getStateError();
 double*  FsNavigation_getBaroKalmanGain();
-double*  FsNavigation_getBaroError();
+double*  FsNavigation_getBaroResidual();
+double*  FsNavigation_getCovarianceCorrection();
 
 // Setters
 void FsNavigation_setIMUdata(IMUtype* pIMUdataIn);
@@ -139,8 +144,10 @@ inline void FsNavigation_NEDToBody(double* vB, double* vNED);
 void FsNavigation_bodyToLL(double* vLL, double* vBody);
 inline void quaternionProduct(double *product, double *q1, double *q2);
 inline void updateEulerAngles();
+inline void updateQuaternions();
 
 // Math
+inline void unitVector(double* vector, int n);
 void math_mgain(double *result, double *matrix, double gain, int nrow, int ncol);
 void math_madd(double *result, double *A, double *B, int nrows, int ncols);
 void math_msubtract(double *result, double *A, double *B, int nrows, int ncols);
@@ -149,5 +156,6 @@ void math_mmult(double *result, double *matrix, double *vector, int nrow, int nc
 void math_mtran(double *matrix_t, double *matrix, int nrow_t, int ncol_t);
 void math_minv(double *matrix_inv, double *matrix, int n);
 void math_LUdecomp(double *x, double *A, double *b, int n);
+inline void symmetric(double* matrix, int n, int m);
 
 #endif /* fs_navigation_hpp */

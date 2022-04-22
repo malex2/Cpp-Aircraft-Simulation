@@ -116,10 +116,10 @@ IMUModelBase::IMUModelBase(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("IMU normal acc x (g)", &accNormalBody[0], savePlot, 2);
     //pMap->addLogVar("IMU normal acc y (g)", &accNormalBody[1], savePlot, 2);
     //pMap->addLogVar("IMU normal acc z (g)", &accNormalBody[2], savePlot, 2);
-    //pMap->addLogVar("dPitch", &dTheta[1], printSavePlot, 3);
+    //pMap->addLogVar("IMU deltaPitch", &dTheta[1], savePlot, 3);
     //pMap->addLogVar("dVelocity X", &dVelocity[0], savePlot, 2);
     //pMap->addLogVar("dVelocity Y", &dVelocity[1], savePlot, 2);
-    //pMap->addLogVar("dVelocity Z", &dVelocity[2], savePlot, 2);
+    //pMap->addLogVar("IMU deltaVD", &dVelocity[2], savePlot, 2);
     //pMap->addLogVar("IntSumTime", &sumTime, printSavePlot, 3);
     
     //pMap->addLogVar("IMU mag x (uT)", &magInUnits[0], savePlot, 2);
@@ -161,8 +161,8 @@ bool IMUModelBase::update(void)
     util.setArray(bodyAcc    , pDyn->getAccBody()    , 3);
     util.setArray(bodyAngularAcc, pDyn->getbodyAngularAcc(), 3);
     gravity        = pAtmo->getGravity();
-    refGravity     = gravity; // Check and udpate
-    //magneticStrength = pAtmo->getMAgneticFieldStrength();
+    //refGravity     = gravity; // Check and udpate
+    //magneticStrength = pAtmo->getMagneticFieldStrength();
     //inclination      = pDyn->getInclination();
     
     // Update Units

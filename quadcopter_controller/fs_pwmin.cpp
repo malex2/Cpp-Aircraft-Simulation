@@ -25,10 +25,10 @@ bool pwmSetup = false;;
 
 void FsPwmIn_setup()
 {
-    pwmIn[THROTTLE] = PWMMIN;
-    pwmIn[ROLL]     = (PWMMIN+PWMMAX)/2;
-    pwmIn[PITCH]    = (PWMMIN+PWMMAX)/2;
-    pwmIn[YAW]      = (PWMMIN+PWMMAX)/2;
+    pwmIn[THROTTLE_CHANNEL] = PWMMIN;
+    pwmIn[ROLL_CHANNEL]     = (PWMMIN+PWMMAX)/2;
+    pwmIn[PITCH_CHANNEL]    = (PWMMIN+PWMMAX)/2;
+    pwmIn[YAW_CHANNEL]      = (PWMMIN+PWMMAX)/2;
     
     throttleChannel.attach(THROTTLEPIN);
     rollChannel.attach(ROLLPIN);
@@ -46,10 +46,10 @@ void FsPwmIn_performPwmIn()
     if (!pwmSetup) { return; }
     
     // Get PWM readings
-    pwmIn[THROTTLE] = throttleChannel.getPwm();
-    pwmIn[ROLL]     = rollChannel.getPwm();
-    pwmIn[PITCH]    = pitchChannel.getPwm();
-    pwmIn[YAW]      = yawChannel.getPwm();
+    pwmIn[THROTTLE_CHANNEL] = throttleChannel.getPwm();
+    pwmIn[ROLL_CHANNEL]     = rollChannel.getPwm();
+    pwmIn[PITCH_CHANNEL]    = pitchChannel.getPwm();
+    pwmIn[YAW_CHANNEL]      = yawChannel.getPwm();
     
     // Determine if readings are valid
     if(PwmIn::getValidReadCount() > validReads)
@@ -66,24 +66,24 @@ bool FsPwmIn_valid()     { return pwmValid; }
 PwmIn::PwmIn()
 {
     // Initialize Pins
-    Pins[THROTTLE] = THROTTLEPIN; // CH3
-    Pins[ROLL]     = ROLLPIN;     // CH4
-    Pins[PITCH]    = PITCHPIN;    // CH5
-    Pins[YAW]      = YAWPIN;      // CH6
+    Pins[THROTTLE_CHANNEL] = THROTTLEPIN; // CH3
+    Pins[ROLL_CHANNEL]     = ROLLPIN;     // CH4
+    Pins[PITCH_CHANNEL]    = PITCHPIN;    // CH5
+    Pins[YAW_CHANNEL]      = YAWPIN;      // CH6
     
     // Initialize Ranges
-    minValues[THROTTLE] = 0.0;
-    minValues[ROLL]     = -MAXROLL;
-    minValues[PITCH]    = -MAXPITCH;
-    minValues[YAW]      = -MAXYAWRATE;
+    minValues[THROTTLE_CHANNEL] = 0.0;
+    minValues[ROLL_CHANNEL]     = -MAXROLL;
+    minValues[PITCH_CHANNEL]    = -MAXPITCH;
+    minValues[YAW_CHANNEL]      = -MAXYAWRATE;
     
-    maxValues[THROTTLE] = 100.0;
-    maxValues[ROLL]     = MAXROLL;
-    maxValues[PITCH]    = MAXPITCH;
-    maxValues[YAW]      = MAXYAWRATE;
+    maxValues[THROTTLE_CHANNEL] = 100.0;
+    maxValues[ROLL_CHANNEL]     = MAXROLL;
+    maxValues[PITCH_CHANNEL]    = MAXPITCH;
+    maxValues[YAW_CHANNEL]      = MAXYAWRATE;
     
     // Initialize Variables
-    channel  = THROTTLE;
+    channel  = THROTTLE_CHANNEL;
     pwm      = PWMMIN;
     minValue = minValues[channel];
     maxValue = maxValues[channel];
@@ -92,7 +92,7 @@ PwmIn::PwmIn()
     foundChannel = false;
     
     // Table To Radians
-    for (int iCh = ROLL; iCh != nChannels; iCh++)
+    for (int iCh = ROLL_CHANNEL; iCh != nChannels; iCh++)
     {
         for (int col = 0; col < lengthTable; col++)
         {
@@ -104,7 +104,7 @@ PwmIn::PwmIn()
 void PwmIn::attach(int pinIn)
 {
     // Find Channel
-    for (int iCh = THROTTLE; iCh != nChannels; iCh++)
+    for (int iCh = THROTTLE_CHANNEL; iCh != nChannels; iCh++)
     {
         if (!foundChannel && pinIn == Pins[iCh])
         {
@@ -153,7 +153,7 @@ int PwmIn::getPwm()
     
     pwm = mapToPwm(value, minValue, maxValue, PWMMIN, PWMMAX);
     
-    if (channel == YAW) { validReadCount++; }
+    if (channel == YAW_CHANNEL) { validReadCount++; }
     /*
     display("Channel: ");
     display((int) channel);

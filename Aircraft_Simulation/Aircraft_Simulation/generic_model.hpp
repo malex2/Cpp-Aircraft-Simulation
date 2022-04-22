@@ -25,7 +25,9 @@ protected:
     
     bool debugFlag;
     
-    double dt, prevTime, time;
+    double dt;
+    double prevTime;
+    double time;
     int counter;
     
     virtual void updateDt(Time* pTime);

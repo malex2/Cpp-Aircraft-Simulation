@@ -20,12 +20,13 @@ bool printI2C  = false;
 bool startDelta = false;
 # ifdef SIMULATION
     bool print_wire = false;
-    bool directIMU  = false; // Use direct IMU and not I2C
+    bool directRawIMU  = false; // Use direct raw IMU and not I2C
+    bool directUnitIMU = false; // Use direct unitized IMU instead of LSB conversion
 #endif
 
 // IMU Sensitivity
 const float accSensitivityLSB[nAccSensitivity] = {16483.0, 8192.0, 4096.0, 2048.0};
-const float gyroSensitivityLSB[nAccSensitivity] = {131.0, 65.5, 32.8, 16.4};
+const float gyroSensitivityLSB[nGyroSensitivity] = {131.0, 65.5, 32.8, 16.4};
 const int sensitivityByte[nAccSensitivity] = {0b00000000, 0b00001000, 0b00010000, 0b00011000};
 float LSBg;
 float LSBdps;
@@ -37,7 +38,9 @@ short rawTemp;
 short errorCodeIMU;
 
 float toBody[3] = {1.0, -1.0, -1.0};
-const double refGravity = 9.80665;
+
+double accelSumSqr = 0.0;
+double gyroSumSqr = 0.0;
 
 // Simulation
 #ifdef SIMULATION
@@ -50,6 +53,9 @@ void FsImu_setupIMU(accSensitivityType accSensitivity, gyroSensitivityType gyroS
     LSBg   = accSensitivityLSB[accSensitivity];
     LSBdps = gyroSensitivityLSB[gyroSensitivity];
     
+    IMUdata.gyroQuantizationError_dps = 1.0/LSBdps;
+    IMUdata.accelQuantizationError_g = 1.0/LSBg;
+
     display("Setting Up IMU I2C...\n");
     
     Wire.beginTransmission(MPU_ADDR); // Begins a transmission to the I2C slave (GY-521 board)
@@ -112,31 +118,66 @@ void readIMU()
     for (int i=0; i<3; i++)
     {
 #ifdef SIMULATION
-        if (directIMU)
+        if (directRawIMU)
         {
             rawAccel[i] = pIMUmodel->getAccelerometer()[i];
             rawGyro[i]  = pIMUmodel->getGyroscope()[i];
         }
 #endif
-        IMUdata.accel[i] = (double) toBody[i]*rawAccel[i]/LSBg * refGravity;
+        IMUdata.accel[i] = (double) toBody[i]*rawAccel[i]/LSBg * Gravity;
         IMUdata.gyro[i]  = (double) toBody[i]*rawGyro[i]/LSBdps;
+  
+#ifdef SIMULATION
+        if (directUnitIMU)
+        {
+            IMUdata.accel[i] = toBody[i]*pIMUmodel->getAccelerometerMps2()[i] * Gravity;
+            IMUdata.gyro[i]  = toBody[i]*pIMUmodel->getGyroscopeDps()[i];
+        }
+#endif
+        
+        accelSumSqr = accelSumSqr + IMUdata.accel[i]*IMUdata.accel[i];
+        gyroSumSqr  = gyroSumSqr  + IMUdata.gyro[i]*IMUdata.gyro[i];
     }
+    accelSumSqr = sqrt(accelSumSqr);
+    gyroSumSqr  = sqrt(gyroSumSqr);
+    
+    if ((gyroSumSqr > highRate)  || (accelSumSqr > highAccel))
+    {
+        IMUdata.highDynamics = true;
+    }
+    else
+    {
+        IMUdata.highDynamics = false;
+    }
+    
+    accelSumSqr = 0.0;
+    gyroSumSqr  = 0.0;
 }
 
 void updateDelta( double &imuDt )
 {
+    // Must call FsImu_zeroDelta() at least once before accumulating delta IMU data
     if (!startDelta) { return; }
     
-    for (int i=0; i<3; i++)
+    for (int i = 0; i < 3; i++)
     {
-        IMUdata.dTheta[i] += IMUdata.gyro[i] * imuDt;
+        IMUdata.dTheta[i]    += IMUdata.gyro[i] * imuDt;
         IMUdata.dVelocity[i] += IMUdata.accel[i] * imuDt;
     }
-
+    
+    
 #ifdef SIMULATION
     if (pIMUmodel) { pIMUmodel->deltaIMU(imuDt); }
 #endif
 }
+
+inline void crossProduct(double *cross, double *a, double *b)
+{
+    *(cross+0) = a[1]*b[2] - a[2]*b[1];
+    *(cross+1) = a[2]*b[0] - a[0]*b[2];
+    *(cross+2) = a[0]*b[1] - a[1]*b[0];
+}
+
 
 IMUtype* FsImu_getIMUdata()
 {

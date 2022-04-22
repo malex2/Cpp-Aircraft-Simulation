@@ -17,9 +17,13 @@ struct IMUtype {
     double dVelocity[3];
     double gyro[3];
     double dTheta[3];
-    
+
     double temperature;
     double timestamp;
+    
+    double gyroQuantizationError_dps;
+    double accelQuantizationError_g;
+    bool highDynamics;
     
     IMUtype()
     {
@@ -32,6 +36,9 @@ struct IMUtype {
         }
         temperature = 0.0;
         timestamp   = 0.0;
+        gyroQuantizationError_dps = 0.0;
+        accelQuantizationError_g  = 0.0;
+        highDynamics = false;
     }
 };
 
@@ -48,6 +55,7 @@ void FsImu_zeroDelta();
 void readIMU();
 void groundCalibration();
 void updateDelta( double &imuDt );
+inline void crossProduct(double *cross, double *a, double *b);
 
 #ifdef SIMULATION
     void FsImu_setSimulationModels(ModelMap* pMap);

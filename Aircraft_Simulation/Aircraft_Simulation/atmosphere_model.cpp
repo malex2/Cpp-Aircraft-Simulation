@@ -23,7 +23,7 @@ AtmosphereModel::AtmosphereModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("Body Gravity X", &bodyGravity[0], savePlot, 2);
     //pMap->addLogVar("Body Gravity Y", &bodyGravity[1], savePlot, 2);
     //pMap->addLogVar("Body Gravity Z", &bodyGravity[2], savePlot, 2);
-    //pMap->addLogVar("Grav", &gravity, savePlot, 2);
+    pMap->addLogVar("Grav", &gravity, savePlot, 2);
     //pMap->addLogVar("Wx  ", &bodyForce[0], savePlot, 2);
     //pMap->addLogVar("Wy  ", &bodyForce[1], savePlot, 2);
     //pMap->addLogVar("Wz  ", &bodyForce[2], savePlot, 2);
