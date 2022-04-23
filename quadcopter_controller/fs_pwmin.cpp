@@ -72,12 +72,14 @@ PwmIn::PwmIn()
     Pins[YAW_CHANNEL]      = YAWPIN;      // CH6
     
     // Initialize Ranges
-    minValues[THROTTLE_CHANNEL] = 0.0;
+    //minValues[THROTTLE_CHANNEL] = 0.0;
+    minValues[THROTTLE_CHANNEL] = -MAXVELOCITY;
     minValues[ROLL_CHANNEL]     = -MAXROLL;
     minValues[PITCH_CHANNEL]    = -MAXPITCH;
     minValues[YAW_CHANNEL]      = -MAXYAWRATE;
     
-    maxValues[THROTTLE_CHANNEL] = 100.0;
+    //maxValues[THROTTLE_CHANNEL] = 100.0;
+    maxValues[THROTTLE_CHANNEL] = MAXVELOCITY;
     maxValues[ROLL_CHANNEL]     = MAXROLL;
     maxValues[PITCH_CHANNEL]    = MAXPITCH;
     maxValues[YAW_CHANNEL]      = MAXYAWRATE;

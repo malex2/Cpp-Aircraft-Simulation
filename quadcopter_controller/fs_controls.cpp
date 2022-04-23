@@ -43,16 +43,24 @@ double maxRPM;
 
 // Gains
 // Velocity Channels
-#define kp_vx  0.0
-#define kp_vy  0.0
-#define kp_vz -0.0
+double wn_vz = 2.0 * hz2rps;
+
+double kp_vx;
+double kp_vy;
+double kp_vz;
 
 // Attitude Channels
-#define kp_roll  148473976
-#define kd_roll  59105900
-#define kp_pitch 148473976
-#define kd_pitch 59105900
-#define kp_yaw   248680042
+double wn_roll    = 5.0 * hz2rps;
+double zeta_roll  = 1.0;
+double wn_pitch   = 5.0 * hz2rps;
+double zeta_pitch = 1.0;
+double wn_yaw     = 20.0 * hz2rps;
+
+double kp_roll;
+double kd_roll;
+double kp_pitch;
+double kd_pitch;
+double kp_yaw;
 
 bool controls_setup = false;
 
@@ -76,6 +84,19 @@ void FsControls_setup()
         bodyRates[i] = 0.0;
         velLL[i] = 0.0;
     }
+    
+    // Control Gains
+    // Velocity Channels Gains
+    kp_vx  = 0.0;
+    kp_vy  = 0.0;
+    kp_vz  = wn_vz/(KVZ);
+    
+    // Attitude Channels Gains
+    kp_roll  = wn_roll*wn_roll/(KROLL);
+    kd_roll  = 2.0*zeta_roll*wn_roll/(KROLL);
+    kp_pitch = wn_pitch*wn_pitch/(KPITCH);
+    kd_pitch = 2.0*zeta_pitch*wn_pitch/(KPITCH);
+    kp_yaw   = wn_yaw/(KYAW);
     
     // Limits
     minPWM = PWMMIN;
@@ -130,9 +151,10 @@ void performControls()
         controlData.dT = mapToValue(controlData.pwmCmd[THROTTLE_CHANNEL], minPWM, maxPWM, minThrottle, maxThrottle);
     }
     
-    if (controlData.mode == AttitudeControl)
+    else if (controlData.mode == AttitudeControl)
     {
-        controlData.dT         = mapToValue(controlData.pwmCmd[THROTTLE_CHANNEL] ,       minPWM,       maxPWM,          minThrottle,      maxThrottle);
+        //controlData.dT         = mapToValue(controlData.pwmCmd[THROTTLE_CHANNEL] ,       minPWM,       maxPWM,          minThrottle,      maxThrottle);
+        controlData.VLLzCmd    = -mapToValue(controlData.pwmCmd[THROTTLE_CHANNEL], (int) PWMMIN, (int) PWMMAX, (double) -MAXVELOCITY, (double) MAXVELOCITY); // (m/s)
         controlData.rollCmd    = mapToValue(controlData.pwmCmd[ROLL_CHANNEL]     , (int) PWMMIN, (int) PWMMAX, (double) -MAXROLL   , (double) MAXROLL);    // Roll (rad)
         controlData.pitchCmd   = mapToValue(controlData.pwmCmd[PITCH_CHANNEL]    , (int) PWMMIN, (int) PWMMAX, (double) -MAXPITCH  , (double) MAXPITCH);   // Pitch (rad)
         controlData.yawRateCmd = mapToValue(controlData.pwmCmd[YAW_CHANNEL]      , (int) PWMMIN, (int) PWMMAX, (double) -MAXYAWRATE, (double) MAXYAWRATE); // Yaw Rate (rad/s)
@@ -140,13 +162,13 @@ void performControls()
     
     else if (controlData.mode == VelocityControl)
     {
-        controlData.VLLzCmd    = mapToValue(controlData.pwmCmd[THROTTLE_CHANNEL], (int) PWMMIN, (int) PWMMAX, (double) -MAXVELOCITY, (double) MAXVELOCITY); // (m/s)
+        controlData.VLLzCmd    = -mapToValue(controlData.pwmCmd[THROTTLE_CHANNEL], (int) PWMMIN, (int) PWMMAX, (double) -MAXVELOCITY, (double) MAXVELOCITY); // (m/s)
         controlData.VLLyCmd    = mapToValue(controlData.pwmCmd[ROLL_CHANNEL]    , (int) PWMMIN, (int) PWMMAX, (double) -MAXVELOCITY, (double) MAXVELOCITY); // (m/s)
         controlData.VLLxCmd    = mapToValue(controlData.pwmCmd[PITCH_CHANNEL]   , (int) PWMMIN, (int) PWMMAX, (double) -MAXVELOCITY, (double) MAXVELOCITY); // (m/s)
         controlData.yawRateCmd = mapToValue(controlData.pwmCmd[YAW_CHANNEL]     , (int) PWMMIN, (int) PWMMAX, (double) -MAXYAWRATE , (double) MAXYAWRATE);  // (rad/s)
         
         // Outer Velocity Loop to Generate Attitude Commands
-        controlData.dT       = kp_vz*(controlData.VLLzCmd - velLL[2]) + controlData.dTo;
+        controlData.dT       = kp_vz*(controlData.VLLzCmd - velLL[2]) + dTo;
         controlData.rollCmd  = kp_vy*(controlData.VLLyCmd - velLL[1]);
         controlData.pitchCmd = kp_vx*(controlData.VLLxCmd - velLL[0]);
         
@@ -157,27 +179,26 @@ void performControls()
     }
     
     // Control Attitude
-    if (controlData.mode != ThrottleControl)
-    {
-        controlData.da = kp_roll *(controlData.rollCmd    - eulerAngles[0]) - kd_roll*bodyRates[0];
-        controlData.de = kp_pitch*(controlData.pitchCmd   - eulerAngles[1]) - kd_pitch*bodyRates[1];
-        controlData.dr = kp_yaw  *(controlData.yawRateCmd - bodyRates[2]);
-        
-        // Increase throttle to allow attitude following
-        if (controlData.mode == VelocityControl)
-        {
-            minAttitudeThrottle();
-            controlData.dT = limit(controlData.dT, minThrottle, maxThrottle);
-        }
-    }
-    else
+    if (controlData.mode == ThrottleControl)
     {
         controlData.da = 0.0;
         controlData.de = 0.0;
         controlData.dr = 0.0;
     }
+    else
+    {
+        controlData.dT = kp_vz*(controlData.VLLzCmd - velLL[2]) + dTo;
+        controlData.da = kp_roll *(controlData.rollCmd    - eulerAngles[0]) - kd_roll*bodyRates[0];
+        controlData.de = kp_pitch*(controlData.pitchCmd   - eulerAngles[1]) - kd_pitch*bodyRates[1];
+        controlData.dr = kp_yaw  *(controlData.yawRateCmd - bodyRates[2]);
+        
+        // Increase throttle to allow attitude following
+        minAttitudeThrottle();
+    }
     
     // Limit Commands
+    controlData.dT = limit(controlData.dT, minThrottle, maxThrottle);
+    
     // Prevent RPM's less than 0
     controlData.da = limit(controlData.da, -controlData.dT/3.0, controlData.dT/3.0);
     controlData.de = limit(controlData.de, -controlData.dT/3.0, controlData.dT/3.0);
@@ -187,6 +208,11 @@ void performControls()
     controlData.da = limit(controlData.da, -(dMAX-controlData.dT)/3.0, (dMAX-controlData.dT)/3.0);
     controlData.de = limit(controlData.de, -(dMAX-controlData.dT)/3.0, (dMAX-controlData.dT)/3.0);
     controlData.dr = limit(controlData.dr, -(dMAX-controlData.dT)/3.0, (dMAX-controlData.dT)/3.0);
+    
+    controlData.dTmin = minThrottle;
+    controlData.dTmax = maxThrottle;
+    controlData.minCtrl = controlData.dT/3.0;
+    controlData.maxCtrl = (dMAX-controlData.dT)/3.0;
 }
 
 void setMotors()
@@ -330,9 +356,9 @@ void minAttitudeThrottle()
     minThrottle = 3*dmax;
     
     // Limit minimum throttle to 0.8*dTo for VLL_z contorl
-    if (minThrottle > 0.8*controlData.dTo)
+    if (minThrottle > 0.8*dTo)
     {
-        minThrottle = 0.8*controlData.dTo;
+        minThrottle = 0.8*dTo;
     }
 }
 

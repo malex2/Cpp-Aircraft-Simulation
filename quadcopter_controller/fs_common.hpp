@@ -43,12 +43,26 @@ class Utilities;
 // Types
 enum channelType {THROTTLE_CHANNEL, ROLL_CHANNEL, PITCH_CHANNEL, YAW_CHANNEL, nChannels};
 
-// Constants
+// Mass
+#define Mass 0.5
+#define Ixx  0.0196
+#define Iyy  0.0196
+#define Izz  0.0264
+
+// Propeller Layout
+#define PropDistance 0.1
+
+// Conversions
 #define degree2radian M_PI/180.0
 #define radian2degree 180.0/M_PI
-#define RE  6371e+3
-#define GMe 3.9857e+14
+#define hz2rps        2.0*M_PI;
+#define rpm2rps       2.0*M_PI/60.0
+
+// Constants
+#define RE      6371e+3
+#define GMe     3.9857e+14
 #define Gravity 9.80665
+#define Weight  Mass*Gravity
 
 // Pulse In Pins
 #define THROTTLEPIN  7  // CH3
@@ -71,12 +85,12 @@ enum channelType {THROTTLE_CHANNEL, ROLL_CHANNEL, PITCH_CHANNEL, YAW_CHANNEL, nC
 #define IMUSCLPIN A5
 
 // PWM
-#define PWMMIN 1000
-#define PWMMAX 2000
-
+#define PWMMIN    1000
 #define PWMMINRPM 1100
-#define MINRPM 500
-#define MAXRPM 6440
+#define PWMMAX    2000
+
+#define MINRPM 500*rpm2rps
+#define MAXRPM 6440*rpm2rps
 #define dMIN   4.0*MINRPM*MINRPM
 #define dMAX   4.0*MAXRPM*MAXRPM
 
@@ -87,6 +101,24 @@ enum channelType {THROTTLE_CHANNEL, ROLL_CHANNEL, PITCH_CHANNEL, YAW_CHANNEL, nC
 #define MAXYAWRATE   360.0 * degree2radian // rad/s
 #define MINTHROTTLE  dMIN
 #define MAXTHROTTLE  0.85*dMAX
+
+// Thrust Constants
+#define        MAXTHRUST   4.22
+#define        TorqueRatio 0.003
+
+// Thrust Coefficients
+#define KT     MAXTHRUST/(MAXRPM*MAXRPM)
+#define KH     TorqueRatio * KT
+#define dTo    Weight/(KT)
+
+// Dynamics Shorthand
+#define KVX    -KT*dTo/(Mass)
+#define KVY    KT*dTo/(Mass)
+#define KVZ    -KT/(Mass)
+
+#define KROLL  KT*PropDistance/(Ixx)
+#define KPITCH KT*PropDistance/(Iyy)
+#define KYAW   KH/(Izz)
 
 // IMU Addresses
 #define MPU_ADDR   0x68
@@ -118,14 +150,10 @@ enum channelType {THROTTLE_CHANNEL, ROLL_CHANNEL, PITCH_CHANNEL, YAW_CHANNEL, nC
 #define MC_ADDR   0xBC
 #define MD_ADDR   0xBE
 
-#define minDeg 0.5
-#define minDps 1.0
 #define minPWMIncr 5.0
-#define quadMass 0.5
 
-#define highRate 5.0
+#define highRate  5.0
 #define highAccel 30.0
-#define zeroAngle 30.0*degree2radian
 
 // Time
 double getTime();

@@ -30,7 +30,12 @@ struct ControlType {
     double de;
     double dr;
     double dT;
-    double dTo;
+    
+    // limits
+    double dTmin;
+    double dTmax;
+    double minCtrl;
+    double maxCtrl;
     
     // RPM
     double rpmSq[4];
@@ -38,8 +43,8 @@ struct ControlType {
     // PWM
     double TPWM[4];
     
-    double timestamp;
     ControlMode mode;
+    double timestamp;
     
     ControlType()
     {
@@ -54,7 +59,11 @@ struct ControlType {
         de = 0.0;
         dr = 0.0;
         dT = 0.0;
-        dTo = 1.2*4.0*MINRPM*MINRPM;
+        
+        dTmin = 0.0;
+        dTmax = 0.0;
+        minCtrl = 0.0;
+        maxCtrl = 0.0;
         
         for (int i=0; i<4; i++)
         {
@@ -62,9 +71,8 @@ struct ControlType {
             TPWM[i]  = PWMMIN;
             rpmSq[i] = 0.0;
         }
-        
-        timestamp = 0.0;
         mode = NoControl;
+        timestamp = 0.0;
     }
 };
 

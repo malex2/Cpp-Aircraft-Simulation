@@ -413,7 +413,7 @@ void setPrintVariables()
     
     //pMap->addLogVar("Nav vel N" , &pNavData->velNED[0], savePlot, 2);
     //pMap->addLogVar("Nav vel E" , &pNavData->velNED[1], savePlot, 2);
-    //pMap->addLogVar("Nav vel D" , &pNavData->velNED[2], savePlot, 2);
+    pMap->addLogVar("Nav vel D" , &pNavData->velNED[2], savePlot, 2);
 
     //pMap->addLogVar("navstate", &navState, savePlot, 2);
     //pMap->addLogVar("INS Update Count", &InsUpdateCount, savePlot, 2);
@@ -456,8 +456,8 @@ void setPrintVariables()
     pMap->addLogVar("Vel E Error", &pNavError->velNED[1], savePlot, 2);
     pMap->addLogVar("Vel D Error", &pNavError->velNED[2], savePlot, 2);
     
-    //pMap->addLogVar("N Error (m)", &pNavError->position[0], savePlot, 2);
-    //pMap->addLogVar("E Error (m)", &pNavError->position[1], savePlot, 2);
+    pMap->addLogVar("N Error (m)", &pNavError->position[0], savePlot, 2);
+    pMap->addLogVar("E Error (m)", &pNavError->position[1], savePlot, 2);
     pMap->addLogVar("Alt Error (m)", &altitudeError, savePlot, 2);
     
     //pMap->addLogVar("Acc Body X Error", &pNavError->accelBody[0], savePlot, 2);
@@ -467,12 +467,12 @@ void setPrintVariables()
     //pMap->addLogVar("q Error", &pNavError->bodyRates[1], savePlot, 2);
     //pMap->addLogVar("r Error", &pNavError->bodyRates[2], savePlot, 2);
     
-    pMap->addLogVar("P[ROLL][ROLL]"    , &Cov[ROLL][ROLL], savePlot, 2);
-    pMap->addLogVar("P[PITCH][PITCH]"    , &Cov[PITCH][PITCH], printSavePlot, 3);
+    //pMap->addLogVar("P[ROLL][ROLL]"    , &Cov[ROLL][ROLL], savePlot, 2);
+    //pMap->addLogVar("P[PITCH][PITCH]"    , &Cov[PITCH][PITCH], printSavePlot, 3);
     //pMap->addLogVar("P[YAW][YAW]"    , &Cov[YAW][YAW], savePlot, 2);
     //pMap->addLogVar("P[VN][VN]"    , &Cov[VN][VN], savePlot, 2);
     //pMap->addLogVar("P[VE][VE]"    , &Cov[VE][VE], savePlot, 2);
-    pMap->addLogVar("P[VD][VD]"    , &Cov[VD][VD], savePlot, 2);
+    //pMap->addLogVar("P[VD][VD]"    , &Cov[VD][VD], savePlot, 2);
     //pMap->addLogVar("P[VN][VN]"    , &Cov[VN][VN], savePlot, 2);
     //pMap->addLogVar("P[VE][VE]"    , &Cov[VE][VE], savePlot, 2);
     //pMap->addLogVar("P[VD][GRAVITY]"    , &Cov[VD][GRAVITY], savePlot, 2);
@@ -481,7 +481,7 @@ void setPrintVariables()
     //pMap->addLogVar("P[VD][ABIAS_Z]"    , &Cov[VD][ABIAS_Z], savePlot, 2);
     //pMap->addLogVar("P[N][N]"  , &Cov[N][N], savePlot, 2);
     //pMap->addLogVar("P[E][E]"  , &Cov[E][E], savePlot, 2);
-    pMap->addLogVar("P[ALT][ALT]"  , &Cov[ALT][ALT], printSavePlot, 3);
+    //pMap->addLogVar("P[ALT][ALT]"  , &Cov[ALT][ALT], printSavePlot, 3);
     //pMap->addLogVar("P[ALT][GRAVITY]"  , &Cov[ALT][GRAVITY], printSavePlot, 3);
     //pMap->addLogVar("P[ALT][GBIAS_X]"  , &Cov[ALT][GBIAS_X], printSavePlot, 3);
     //pMap->addLogVar("P[ALT][GBIAS_Y]"  , &Cov[ALT][GBIAS_Y], printSavePlot, 3);
@@ -540,13 +540,22 @@ void setPrintVariables()
     //pMap->addLogVar("baroResidual[BAR_ALT]", &barometerResidual[BARO_ALT], savePlot, 2);
  
     // Controls
-    //pMap->addLogVar("da"          , &pControlData->da     , savePlot, 2);
-    //pMap->addLogVar("de"          , &pControlData->de     , savePlot, 2);
-    //pMap->addLogVar("dr"          , &pControlData->dr     , savePlot, 2);
+    pMap->addLogVar("dT"          , &pControlData->dT     , savePlot, 2);
+    pMap->addLogVar("dTmin"       , &pControlData->dTmin  , savePlot, 2);
+    pMap->addLogVar("dTmax"       , &pControlData->dTmax  , savePlot, 2);
+    pMap->addLogVar("da"          , &pControlData->da     , savePlot, 2);
+    pMap->addLogVar("de"          , &pControlData->de     , savePlot, 2);
+    pMap->addLogVar("dr"          , &pControlData->dr     , savePlot, 2);
+    pMap->addLogVar("minCtrl"     , &pControlData->minCtrl, savePlot, 2);
+    pMap->addLogVar("maxCtrl"     , &pControlData->maxCtrl, savePlot, 2);
+    
     //pMap->addLogVar("Ctrl PMW [0]", &pControlData->TPWM[0], savePlot, 2);
     //pMap->addLogVar("Ctrl PMW [1]", &pControlData->TPWM[1], savePlot, 2);
     //pMap->addLogVar("Ctrl PMW [2]", &pControlData->TPWM[2], savePlot, 2);
     //pMap->addLogVar("Ctrl PMW [3]", &pControlData->TPWM[3], savePlot, 2);
+    pMap->addLogVar("Ctrl rollCmd", &pControlData->rollCmd, savePlot, 2);
+    pMap->addLogVar("Ctrl pitchCmd", &pControlData->pitchCmd, savePlot, 2);
+    pMap->addLogVar("Ctrl VLLzCmd", &pControlData->VLLzCmd, savePlot, 2);
 }
 #endif
 
