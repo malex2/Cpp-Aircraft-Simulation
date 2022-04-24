@@ -12,12 +12,13 @@
 #include "fs_common.hpp"
 
 // Types
-enum ControlMode {ThrottleControl, AttitudeControl, VelocityControl, NoControl};
+enum ControlMode {ThrottleControl, AttitudeControl, VelocityControl, Autopilot, NoControl};
 
 struct ControlType {
     // Command Input
     int pwmCmd[nChannels];
     
+    double hCmd;
     double VLLxCmd;
     double VLLyCmd;
     double VLLzCmd;
@@ -43,15 +44,18 @@ struct ControlType {
     // PWM
     double TPWM[4];
     
+    bool controlAltitude;
+    
     ControlMode mode;
     double timestamp;
     
     ControlType()
     {
-        VLLxCmd = 0.0;
-        VLLyCmd = 0.0;
-        VLLzCmd = 0.0;
-        rollCmd = 0.0;
+        hCmd     = 0.0;
+        VLLxCmd  = 0.0;
+        VLLyCmd  = 0.0;
+        VLLzCmd  = 0.0;
+        rollCmd  = 0.0;
         pitchCmd = 0.0;
         yawRateCmd = 0.0;
         
@@ -71,6 +75,7 @@ struct ControlType {
             TPWM[i]  = PWMMIN;
             rpmSq[i] = 0.0;
         }
+        controlAltitude = false;
         mode = NoControl;
         timestamp = 0.0;
     }
@@ -95,6 +100,7 @@ ControlType* FsControls_getControlData();
 void discretizeCommands();
 int discretize(int desiredCommand, int command, int minCmd, int maxCmd, int deltaPwm);
 void performControls();
+void verticalModing();
 void setMotors();
 
 // Limits

@@ -67,9 +67,9 @@ private:
     };
     
     double signalValues[nChannels][lengthTable] = {
-        {1.0, 0.0, -1.0 , -0.2 , 0.0}, // Velocity (m/s)
-        {0.0, 0.0 , 0.0  , 0.0 , 0.0 }, // Roll  (deg)
-        {0.0, 20.0 , 0.0  , 0.0  , 0.0 }, // Pitch    (deg)
+        {1.5, 0.0, -0.5, 0.0 , 0.0}, // Velocity (m/s)
+        {0.0, 0.0 , 0.0  , 5.0 , -5.0 }, // Roll  (deg)
+        {10.0, 2.0 , -1.0  , 0.0  , 0.0 }, // Pitch    (deg)
         {0.0, 0.0 , 0.0  , 0.0  , 0.0 }  // YawRate  (deg/s)
     };
     /*

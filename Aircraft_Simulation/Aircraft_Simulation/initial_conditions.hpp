@@ -32,7 +32,7 @@ const double clock_dt              = 1.0/800.0; // time interval when not in rea
 const bool saveOutput  = true;
 const bool printOutput = true;
 const bool plotOutput  = false;
-const std::string savefile = "output.csv";
+const std::string savefile = "output_throttle.csv";
 
 // Initial States
 const double velNED_init[3]  = {0, 0, 0};

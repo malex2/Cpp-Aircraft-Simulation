@@ -66,7 +66,7 @@ public:
     
     // angle rate conversions
     const double dps2rps = deg2rad;
-    const double rpm2rps = 2*M_PI/60;
+    const double rpm2rps = 2.0*M_PI/60.0;
     
 };
 

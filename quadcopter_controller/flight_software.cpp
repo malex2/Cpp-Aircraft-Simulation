@@ -89,7 +89,6 @@ ControlMode controlMode;
 // Print
 #ifdef SIMULATION
     double highDynamics = 0.0;
-    double position[3];
     double eulerAnglesDeg[3];
     double fsTime;
     double countDelta50hz;
@@ -99,6 +98,7 @@ ControlMode controlMode;
     double GpsUpdateCount = 0.0;
     double altitudeError = 0.0;
     double cpwmCmd;
+    double controlAltitude = 0.0;
     double baroState = 0.0;
 
     double Cov[NSTATES][NSTATES];
@@ -142,8 +142,8 @@ void initialize(void)
     useBarometer     = true;
     
     // Navigation Settings
-    initialPosition[0] = 28.5997222;  // Latitude  (deg)
-    initialPosition[1] = -81.3394444; // Longitude (deg)
+    initialPosition[0] = 0.0;  // Latitude  (deg)
+    initialPosition[1] = 0.0; // Longitude (deg)
     initialPosition[2] = 0.6;         // Altitude  (m)
     initialHeading = 0.0;
     useTruthNav = false;
@@ -294,6 +294,7 @@ bool mainFlightSoftware(void)
     pNavError = FsNavigation_getNavError();
     altitudeError = -pNavError->position[2];
     cpwmCmd = (double) pControlData->pwmCmd[THROTTLE_CHANNEL];
+    controlAltitude = (double) pControlData->controlAltitude;
     
     double* covCorTemp = FsNavigation_getCovarianceCorrection();
     for (int i = 0; i < NSTATES; i++)
@@ -509,7 +510,7 @@ void setPrintVariables()
     //pMap->addLogVar("Pitch Stdev Due to VD"   , &navStd[PITCH][VD], savePlot, 2);
     //pMap->addLogVar("Pitch 3 Stdev" , &nav3Std[PITCH][PITCH], savePlot, 2);
     //pMap->addLogVar("VD Stdev"    , &navStd[VD][VD], savePlot, 2);
-    //pMap->addLogVar("Alt Stdev"    , &navStd[ALT][ALT], savePlot, 2);
+    pMap->addLogVar("Alt Stdev"    , &navStd[ALT][ALT], savePlot, 2);
     //pMap->addLogVar("covCorrection[PITCH][ALT]", &covarianceCorrection[PITCH][ALT], savePlot, 2);
     //pMap->addLogVar("covCorrection[ROLL][ALT]", &covarianceCorrection[ROLL][ALT], savePlot, 2);
     //pMap->addLogVar("covCorrection[VD][ALT]", &covarianceCorrection[VD][ALT], savePlot, 2);
@@ -540,14 +541,14 @@ void setPrintVariables()
     //pMap->addLogVar("baroResidual[BAR_ALT]", &barometerResidual[BARO_ALT], savePlot, 2);
  
     // Controls
-    pMap->addLogVar("dT"          , &pControlData->dT     , savePlot, 2);
-    pMap->addLogVar("dTmin"       , &pControlData->dTmin  , savePlot, 2);
-    pMap->addLogVar("dTmax"       , &pControlData->dTmax  , savePlot, 2);
-    pMap->addLogVar("da"          , &pControlData->da     , savePlot, 2);
-    pMap->addLogVar("de"          , &pControlData->de     , savePlot, 2);
-    pMap->addLogVar("dr"          , &pControlData->dr     , savePlot, 2);
-    pMap->addLogVar("minCtrl"     , &pControlData->minCtrl, savePlot, 2);
-    pMap->addLogVar("maxCtrl"     , &pControlData->maxCtrl, savePlot, 2);
+    //pMap->addLogVar("dT"          , &pControlData->dT     , savePlot, 2);
+    //pMap->addLogVar("dTmin"       , &pControlData->dTmin  , savePlot, 2);
+    //pMap->addLogVar("dTmax"       , &pControlData->dTmax  , savePlot, 2);
+    //pMap->addLogVar("da"          , &pControlData->da     , savePlot, 2);
+    //pMap->addLogVar("de"          , &pControlData->de     , savePlot, 2);
+    //pMap->addLogVar("dr"          , &pControlData->dr     , savePlot, 2);
+    //pMap->addLogVar("minCtrl"     , &pControlData->minCtrl, savePlot, 2);
+    //pMap->addLogVar("maxCtrl"     , &pControlData->maxCtrl, savePlot, 2);
     
     //pMap->addLogVar("Ctrl PMW [0]", &pControlData->TPWM[0], savePlot, 2);
     //pMap->addLogVar("Ctrl PMW [1]", &pControlData->TPWM[1], savePlot, 2);
@@ -556,6 +557,9 @@ void setPrintVariables()
     pMap->addLogVar("Ctrl rollCmd", &pControlData->rollCmd, savePlot, 2);
     pMap->addLogVar("Ctrl pitchCmd", &pControlData->pitchCmd, savePlot, 2);
     pMap->addLogVar("Ctrl VLLzCmd", &pControlData->VLLzCmd, savePlot, 2);
+    pMap->addLogVar("Ctrl hCmd", &pControlData->hCmd, savePlot, 2);
+    pMap->addLogVar("controlAltitude", &controlAltitude, savePlot, 2);
+    
 }
 #endif
 

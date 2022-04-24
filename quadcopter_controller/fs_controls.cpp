@@ -29,6 +29,7 @@ int prevPwmCmd[nChannels];
 // Navigation Data
 double eulerAngles[3];
 double velLL[3];
+double position[3];
 
 // IMU Data
 double bodyRates[3];
@@ -41,9 +42,16 @@ double maxThrottle;
 double minRPM;
 double maxRPM;
 
+int altHoldLatchCounter;
+
 // Gains
+// Position Channels
+double wn_h = 0.5 * hz2rps;
+
+double kp_h;
+
 // Velocity Channels
-double wn_vz = 2.0 * hz2rps;
+double wn_vz = 5.0 * hz2rps;
 
 double kp_vx;
 double kp_vy;
@@ -86,12 +94,17 @@ void FsControls_setup()
     }
     
     // Control Gains
-    // Velocity Channels Gains
+    altHoldLatchCounter = 0;
+    
+    // Altitude Channel Gains
+    kp_h = -wn_h;
+    
+    // Velocity Channel Gains
     kp_vx  = 0.0;
     kp_vy  = 0.0;
     kp_vz  = wn_vz/(KVZ);
     
-    // Attitude Channels Gains
+    // Attitude Channel Gains
     kp_roll  = wn_roll*wn_roll/(KROLL);
     kd_roll  = 2.0*zeta_roll*wn_roll/(KROLL);
     kp_pitch = wn_pitch*wn_pitch/(KPITCH);
@@ -146,14 +159,8 @@ void performControls()
     rpmPwmLimits( (float) controlData.pwmCmd[THROTTLE_CHANNEL], (float) PWMMINRPM );
     
     // Convert PWM to values
-    if (controlData.mode == ThrottleControl)
+    if (controlData.mode == AttitudeControl)
     {
-        controlData.dT = mapToValue(controlData.pwmCmd[THROTTLE_CHANNEL], minPWM, maxPWM, minThrottle, maxThrottle);
-    }
-    
-    else if (controlData.mode == AttitudeControl)
-    {
-        //controlData.dT         = mapToValue(controlData.pwmCmd[THROTTLE_CHANNEL] ,       minPWM,       maxPWM,          minThrottle,      maxThrottle);
         controlData.VLLzCmd    = -mapToValue(controlData.pwmCmd[THROTTLE_CHANNEL], (int) PWMMIN, (int) PWMMAX, (double) -MAXVELOCITY, (double) MAXVELOCITY); // (m/s)
         controlData.rollCmd    = mapToValue(controlData.pwmCmd[ROLL_CHANNEL]     , (int) PWMMIN, (int) PWMMAX, (double) -MAXROLL   , (double) MAXROLL);    // Roll (rad)
         controlData.pitchCmd   = mapToValue(controlData.pwmCmd[PITCH_CHANNEL]    , (int) PWMMIN, (int) PWMMAX, (double) -MAXPITCH  , (double) MAXPITCH);   // Pitch (rad)
@@ -168,12 +175,10 @@ void performControls()
         controlData.yawRateCmd = mapToValue(controlData.pwmCmd[YAW_CHANNEL]     , (int) PWMMIN, (int) PWMMAX, (double) -MAXYAWRATE , (double) MAXYAWRATE);  // (rad/s)
         
         // Outer Velocity Loop to Generate Attitude Commands
-        controlData.dT       = kp_vz*(controlData.VLLzCmd - velLL[2]) + dTo;
         controlData.rollCmd  = kp_vy*(controlData.VLLyCmd - velLL[1]);
         controlData.pitchCmd = kp_vx*(controlData.VLLxCmd - velLL[0]);
         
         // Limit Commands
-        controlData.dT       = limit(controlData.dT, minThrottle, maxThrottle);
         controlData.rollCmd  = limit(controlData.rollCmd, (double) -MAXROLL, (double) MAXROLL);
         controlData.pitchCmd = limit(controlData.pitchCmd, (double) -MAXPITCH, (double) MAXPITCH);
     }
@@ -181,12 +186,21 @@ void performControls()
     // Control Attitude
     if (controlData.mode == ThrottleControl)
     {
+        controlData.dT = mapToValue(controlData.pwmCmd[THROTTLE_CHANNEL], minPWM, maxPWM, minThrottle, maxThrottle);
         controlData.da = 0.0;
         controlData.de = 0.0;
         controlData.dr = 0.0;
     }
     else
     {
+        verticalModing();
+        
+        if (controlData.controlAltitude)
+        {
+            controlData.VLLzCmd = kp_h*(controlData.hCmd - position[2]);
+            controlData.VLLzCmd  = limit(controlData.VLLzCmd, (double) -MAXVELOCITY, (double) MAXVELOCITY);
+        }
+        
         controlData.dT = kp_vz*(controlData.VLLzCmd - velLL[2]) + dTo;
         controlData.da = kp_roll *(controlData.rollCmd    - eulerAngles[0]) - kd_roll*bodyRates[0];
         controlData.de = kp_pitch*(controlData.pitchCmd   - eulerAngles[1]) - kd_pitch*bodyRates[1];
@@ -213,6 +227,35 @@ void performControls()
     controlData.dTmax = maxThrottle;
     controlData.minCtrl = controlData.dT/3.0;
     controlData.maxCtrl = (dMAX-controlData.dT)/3.0;
+}
+
+void verticalModing()
+{
+    if (controlData.mode == Autopilot) { return; }
+    
+    if (!controlData.controlAltitude && fabs(controlData.VLLzCmd) < AltHoldVelEnter)
+    {
+        altHoldLatchCounter++;
+        if (altHoldLatchCounter > 10)
+        {
+            altHoldLatchCounter = 0;
+            controlData.controlAltitude = true;
+            controlData.hCmd = position[2];
+        }
+    }
+    else if (controlData.controlAltitude && fabs(controlData.VLLzCmd) > AltHoldVelExit)
+    {
+        altHoldLatchCounter++;
+        if (altHoldLatchCounter > 10)
+        {
+            altHoldLatchCounter = 0;
+            controlData.controlAltitude = false;
+        }
+    }
+    else
+    {
+        altHoldLatchCounter = 0;
+    }
 }
 
 void setMotors()
@@ -271,8 +314,9 @@ void FsControls_setControlsData(IMUtype* pIMUdataIn, NavType* pNavDataIn)
 {
     for (int i=0; i<3; i++)
     {
-        bodyRates[i] = pIMUdataIn->gyro[i]*degree2radian - pNavDataIn->gyroBias[i];
+        bodyRates[i]   = pIMUdataIn->gyro[i]*degree2radian - pNavDataIn->gyroBias[i];
         eulerAngles[i] = pNavDataIn->eulerAngles[i];
+        position[i]    = pNavDataIn->position[i];
     }
     FsNavigation_bodyToLL(velLL, pNavDataIn->velBody);
 }
