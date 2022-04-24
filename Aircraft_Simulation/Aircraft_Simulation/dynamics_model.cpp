@@ -38,8 +38,8 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("VbY  ", &velBody[1].val, savePlot, 2);
     //pMap->addLogVar("VbZ  ", &velBody[2].val, printSavePlot, 3);
     
-    pMap->addLogVar("VN  ", &velNED[0].val, savePlot, 2);
-    pMap->addLogVar("VE  ", &velNED[1].val, savePlot, 2);
+    //pMap->addLogVar("VN  ", &velNED[0].val, savePlot, 2);
+    //pMap->addLogVar("VE  ", &velNED[1].val, savePlot, 2);
     pMap->addLogVar("VD  ", &velNED[2].val, printSavePlot, 3);
     
     //pMap->addLogVar("Roll Rate", &eulerRatesDeg[0].val, savePlot, 2);
@@ -69,12 +69,12 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("Roll Int Err", &eulerError[0], savePlot, 2);
     //pMap->addLogVar("Pitch Int Err", &eulerError[1], printSavePlot, 2);
     
-    pMap->addLogVar("SumXLL", &LLForce[0], savePlot, 2);
-    pMap->addLogVar("SumYLL", &LLForce[1], savePlot, 2);
+    //pMap->addLogVar("SumXLL", &LLForce[0], savePlot, 2);
+    //pMap->addLogVar("SumYLL", &LLForce[1], savePlot, 2);
     pMap->addLogVar("SumZLL", &LLForce[2], savePlot, 2);
  
-    pMap->addLogVar("Body Accel X", &accBody[0], savePlot, 2);
-    pMap->addLogVar("Body Accel Y", &accBody[1], savePlot, 2);
+    //pMap->addLogVar("Body Accel X", &accBody[0], savePlot, 2);
+    //pMap->addLogVar("Body Accel Y", &accBody[1], savePlot, 2);
     pMap->addLogVar("Body Accel Z", &accBody[2], savePlot, 2);
     pMap->addLogVar("Accel Mag", &accMag, savePlot, 2);
     

@@ -97,6 +97,8 @@ enum channelType {THROTTLE_CHANNEL, ROLL_CHANNEL, PITCH_CHANNEL, YAW_CHANNEL, nC
 // Min/Max Limits
 #define AltHoldVelEnter 0.06  // m/s
 #define AltHoldVelExit  0.061 // m/s
+#define AltError        1.0   // m
+
 #define MAXVELOCITY  1.5 // m/s - 5 ft/s
 #define MAXROLL      25.0 * degree2radian // rad
 #define MAXPITCH     25.0 * degree2radian // rad

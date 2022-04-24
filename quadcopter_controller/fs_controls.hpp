@@ -44,8 +44,12 @@ struct ControlType {
     // PWM
     double TPWM[4];
     
-    bool controlAltitude;
+    // Ground Detection
+    bool onGround;
+    bool takeOff;
+    bool crashLand;
     
+    bool controlAltitude;
     ControlMode mode;
     double timestamp;
     
@@ -75,6 +79,10 @@ struct ControlType {
             TPWM[i]  = PWMMIN;
             rpmSq[i] = 0.0;
         }
+        takeOff   = false;
+        crashLand  = false;
+        onGround   = true;
+        
         controlAltitude = false;
         mode = NoControl;
         timestamp = 0.0;
@@ -83,6 +91,7 @@ struct ControlType {
 
 // External Access
 void FsControls_setup();
+void FsControls_groundDetection();
 void FsControls_performControls();
 
 // Setters

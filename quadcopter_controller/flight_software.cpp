@@ -99,6 +99,9 @@ ControlMode controlMode;
     double altitudeError = 0.0;
     double cpwmCmd;
     double controlAltitude = 0.0;
+    double takeOff   = 0.0;
+    double crashLand = 0.0;
+    double onGround  = 1.0;
     double baroState = 0.0;
 
     double Cov[NSTATES][NSTATES];
@@ -215,6 +218,10 @@ bool mainFlightSoftware(void)
         
         // Calibrate Navigation
         FsNavigation_calibrateIMU();
+        
+        // Ground Detection
+        FsControls_setControlsData(pIMUdata, pNavData);
+        FsControls_groundDetection();
     }
     
     if (performRoutine[hz100])
@@ -226,7 +233,6 @@ bool mainFlightSoftware(void)
         FsNavigation_performNavigation( actualDelays[hz100] );
         
         // Perform Attitde Control
-        FsControls_setControlsData(pIMUdata, pNavData);
         FsControls_performControls();
     }
     
@@ -293,8 +299,12 @@ bool mainFlightSoftware(void)
 
     pNavError = FsNavigation_getNavError();
     altitudeError = -pNavError->position[2];
+    
     cpwmCmd = (double) pControlData->pwmCmd[THROTTLE_CHANNEL];
     controlAltitude = (double) pControlData->controlAltitude;
+    takeOff   = (double) pControlData->takeOff;
+    crashLand = (double) pControlData->crashLand;
+    onGround  = (double) pControlData->onGround;
     
     double* covCorTemp = FsNavigation_getCovarianceCorrection();
     for (int i = 0; i < NSTATES; i++)
@@ -414,7 +424,7 @@ void setPrintVariables()
     
     //pMap->addLogVar("Nav vel N" , &pNavData->velNED[0], savePlot, 2);
     //pMap->addLogVar("Nav vel E" , &pNavData->velNED[1], savePlot, 2);
-    pMap->addLogVar("Nav vel D" , &pNavData->velNED[2], savePlot, 2);
+    //pMap->addLogVar("Nav vel D" , &pNavData->velNED[2], savePlot, 2);
 
     //pMap->addLogVar("navstate", &navState, savePlot, 2);
     //pMap->addLogVar("INS Update Count", &InsUpdateCount, savePlot, 2);
@@ -453,12 +463,12 @@ void setPrintVariables()
     //pMap->addLogVar("Vel Body Y Error", &pNavError->velBody[1], savePlot, 2);
     //pMap->addLogVar("Vel Body Z Error", &pNavError->velBody[2], savePlot, 2);
     
-    pMap->addLogVar("Vel N Error", &pNavError->velNED[0], savePlot, 2);
-    pMap->addLogVar("Vel E Error", &pNavError->velNED[1], savePlot, 2);
+    //pMap->addLogVar("Vel N Error", &pNavError->velNED[0], savePlot, 2);
+    //pMap->addLogVar("Vel E Error", &pNavError->velNED[1], savePlot, 2);
     pMap->addLogVar("Vel D Error", &pNavError->velNED[2], savePlot, 2);
     
-    pMap->addLogVar("N Error (m)", &pNavError->position[0], savePlot, 2);
-    pMap->addLogVar("E Error (m)", &pNavError->position[1], savePlot, 2);
+    //pMap->addLogVar("N Error (m)", &pNavError->position[0], savePlot, 2);
+    //pMap->addLogVar("E Error (m)", &pNavError->position[1], savePlot, 2);
     pMap->addLogVar("Alt Error (m)", &altitudeError, savePlot, 2);
     
     //pMap->addLogVar("Acc Body X Error", &pNavError->accelBody[0], savePlot, 2);
@@ -554,12 +564,14 @@ void setPrintVariables()
     //pMap->addLogVar("Ctrl PMW [1]", &pControlData->TPWM[1], savePlot, 2);
     //pMap->addLogVar("Ctrl PMW [2]", &pControlData->TPWM[2], savePlot, 2);
     //pMap->addLogVar("Ctrl PMW [3]", &pControlData->TPWM[3], savePlot, 2);
-    pMap->addLogVar("Ctrl rollCmd", &pControlData->rollCmd, savePlot, 2);
-    pMap->addLogVar("Ctrl pitchCmd", &pControlData->pitchCmd, savePlot, 2);
-    pMap->addLogVar("Ctrl VLLzCmd", &pControlData->VLLzCmd, savePlot, 2);
-    pMap->addLogVar("Ctrl hCmd", &pControlData->hCmd, savePlot, 2);
+    //pMap->addLogVar("Ctrl rollCmd", &pControlData->rollCmd, savePlot, 2);
+    //pMap->addLogVar("Ctrl pitchCmd", &pControlData->pitchCmd, savePlot, 2);
+    //pMap->addLogVar("Ctrl VLLzCmd", &pControlData->VLLzCmd, savePlot, 2);
+    //pMap->addLogVar("Ctrl hCmd", &pControlData->hCmd, savePlot, 2);
     pMap->addLogVar("controlAltitude", &controlAltitude, savePlot, 2);
-    
+    pMap->addLogVar("takeOff", &takeOff, savePlot, 2);
+    pMap->addLogVar("crashLand", &crashLand, savePlot, 2);
+    pMap->addLogVar("onGround", &onGround, savePlot, 2);
 }
 #endif
 

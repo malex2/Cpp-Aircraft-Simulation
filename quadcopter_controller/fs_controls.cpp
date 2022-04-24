@@ -30,6 +30,7 @@ int prevPwmCmd[nChannels];
 double eulerAngles[3];
 double velLL[3];
 double position[3];
+double accelZ;
 
 // IMU Data
 double bodyRates[3];
@@ -43,6 +44,7 @@ double minRPM;
 double maxRPM;
 
 int altHoldLatchCounter;
+int groundCount;
 
 // Gains
 // Position Channels
@@ -92,9 +94,11 @@ void FsControls_setup()
         bodyRates[i] = 0.0;
         velLL[i] = 0.0;
     }
+    accelZ = 0.0;
     
     // Control Gains
     altHoldLatchCounter = 0;
+    groundCount = 0;
     
     // Altitude Channel Gains
     kp_h = -wn_h;
@@ -125,6 +129,50 @@ void FsControls_setup()
         prevPwmCmd[iCh] = (PWMMIN+PWMMAX)/2.0;
     }
     controls_setup = true;
+}
+
+void FsControls_groundDetection()
+{
+    if (controlData.onGround)
+    {
+        // Detect crash landings
+        if (!controlData.takeOff &&
+            (fabs(eulerAngles[0]) > 15.0*degree2radian ||
+            fabs(eulerAngles[1]) > 15.0*degree2radian))
+        {
+            controlData.crashLand = true;
+        }
+        
+        // Detect take off command
+        if (!controlData.takeOff &&
+            ((controlData.mode == ThrottleControl && controlData.pwmCmd[THROTTLE_CHANNEL] > PWMMINRPM) || controlData.VLLzCmd < -AltHoldVelExit) )
+        {
+            controlData.takeOff = true;
+        }
+        
+        // Detect off ground
+        if (position[2] > 1.5)
+        {
+            controlData.onGround = false;
+        }
+    }
+    
+    // Check for ground contact
+    else if (position[2] < 1.5 || accelZ < -2.0*Gravity)
+    {
+        if (position[2] < 1.0) { groundCount++; }
+        else { groundCount = 0; }
+        
+        if (accelZ < -0.4*Gravity || groundCount > 10)
+        {
+            controlData.onGround = true;
+            controlData.takeOff  = false;
+        }
+    }
+    else
+    {
+        groundCount = 0;
+    }
 }
 
 void FsControls_performControls()
@@ -184,7 +232,22 @@ void performControls()
     }
     
     // Control Attitude
-    if (controlData.mode == ThrottleControl)
+    if (controlData.crashLand)
+    {
+        controlData.dT = 0.0;
+        controlData.da = 0.0;
+        controlData.de = 0.0;
+        controlData.dr = 0.0;
+        minThrottle = 0.0;
+    }
+    else if (controlData.onGround && !controlData.takeOff)
+    {
+        controlData.dT = dMIN;
+        controlData.da = 0.0;
+        controlData.de = 0.0;
+        controlData.dr = 0.0;
+    }
+    else if (controlData.mode == ThrottleControl)
     {
         controlData.dT = mapToValue(controlData.pwmCmd[THROTTLE_CHANNEL], minPWM, maxPWM, minThrottle, maxThrottle);
         controlData.da = 0.0;
@@ -319,6 +382,7 @@ void FsControls_setControlsData(IMUtype* pIMUdataIn, NavType* pNavDataIn)
         position[i]    = pNavDataIn->position[i];
     }
     FsNavigation_bodyToLL(velLL, pNavDataIn->velBody);
+    accelZ = pIMUdataIn->accel[2] - pNavDataIn->accBias[2] + pNavDataIn->gravity;
 }
 
 ControlType* FsControls_getControlData()
