@@ -35,6 +35,8 @@ Time::Time(ModelMap *pMapInit, bool debugFlagIn)
     saveInterval     = saveInterval_init;
     dynamicsInterval = dynamicsInterval_init;
     
+    pGPSTime = new GPSTimeType(month_init, day_init, year_init, hour_init, minute_init, second_init);
+    
     print    = true;
     save     = true;
     dynamics = true;
@@ -42,6 +44,11 @@ Time::Time(ModelMap *pMapInit, bool debugFlagIn)
     counter = 0;
     
     debugFlag = debugFlagIn;
+}
+
+Time::~Time()
+{
+    delete pGPSTime;
 }
 
 bool Time::update(void)
@@ -62,7 +69,7 @@ bool Time::update(void)
     timeSinceLastPrint = durationTemp.count();
     
     durationTemp = systemtime - lastSaveTime;
-    timeSinceLastSave     = durationTemp.count();
+    timeSinceLastSave = durationTemp.count();
     
     durationTemp = systemtime - startTime;
     curTime = durationTemp.count();
@@ -82,9 +89,9 @@ bool Time::update(void)
 #endif
     
     timeSinceLastDynamics += dtPad;
-    timeSinceLastPrint += dtPad;
-    timeSinceLastSave += dtPad;
-    timeSinceLastClockDt += dtPad;
+    timeSinceLastPrint    += dtPad;
+    timeSinceLastSave     += dtPad;
+    timeSinceLastClockDt  += dtPad;
     
     if (timeSinceLastDynamics >= dynamicsInterval)
     {
@@ -109,6 +116,7 @@ bool Time::update(void)
     
     if (timeSinceLastClockDt >= clock_dt)
     {
+        pGPSTime->update(timeSinceLastClockDt);
         lastClockDt = systemtime;
         clockCounter++;
     }

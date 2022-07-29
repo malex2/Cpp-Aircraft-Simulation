@@ -125,13 +125,13 @@ void readIMU()
         }
 #endif
         IMUdata.accel[i] = (double) toBody[i]*rawAccel[i]/LSBg * Gravity;
-        IMUdata.gyro[i]  = (double) toBody[i]*rawGyro[i]/LSBdps;
+        IMUdata.gyro[i]  = (double) toBody[i]*rawGyro[i]/LSBdps * degree2radian;
   
 #ifdef SIMULATION
         if (directUnitIMU)
         {
-            IMUdata.accel[i] = toBody[i]*pIMUmodel->getAccelerometerMps2()[i] * Gravity;
-            IMUdata.gyro[i]  = toBody[i]*pIMUmodel->getGyroscopeDps()[i];
+            IMUdata.accel[i] = toBody[i]*pIMUmodel->getAccelerometerGs()[i] * Gravity;
+            IMUdata.gyro[i]  = toBody[i]*pIMUmodel->getGyroscopeDps()[i] * degree2radian;
         }
 #endif
         
@@ -165,19 +165,10 @@ void updateDelta( double &imuDt )
         IMUdata.dVelocity[i] += IMUdata.accel[i] * imuDt;
     }
     
-    
 #ifdef SIMULATION
     if (pIMUmodel) { pIMUmodel->deltaIMU(imuDt); }
 #endif
 }
-
-inline void crossProduct(double *cross, double *a, double *b)
-{
-    *(cross+0) = a[1]*b[2] - a[2]*b[1];
-    *(cross+1) = a[2]*b[0] - a[0]*b[2];
-    *(cross+2) = a[0]*b[1] - a[1]*b[0];
-}
-
 
 IMUtype* FsImu_getIMUdata()
 {
@@ -193,6 +184,7 @@ void FsImu_zeroDelta()
         IMUdata.dTheta[i]    = 0.0;
         IMUdata.dVelocity[i] = 0.0;
     }
+
 #ifdef SIMULATION
     if (pIMUmodel) { pIMUmodel->reset(); }
 #endif

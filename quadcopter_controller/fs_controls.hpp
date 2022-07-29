@@ -32,6 +32,10 @@ struct ControlType {
     double dr;
     double dT;
     
+    double daRaw;
+    double deRaw;
+    double drRaw;
+    
     // limits
     double dTmin;
     double dTmax;

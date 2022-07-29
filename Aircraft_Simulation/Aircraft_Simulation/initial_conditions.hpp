@@ -22,23 +22,30 @@
 //#define RealTime
 
 // Time
-const double runTime_init          = 90.0;
+const double runTime_init          = 60.0;
 const double printInterval_init    = 1.0;
-const double saveInterval_init     = 0.1;
+const double saveInterval_init     = 1.0;
 const double dynamicsInterval_init = 1.0/800.0;
 const double clock_dt              = 1.0/800.0; // time interval when not in real time mode
+
+const int month_init  = EARTHCONSTANTS::JUL;
+const int day_init    = 02;
+const int year_init   = 2022;
+const int hour_init   = 10;
+const int minute_init = 00;
+const int second_init = 00;
 
 // Print options
 const bool saveOutput  = true;
 const bool printOutput = true;
 const bool plotOutput  = false;
-const std::string savefile = "output_throttle2.csv";
+const std::string savefile = "output_gps_baro_yaw.csv";
 
 // Initial States
 const double velNED_init[3]  = {0, 0, 0};
-const double posBody_init[3] = {28.5997222, -81.3394444, 1.968}; // deg, deg, ft
-const double eulerAngles_init[3] = {0, 0.0, 0}; // {0, 6.507, 0};
-const double eulerRates_init[3]  = {0, 0, 0};
+const double posLLH_init[3] = {28.5997222, -81.3394444, 1.968}; // deg, deg, ft
+const double eulerAngles_init[3] = {0, 0.0, -45}; // {0, 6.507, 0};
+const double bodyRates_init[3]  = {0, 0, 0};
 const double actuators_init[4]   = {0.0, 0.0, 0.0, 0.0}; //{de,da,dr,dT}
 const int inputMode_init = 0; // 0 - external, 1 - keyboard, 2 - table
 

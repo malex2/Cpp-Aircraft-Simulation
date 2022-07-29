@@ -23,12 +23,26 @@ RotateFrame::RotateFrame(ModelMap *pMapInit, bool debugFlagIn)
     pAero = NULL;
     pIMU  = NULL;
     pMap  = pMapInit;
-    
+
     // IMU frame
     util.setUnitClassArray(imuFrame, imuFrame_init, degrees, 3);
     util.setupRotation(*T_B_imu, imuFrame);
     util.mtran(*T_imu_B, *T_B_imu, 3, 3);
     util.setUnitClassUnit(imuFrame, radians, 3);
+    
+    // ECI rotations
+    util.setMatrix(*R_ECI_ECEF, *identityMatrix, 3, 3);
+    util.setMatrix(*R_ECEF_ECI, *identityMatrix, 3, 3);
+    
+    // ECEF rotations
+    double LLH[3];
+    util.setArray(LLH, posLLH_init, 3);
+    LLH[0] *= util.deg2rad;
+    LLH[1] *= util.deg2rad;
+    LLH[2] *= util.ft2m;
+    
+    util.dcmECEFtoNED(*R_NED_ECEF, LLH);
+    util.mtran(*R_ECEF_NED, *R_NED_ECEF, 3, 3);
     
     // Body rotations
     util.setUnitClassArray(eulerAngles, eulerAngles_init, degrees, 3);
@@ -100,33 +114,96 @@ bool RotateFrame::update(void)
 
 void RotateFrame::updateRotations(void)
 {
+    if (!pDyn) { return; }
+    
+    // Update ECEF to NED from dynamics model
+    util.dcmECEFtoNED(*R_NED_ECEF, pDyn->getPosLLH());
+    util.mtran(*R_ECEF_NED, *R_NED_ECEF, 3, 3);
+    
     // Update NED to Body rotation from dynamics model
     util.setArray(q_B_NED, pDyn->get_q_B_NED(), 4);
     util.quaternionConjugate(q_NED_B, q_B_NED);
     
-    util.setupRotation(*R_B_NED, pDyn->getEulerAngles() );
+    util.setupRotation(*R_B_NED, pDyn->getEulerAngles());
     util.mtran(*R_NED_B, *R_B_NED, 3, 3);
     
     // Update Local Level to Body rotation
-    util.setArray(q_B_LL, pDyn->get_q_B_LL(), 4);
+    util.setArray(eulerLL, pDyn->getEulerAngles(), 3);
+    eulerLL[2] = 0.0;
+    
+    util.eulerToQuaternion(q_B_LL, eulerLL);
     util.quaternionConjugate(q_LL_B, q_B_LL);
     
-    util.setArray(eulerLL, pDyn->getEulerAngles(), 3 );
-    eulerLL[2] = 0;
     util.setupRotation(*R_B_LL, eulerLL);
     util.mtran(*R_LL_B, *R_B_LL, 3, 3);
     
     // Update wind to body rotation from aero model
-    util.setupRotation(*R_B_W, pAero->getAeroEuler() );
+    util.setupRotation(*R_B_W, pAero->getAeroEuler());
     util.mtran(*R_W_B, *R_B_W, 3, 3);
     
     // Update IMU rotation matrices
-    util.setupRotation(*T_imu_B, pIMU->getIMUEuler() );
+    util.setupRotation(*T_imu_B, pIMU->getIMUEuler());
     util.mtran(*T_B_imu, *T_imu_B, 3, 3);
     
     // Update angle rate matrices
     util.setupEulerRateToBodyRate(*L_B_E, pDyn->getEulerAngles() );
     util.setupBodyRateToEulerRate(*L_E_B, pDyn->getEulerAngles() );
+}
+
+// ECI
+void RotateFrame::ECIToECEF(double *ECEFFrame, double *ECIFrame)
+{
+    util.mmult(ECEFFrame, *R_ECEF_ECI, ECIFrame, 3, 3);
+}
+
+void RotateFrame::ECEFToECI(double *ECIFrame, double *ECEFFrame)
+{
+     util.mmult(ECIFrame, *R_ECI_ECEF, ECEFFrame, 3, 3);
+}
+
+void RotateFrame::bodyToECI(double *ECIFrame, double *bodyFrame)
+{
+    double ECEFFrame[3];
+    util.initArray(ECEFFrame, 0.0, 3);
+    
+    bodyToECEF(ECEFFrame, bodyFrame);
+    ECEFToECI(ECIFrame, ECEFFrame);
+}
+
+void RotateFrame::ECIToBody(double *bodyFrame, double *ECIFrame)
+{
+    double ECEFFrame[3];
+    util.initArray(ECEFFrame, 0.0, 3);
+    
+    ECIToECEF(ECEFFrame, ECIFrame);
+    ECEFToBody(bodyFrame, ECEFFrame);
+}
+
+// ECEF
+void RotateFrame::ECEFToNED(double *NEDFrame, double *ECEFFrame)
+{
+    util.mmult(NEDFrame, *R_NED_ECEF, ECEFFrame, 3, 3);
+}
+
+void RotateFrame::NEDToECEF(double *ECEFFrame, double *NEDFrame)
+{
+    util.mmult(ECEFFrame, *R_ECEF_NED, NEDFrame, 3, 3);
+}
+
+void RotateFrame::bodyToECEF(double *ECEFFrame, double *bodyFrame)
+{
+    double NEDFrame[3];
+    util.initArray(NEDFrame, 0.0, 3);
+    
+    bodyToNED(NEDFrame, bodyFrame);
+    NEDToECEF(ECEFFrame, NEDFrame);
+}
+
+void RotateFrame::ECEFToBody(double *bodyFrame, double *ECEFFrame)
+{
+    double NEDFrame[3];
+    ECEFToNED(NEDFrame, ECEFFrame);
+    NEDToBody(bodyFrame, NEDFrame);
 }
 
 // NED

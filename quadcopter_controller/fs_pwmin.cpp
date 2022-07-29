@@ -139,6 +139,9 @@ int PwmIn::getPwm()
     for (int i=0; i<pTable->tableLength; i++)
     {
         /*
+        if (channel == THROTTLE_CHANNEL)
+        {
+         display("("); display(i); display(") ");
          display("Time: ");
          display( getTime() );
          display(" Table Time: ");
@@ -146,7 +149,8 @@ int PwmIn::getPwm()
          display(" Table Value: ");
          display( pTable->pTableValues[i] );
          display("\n");
-         */
+        }
+        */
         if( getTime() >= pTable->pTableTimes[i] )
         {
             value = pTable->pTableValues[i];

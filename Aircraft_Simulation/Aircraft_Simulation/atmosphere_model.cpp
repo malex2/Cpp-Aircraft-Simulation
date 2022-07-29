@@ -41,8 +41,8 @@ AtmosphereModel::AtmosphereModel(ModelMap *pMapInit, bool debugFlagIn)
     util.setArray(nedGravity, zero_init, 3);
     util.setArray(bodyGravity, zero_init, 3);
     util.setArray(nedForce, zero_init, 3);
-    util.setUnitClassArray(velWindNED, zero_init, metersPerSecond, 3);
-    util.setUnitClassArray(velWindBody, zero_init, metersPerSecond, 3);
+    util.setArray(velWindNED, zero_init, 3);
+    util.setArray(velWindBody, zero_init, 3);
     
     speedOfSound.convertUnit(metersPerSecond);
     Mach = 0.0;
@@ -149,7 +149,7 @@ bool AtmosphereModel::update(void)
 
 void AtmosphereModel::updateGravity(void)
 {
-    double hCenter = pDyn->gethCenter().m();
+    double hCenter = pDyn->gethCenter();
     double mass = pDyn->getMass();
     gravity = GM/(hCenter*hCenter);
     
@@ -164,8 +164,8 @@ void AtmosphereModel::updateGravity(void)
 void AtmosphereModel::updateAir(void)
 {
     // altitude and speed
-    double alt = pDyn->getPosBody()[2];
-    double speed = pDyn->getSpeed().mps();
+    double alt = pDyn->getPosLLH()[2];
+    double speed = pDyn->getSpeed();
     
     // Update atmospheric layer
     updateLayerInfo(alt);
@@ -199,9 +199,9 @@ void AtmosphereModel::updateAir(void)
 
 void AtmosphereModel::updateWind(void)
 {
-    velWindNED[0].val = 0.0;
-    velWindNED[1].val = 0.0;
-    velWindNED[2].val = 0.0;
+    velWindNED[0] = 0.0;
+    velWindNED[1] = 0.0;
+    velWindNED[2] = 0.0;
     
     pRotate->NEDToBody(velWindBody, velWindNED);
 }

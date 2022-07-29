@@ -72,17 +72,21 @@ bool ContactPoint::update(void)
     
     SpeedType<double> velRel[3];
     SpeedType<double> velBody[3];
+    SpeedType<double> cgVel_B[3];
+    AngleRateType<double> bodyRates[3];
     
     // Update position relative to ground
     pRotate->bodyToLL(posLL, posRelCG);
     
-    altGround.val = pDyn->gethGround().m() - posLL[2].m();
+    altGround.val = pDyn->gethGround() - posLL[2].m();
     
     // Update Local Level velocity
     util.setUnitClassArray(velRel, zero_init, metersPerSecond, 3);
-    util.crossProduct(velRel, pDyn->getBodyRates(), posRelCG);
+    util.setUnitClassArray(bodyRates, pDyn->getBodyRates(), radiansPerSecond, 3);
+    util.crossProduct(velRel, bodyRates, posRelCG);
     
-    util.vAdd(velBody, pDyn->getVelBody(), velRel, 3);
+    util.setUnitClassArray(cgVel_B, pDyn->getVelBody(), metersPerSecond, 3);
+    util.vAdd(velBody, cgVel_B, velRel, 3);
     
     pRotate->bodyToLL(velLL, velBody);
     
@@ -213,13 +217,15 @@ GroundModelBase::GroundModelBase(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("gbyF ", &bodyForce[1], printSavePlot, 3);
     //pMap->addLogVar("gbzF ", &bodyForce[2], printSavePlot, 3);
     
-    pMap->addLogVar("gLLxF", &LLForce[0], savePlot, 3);
-    pMap->addLogVar("gLLyF", &LLForce[1], savePlot, 2);
-    pMap->addLogVar("gLLzF", &LLForce[2], savePlot, 3);
+    //pMap->addLogVar("gLLxF", &LLForce[0], savePlot, 3);
+    //pMap->addLogVar("gLLyF", &LLForce[1], savePlot, 2);
+    //pMap->addLogVar("gLLzF", &LLForce[2], savePlot, 3);
     
-    pMap->addLogVar("gbxM ", &bodyMoment[0], savePlot, 2);
-    pMap->addLogVar("gbyM ", &bodyMoment[1], savePlot, 2);
-    pMap->addLogVar("gbzM ", &bodyMoment[2], savePlot, 2);
+    //pMap->addLogVar("gbxM ", &bodyMoment[0], savePlot, 2);
+    //pMap->addLogVar("gbyM ", &bodyMoment[1], savePlot, 2);
+    //pMap->addLogVar("gbzM ", &bodyMoment[2], savePlot, 2);
+    
+    //pMap->addLogVar("onGround ", &onGroundPrint, savePlot, 2);
     
     for (int i=0; i<maxContactPoints; i++)
     {
@@ -227,9 +233,10 @@ GroundModelBase::GroundModelBase(ModelMap *pMapInit, bool debugFlagIn)
     }
     
     std::fill_n(onGround, maxContactPoints, false);
+    onGroundPrint = (double) isOnGround();
 }
 
-GroundModelBase::GroundModelBase()
+GroundModelBase::~GroundModelBase()
 {
     for (int i = 0; i < maxContactPoints; i++)
     {
@@ -336,7 +343,8 @@ bool GroundModelBase::update(void)
     if (debugFlag) util.print(bodyForce, 3, "Ground Total Body Force:");
     if (debugFlag) util.print(bodyMoment, 3, "Ground Total Body Moment:");
     
-    AngleType<double> *eulerAngles = pDyn->getEulerAngles();
+    AngleType<double> eulerAngles[3];
+    util.setUnitClassArray(eulerAngles, pDyn->getEulerAngles(), radians, 3);
     if (debugFlag) util.print(eulerAngles, degrees, 3, "Euler Angles:");
 
     // Determine if on ground
@@ -350,6 +358,9 @@ bool GroundModelBase::update(void)
             continueSim = false;
         }
     }
+    
+    onGroundPrint = (double) isOnGround();
+    
     return continueSim;
 }
 

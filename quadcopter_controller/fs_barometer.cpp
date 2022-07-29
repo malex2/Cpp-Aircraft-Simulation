@@ -284,8 +284,8 @@ bool FsBarometer_startBarometerMeasurement()
     }
     else
     {
-        //display(getTime());
-        //display(" Barometer not ready\n");
+        display(getTime());
+        display(" Barometer not ready\n");
         return false;
     }
 }

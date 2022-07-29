@@ -25,6 +25,20 @@ public:
     
     void updateRotations(void);
     
+    // ECI
+    void ECIToECEF(double *ECEFFrame, double *ECIFrame);
+    void ECEFToECI(double *ECIFrame, double *ECEFFrame);
+    
+    void bodyToECI(double *ECIFrame, double *bodyFrame);
+    void ECIToBody(double *bodyFrame, double *ECIFrame);
+    
+    // ECEF
+    void ECEFToNED(double *NEDFrame, double *ECEFFrame);
+    void NEDToECEF(double *ECEFFrame, double *NEDFrame);
+    
+    void bodyToECEF(double *ECEFFrame, double *bodyFrame);
+    void ECEFToBody(double *bodyFrame, double *ECEFFrame);
+    
     // NED
     void bodyToNED(double *NEDFrame, double *bodyFrame);
     template<typename valType, template<typename T> class unitType>
@@ -74,6 +88,12 @@ private:
     AngleType<double> aeroEuler[3];
     AngleType<double> eulerAngles[3];
     double eulerLL[3];
+    
+    double R_ECI_ECEF[3][3]; // ECEF to ECI
+    double R_ECEF_ECI[3][3]; // ECI to ECEF
+    
+    double R_ECEF_NED[3][3]; // NED to ECEF matrix
+    double R_NED_ECEF[3][3]; // ECEF to NED matrix
     
     double q_B_NED[4];     // NED to body rotation
     double q_NED_B[4];     // Body to NED rotation

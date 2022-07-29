@@ -14,7 +14,6 @@
 #include "model_mapping.hpp"
 #include "barometer_model.hpp"
 
-typedef unsigned char byte;
 enum pinMode {INPUT, OUTPUT};
 const unsigned int LEDPIN = 0;
 
@@ -136,6 +135,47 @@ public:
     ArduinoSerial();
     
     void begin(long baudRate);
+};
+
+class SoftwareSerial {
+public:
+    SoftwareSerial();
+    SoftwareSerial(int rx_pin, int tx_pin);
+
+    void begin(int baud);
+    byte read();
+    int write(byte val);
+    int write(byte* val, int length);
+    int available();
+    
+    // slave read/write
+    byte slave_read();
+    int slave_write(byte val);
+    int slave_write(byte* val, int length);
+    int slave_available();
+    
+    // simulation support
+    int getRXPin()    { return rx_pin; }
+    int getTXPin()    { return tx_pin; }
+    int getBaudRate() { return baud_rate; }
+    void serial_setSimulationModels(ModelMap* pMap, std::string model, bool print = false);
+private:
+    static const int max_buffer_size = 64;
+    static const int max_gps_neo_buffer_size = 700;
+    int baud_rate;
+    bool baud_begin;
+    byte rx_buffer[max_gps_neo_buffer_size];
+    int rx_buffer_index;
+    int rx_buffer_length;
+    int rx_pin;
+    
+    byte tx_buffer[max_gps_neo_buffer_size];
+    int tx_buffer_index;
+    int tx_buffer_length;
+    int tx_pin;
+  
+    GenericSensorModel* pModel;
+    bool print_serial;
 };
 
 void pinMode(int pin, pinMode mode);

@@ -9,6 +9,7 @@
 #include "initial_conditions.hpp"
 #include "generic_model.hpp"
 #include "time.hpp"
+#include "arduino_class_models.hpp"
 
 GenericModel::GenericModel()
 {
@@ -52,6 +53,8 @@ GenericForceModel::GenericForceModel()
 
 GenericSensorModel::GenericSensorModel()
 {
+    pSerialIO = 0;
+    perfectSensor = false;
     util.initArray(randomNoise, 0.0, 3);
 }
 
@@ -75,6 +78,11 @@ double GenericSensorModel::randomNoiseModel(double maxNoise)
     double randToMax = maxNoise*randInt / 100.0;
     double randMinMax = randToMax*2.0 - maxNoise;
     return randMinMax;
+}
+
+void GenericSensorModel::setSerialIO(SoftwareSerial* pIO)
+{
+    pSerialIO = pIO;
 }
 
 // Example class

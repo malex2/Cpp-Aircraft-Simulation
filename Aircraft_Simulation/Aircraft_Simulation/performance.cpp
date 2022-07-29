@@ -173,8 +173,8 @@ void Performance::updateForces(void)
 
 void Performance::trimModels(void)
 {
-    pDyn -> setEulerAngles(trimAttitude);
-    pDyn -> setSpeed(trimV);
+    //pDyn -> setEulerAngles(trimAttitude);
+    //pDyn -> setSpeed(trimV);
     pAero-> setAeroEuler(trimAero);
     pAct -> setCommands(controls);
 }

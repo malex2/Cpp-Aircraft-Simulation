@@ -55,7 +55,6 @@ void FsImu_zeroDelta();
 void readIMU();
 void groundCalibration();
 void updateDelta( double &imuDt );
-inline void crossProduct(double *cross, double *a, double *b);
 
 #ifdef SIMULATION
     void FsImu_setSimulationModels(ModelMap* pMap);

@@ -29,7 +29,7 @@ public:
     virtual bool update(void);
     
     // Getters
-    bool                 isOnGround(void) { return onGround; };
+    bool                  isOnGround(void) { return onGround; };
     double*               getLLForce(void) { return LLForce;  };
     DistanceType<double>* getPos(void)     { return posRelCG; };
     
@@ -85,7 +85,7 @@ public:
     GroundModelBase(ModelMap *pMapInit, bool debugFlagIn = false);
     
     // Destructor
-    GroundModelBase(void);
+    ~GroundModelBase(void);
     
     // Initialize class pointers and variables that rely on other classes
     virtual void initialize(void);
@@ -118,6 +118,7 @@ protected:
     
     bool onGround[maxContactPoints];
     
+    double onGroundPrint;
     // Functions
     void setLoadPercentage(void);
     

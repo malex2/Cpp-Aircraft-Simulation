@@ -62,7 +62,7 @@ void ModelMap::addLogVar(std::string name, double *var, const mapType *mappings,
 // Get model from key
 GenericModel* ModelMap::getModel(std::string key)
 {
-     if (debugFlag) std::cout << "Getting Model: " << modelMapping.find(key)->first << std::endl;
+    if (debugFlag) std::cout << "Getting Model: " << modelMapping.find(key)->first << std::endl;
     return modelMapping.find(key)->second;
 }
 

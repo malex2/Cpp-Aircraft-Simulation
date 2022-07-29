@@ -63,6 +63,9 @@ public:
 
 class GenericSensorModel : public GenericModel {
 protected:
+    class SoftwareSerial* pSerialIO;
+    
+    bool perfectSensor;
     
     // Random Noise
     double randomNoise[3];
@@ -72,6 +75,10 @@ public:
     // Constructor
     GenericSensorModel();
     
+    // Setters
+    virtual void setPerfectSensor(bool input) { perfectSensor = input; }
+    
+    void setSerialIO(SoftwareSerial*  pIO);
 };
 
 // Example class

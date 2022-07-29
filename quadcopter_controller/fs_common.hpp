@@ -18,13 +18,14 @@
 #ifdef SIMULATION
     #include "model_mapping.hpp"
     #include "arduino_class_models.hpp"
+    #include "utilities.hpp"
     #include <iostream>
     #include <iomanip>
     #include <fstream>
     typedef std::string String;
-
 #else
     #include "Wire.h"
+    #include <SoftwareSerial.h>
     #include "arduino.h"
     #ifdef max
         #undef max
@@ -37,6 +38,8 @@
 struct IMUtype;
 struct NavType;
 struct ControlType;
+struct GpsType;
+
 class ModelMap;
 class Utilities;
 
@@ -59,10 +62,15 @@ enum channelType {THROTTLE_CHANNEL, ROLL_CHANNEL, PITCH_CHANNEL, YAW_CHANNEL, nC
 #define rpm2rps       2.0*M_PI/60.0
 
 // Constants
-#define RE      6371e+3
-#define GMe     3.9857e+14
-#define Gravity 9.80665
-#define Weight  Mass*Gravity
+#define RE       6371e+3
+#define GMe      3.9857e+14
+#define Gravity  9.80665
+#define Weight   Mass*Gravity
+#define EARTH_a  6378137.0
+#define EARTH_a2 EARTH_a*EARTH_a
+#define EARTH_b  6356752.3142
+#define EARTH_b2 EARTH_b*EARTH_b
+#define EARTH_e2 1.0 - (EARTH_b2)/(EARTH_a2)
 
 // Pulse In Pins
 #define THROTTLEPIN  7  // CH3
@@ -77,8 +85,8 @@ enum channelType {THROTTLE_CHANNEL, ROLL_CHANNEL, PITCH_CHANNEL, YAW_CHANNEL, nC
 #define T4PIN  11
 
 // GPS Pins
-#define GPSRXPIN 2
-#define GPSTXPIN 3
+#define GPSRXPIN 2 // Rcv GPS msgs, connect to GPS TX
+#define GPSTXPIN 3 // Txmit GPS msgs, connect to GPS RX
 
 // IMU Pins
 #define IMUSDAPIN A4
@@ -105,6 +113,7 @@ enum channelType {THROTTLE_CHANNEL, ROLL_CHANNEL, PITCH_CHANNEL, YAW_CHANNEL, nC
 #define MAXYAWRATE   360.0 * degree2radian // rad/s
 #define MINTHROTTLE  dMIN
 #define MAXTHROTTLE  0.85*dMAX
+#define minPWMIncr   5.0
 
 // Thrust Constants
 #define        MAXTHRUST   4.22
@@ -154,9 +163,35 @@ enum channelType {THROTTLE_CHANNEL, ROLL_CHANNEL, PITCH_CHANNEL, YAW_CHANNEL, nC
 #define MC_ADDR   0xBC
 #define MD_ADDR   0xBE
 
-#define minPWMIncr 5.0
+// GPS Addresses
+#define UBX_HEADER_1 0xB5
+#define UBX_HEADER_2 0x62
 
-#define highRate  5.0
+#define NMEA     0xF0
+#define NMEA_GGA 0x00
+#define NMEA_GLL 0x01
+#define NMEA_GSA 0x02
+#define NMEA_GSV 0x03
+#define NMEA_RMC 0x04
+#define NMEA_VTG 0x05
+
+#define UBX_NAV        0x01
+#define UBX_NAV_STATUS 0x03
+#define UBX_NAV_POSLLH 0x02
+#define UBX_NAV_VELNED 0x12
+
+#define UBX_CFG           0x06
+#define UBX_CFG_MSG       0x01
+#define UBX_CFG_MSG_ON1Hz 0x01
+#define UBX_CFG_MSG_OFF   0x00
+
+#define UBX_BUFFER_MAX_SIZE   100
+#define UBX_MSG_HEADER_SIZE   2
+#define UBX_MSG_CLASS_ID_SIZE 2
+#define UBX_MSG_LENGTH_SIZE   2
+#define UBX_MSG_CHECKSUM_SIZE 2
+
+#define highRate  5.0*degree2radian
 #define highAccel 30.0
 
 // Time
@@ -164,6 +199,10 @@ double getTime();
 
 // Errors
 double errorToVariance(double maxError);
+
+//
+double vectorMag(double* vec);
+void crossProduct(double *cross, double *a, double *b);
 
 // Printing
 template<typename TempType>

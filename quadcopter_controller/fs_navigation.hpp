@@ -11,13 +11,15 @@
 
 #include "fs_common.hpp"
 #include "fs_barometer.hpp"
+#include "fs_gps.hpp"
 
 #define FILTERTEST
 
 // Types
-enum NavState {Calibration, INS, GPSUpdate, BaroUpdate};
+enum NavState {Calibration, INS, GPSUpdate, BaroUpdate, GroundAlign};
 enum StateType {ROLL, PITCH, YAW, VN, VE, VD, N, E, ALT, GBIAS_X, GBIAS_Y, GBIAS_Z, ABIAS_X, ABIAS_Y, ABIAS_Z, GRAVITY, NSTATES};
 enum VECTORTYPE {X, Y, Z};
+enum GroundMeasurementType {GROUND_VN, GROUND_VE, GROUND_VD, GROUND_YAW, NGROUNDSTATES};
 enum GPSMeasurementType {GPS_N, GPS_E, GPS_ALT, GPS_VN, GPS_VE, GPS_VD, NGPSSTATES};
 enum BAROMeasurementType {BARO_ALT, NBAROSTATES};
 
@@ -70,6 +72,7 @@ struct NavType {
     unsigned int InsUpdateCount;
     unsigned int BaroUpdateCount;
     unsigned int GpsUpdateCount;
+    unsigned int GroundAlignCount;
     
     NavType()
     {
@@ -110,8 +113,9 @@ void applyCorrections();
 
 // Filter Updates
 void filterUpdate(double* residual, double* R, double* H, double* K, int nMeas);
-void FsNavigation_performGPSPVTUpdate(double* gps_LLA, double* gps_velNED, double gps_heading, double gps_timestamp);
+void FsNavigation_performGPSUpdate(GpsType* gpsData);
 void FsNavigation_performBarometerUpdate(barometerType* baroData);
+void FsNavigation_groundAlign();
 
 // Calibration
 void FsNavigation_calibrateIMU();

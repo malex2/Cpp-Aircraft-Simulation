@@ -99,16 +99,18 @@ bool AeroModelBase::update(void)
 
 void AeroModelBase::updateAeroAngles(void)
 {
-    SpeedType<double>* velBody = pDyn->getVelBodyRelWind();
+    double velBodyRelWind[3];
     
-    double V = util.mag(velBody, 3);
+    util.vSubtract(velBodyRelWind, pDyn->getVelBody(), pAtmo->getVelWindBody(), 3);
+    
+    double V = util.mag(velBodyRelWind, 3);
 
     // Anlge of Attack
-    alpha.val = atan2(velBody[2].val, velBody[0].val);
+    alpha.val = atan2(velBodyRelWind[2], velBodyRelWind[0]);
     
     // Side Slip
     if (V <= zeroTolerance) { beta.val = 0; }
-    else { beta.val = asin(velBody[1].mps()/V); }
+    else { beta.val = asin(velBodyRelWind[1]/V); }
     
     aeroEuler[1].val = alpha.deg();
     aeroEuler[2].val = -beta.deg();
@@ -125,8 +127,8 @@ void AeroModelBase::updateAeroCoeffs(void)
 void AeroModelBase::updateAeroForces(void)
 {
     // Get values from other models
-    AngleRateType<double>* omega  = pDyn->getBodyRates();
-    double V = pDyn->getSpeed().mps();
+    double* omega  = pDyn->getBodyRates();
+    double V = pDyn->getSpeed();
     double q = pAtmo->getAir()[AtmosphereModel::dynPress];
     double* actuators = pAct->getActuators();
     
@@ -176,9 +178,9 @@ void AeroModelBase::updateAeroForces(void)
         inputs[dbeta] = beta.rad();
     
         // phat, qhat, rhat
-        inputs[dbp] = omega[0].rps()*b2v; // p*b/(2*V)
-        inputs[dbq] = omega[1].rps()*c2v; // q*c/(2*V)
-        inputs[dbr] = omega[2].rps()*b2v; // r*b/(2*V)
+        inputs[dbp] = omega[0]*b2v; // p*b/(2*V)
+        inputs[dbq] = omega[1]*c2v; // q*c/(2*V)
+        inputs[dbr] = omega[2]*b2v; // r*b/(2*V)
     
         // de, da, dr, dT
         inputs[delevator] = actuators[RCActuatorModel::de]*util.deg2rad;

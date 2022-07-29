@@ -1061,6 +1061,31 @@ void Utilities::LUdecomp(TempType *x, TempType *A, TempType *b, int n)
 }
 
 
+template<typename TempType>
+TempType Utilities::checkOrthonormal(TempType *A, int n)
+{
+    TempType Ainv[n][n];
+    TempType Atran[n][n];
+    TempType Adiff[n][n];
+    TempType sumDiff;
+    
+    minv(*Ainv, A, n);
+    mtran(*Atran, A, n, n);
+    
+    sumDiff = 0.0;
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            Adiff[i][j] = Ainv[i][j] - Atran[i][j];
+            sumDiff += Adiff[i][j];
+        }
+    }
+    
+    return sumDiff;
+}
+
+
 /* -------------------- Euler Math -------------------- */
 template<typename TempType>
 void Utilities::setupRotation(TempType *R, TempType *eulerAngles)
@@ -1068,13 +1093,13 @@ void Utilities::setupRotation(TempType *R, TempType *eulerAngles)
     TempType cr, cp, cy;
     TempType sr, sp, sy;
     
-    cr = cos(eulerAngles[0] * Utilities::deg2rad);
-    cp = cos(eulerAngles[1] * Utilities::deg2rad);
-    cy = cos(eulerAngles[2] * Utilities::deg2rad);
+    cr = cos(eulerAngles[0]);
+    cp = cos(eulerAngles[1]);
+    cy = cos(eulerAngles[2]);
     
-    sr = sin(eulerAngles[0] * Utilities::deg2rad);
-    sp = sin(eulerAngles[1] * Utilities::deg2rad);
-    sy = sin(eulerAngles[2] * Utilities::deg2rad);
+    sr = sin(eulerAngles[0]);
+    sp = sin(eulerAngles[1]);
+    sy = sin(eulerAngles[2]);
     
     *(R + 0*3 + 0) = cp*cy;            *(R + 0*3 + 1) = cp*sy;             *(R + 0*3 + 2) = -sp;
     *(R + 1*3 + 0) = cy*sp*sr - cr*sy; *(R + 1*3 + 1) = cr*cy + sp*sr*sy;  *(R + 1*3 + 2) = cp*sr;
@@ -1101,16 +1126,45 @@ void Utilities::setupRotation(valType *R, AngleType<valType> *eulerAngles)
 }
 
 template<typename TempType>
+void Utilities::dcmToEuler(TempType *euler, TempType *dcm)
+{
+    int n = 3;
+    TempType dcm12 = *(dcm + 1*n + 2);
+    TempType dcm22 = *(dcm + 2*n + 2);
+    TempType dcm02 = *(dcm + 0*n + 2);
+    TempType dcm01 = *(dcm + 0*n + 1);
+    TempType dcm00 = *(dcm + 0*n + 0);
+
+    euler[0] = atan(dcm12/dcm22);
+    euler[1] = -asin(dcm02);
+    euler[2] = atan(dcm01/dcm00);
+}
+
+template<typename valType>
+void Utilities::dcmToEuler(AngleType<valType> *euler, valType *dcm)
+{
+    bool isDeg = euler[0].getUnit() == degrees;
+    
+    if (isDeg) { setUnitClassUnit(euler, radians, 3); }
+    
+    euler[0].val = atan(dcm[1][2]/dcm[2][2]);
+    euler[1].val = -asin(dcm[0][2]);
+    euler[2].val = atan(dcm[0][1]/dcm[0][0]);
+    
+    if (isDeg) { setUnitClassUnit(euler, degrees, 3); }
+}
+
+template<typename TempType>
 void Utilities::setupEulerRateToBodyRate(TempType *L, TempType *eulerAngles)
 {
     TempType cr, cp;
     TempType sr, sp;
     
-    cr = cos(eulerAngles[0] * Utilities::deg2rad);
-    cp = cos(eulerAngles[1] * Utilities::deg2rad);
+    cr = cos(eulerAngles[0]);
+    cp = cos(eulerAngles[1]);
     
-    sr = sin(eulerAngles[0] * Utilities::deg2rad);
-    sp = sin(eulerAngles[1] * Utilities::deg2rad);
+    sr = sin(eulerAngles[0]);
+    sp = sin(eulerAngles[1]);
     
     *(L + 0*3 + 0) = 1; *(L + 0*3 + 1) =   0; *(L + 0*3 + 2) =   -sp;
     *(L + 1*3 + 0) = 0; *(L + 1*3 + 1) =  cr; *(L + 1*3 + 2) = cp*sr;
@@ -1137,14 +1191,14 @@ void Utilities::setupEulerRateToBodyRate(valType *L, AngleType<valType> *eulerAn
 template<typename TempType>
 void Utilities::setupBodyRateToEulerRate(TempType *L, TempType *eulerAngles)
 {
-    TempType cr = cos(eulerAngles[0]  * Utilities::deg2rad);     // cos(roll)
-    TempType sr = sin(eulerAngles[0]  * Utilities::deg2rad);     // sin(roll)
-    TempType tp = tan(eulerAngles[1]  * Utilities::deg2rad);     // tan(pitch)
-    TempType secp = 1/cos(eulerAngles[1] * Utilities::deg2rad);  // sec(pitch)
+    TempType cr = cos(eulerAngles[0]);     // cos(roll)
+    TempType sr = sin(eulerAngles[0]);     // sin(roll)
+    TempType tp = tan(eulerAngles[1]);     // tan(pitch)
+    TempType secp = 1.0/cos(eulerAngles[1]);  // sec(pitch)
     
-    *(L +0*3 +0) =  1;   *(L +0*3 +1) =  sr*tp  ;   *(L +0*3 +2) =  cr*tp  ;
-    *(L +1*3 +0) =  0;   *(L +1*3 +1) =    cr   ;   *(L +1*3 +2) =   -sr   ;
-    *(L +2*3 +0) =  0;   *(L +2*3 +1) =  sr*secp;   *(L +2*3 +2) =  cr*secp;
+    *(L +0*3 +0) =  1.0;   *(L +0*3 +1) =  sr*tp  ;   *(L +0*3 +2) =  cr*tp  ;
+    *(L +1*3 +0) =  0.0;   *(L +1*3 +1) =    cr   ;   *(L +1*3 +2) =   -sr   ;
+    *(L +2*3 +0) =  0.0;   *(L +2*3 +1) =  sr*secp;   *(L +2*3 +2) =  cr*secp;
 }
 
 template<typename valType>
@@ -1153,19 +1207,19 @@ void Utilities::setupBodyRateToEulerRate(valType *L, AngleType<valType> *eulerAn
     valType cr = cos( eulerAngles[0].rad()  );     // cos(roll)
     valType sr = sin( eulerAngles[0].rad()  );     // sin(roll)
     valType tp = tan( eulerAngles[1].rad()  );     // tan(pitch)
-    valType secp = 1/cos( eulerAngles[1].rad() );  // sec(pitch)
+    valType secp = 1.0/cos( eulerAngles[1].rad() );  // sec(pitch)
     
-    *(L +0*3 +0) =  1;   *(L +0*3 +1) =  sr*tp  ;   *(L +0*3 +2) =  cr*tp  ;
-    *(L +1*3 +0) =  0;   *(L +1*3 +1) =    cr   ;   *(L +1*3 +2) =   -sr   ;
-    *(L +2*3 +0) =  0;   *(L +2*3 +1) =  sr*secp;   *(L +2*3 +2) =  cr*secp;
+    *(L +0*3 +0) =  1.0;   *(L +0*3 +1) =  sr*tp  ;   *(L +0*3 +2) =  cr*tp  ;
+    *(L +1*3 +0) =  0.0;   *(L +1*3 +1) =    cr   ;   *(L +1*3 +2) =   -sr   ;
+    *(L +2*3 +0) =  0.0;   *(L +2*3 +1) =  sr*secp;   *(L +2*3 +2) =  cr*secp;
 }
 
 /* -------------------- Quaternion Math -------------------- */
 template<typename TempType>
 void Utilities::initQuaternion(TempType *q, TempType angle, TempType *axis)
 {
-    TempType c2 = cos(angle * Utilities::deg2rad / 2);
-    TempType s2 = sin(angle * Utilities::deg2rad / 2);
+    TempType c2 = cos(angle/2);
+    TempType s2 = sin(angle/2);
     
     q[0] = c2;
     q[1] = axis[0]*s2;
@@ -1314,33 +1368,32 @@ void Utilities::quaternionTransformation(valType *w, valType *quaternion, unitTy
 template<typename TempType>
 void Utilities::eulerToQuaternion(TempType *q, TempType *euler)
 {
-    TempType cr2 = cos(euler[0]/2 * Utilities::deg2rad);
-    TempType cp2 = cos(euler[1]/2 * Utilities::deg2rad);
-    TempType cy2 = cos(euler[2]/2 * Utilities::deg2rad);
+    TempType cr2 = cos(euler[0]/2.0);
+    TempType cp2 = cos(euler[1]/2.0);
+    TempType cy2 = cos(euler[2]/2.0);
     
-    TempType sr2 = sin(euler[0]/2 * Utilities::deg2rad);
-    TempType sp2 = sin(euler[1]/2 * Utilities::deg2rad);
-    TempType sy2 = sin(euler[2]/2 * Utilities::deg2rad);
+    TempType sr2 = sin(euler[0]/2.0);
+    TempType sp2 = sin(euler[1]/2.0);
+    TempType sy2 = sin(euler[2]/2.0);
     
     q[0] = cr2*cp2*cy2 + sr2*sp2*sy2;
     q[1] = sr2*cp2*cy2 - cr2*sp2*sy2;
     q[2] = cr2*sp2*cy2 + sr2*cp2*sy2;
     q[3] = cr2*cp2*sy2 - sr2*sp2*cy2;
     
-    for (int i = 0; i < 4; i++) { if (fabs(q[i]) < Utilities::zeroTolerance) q[i] = 0.0; }
     Utilities::unitVector(q, 4);
 }
 
 template<typename valType>
 void Utilities::eulerToQuaternion(valType *q, AngleType<valType> *euler)
 {
-    valType cr2 = cos(euler[0].rad() / 2);
-    valType cp2 = cos(euler[1].rad() / 2);
-    valType cy2 = cos(euler[2].rad() / 2);
+    valType cr2 = cos(euler[0].rad() / 2.0);
+    valType cp2 = cos(euler[1].rad() / 2.0);
+    valType cy2 = cos(euler[2].rad() / 2.0);
     
-    valType sr2 = sin(euler[0].rad() / 2);
-    valType sp2 = sin(euler[1].rad() / 2);
-    valType sy2 = sin(euler[2].rad() / 2);
+    valType sr2 = sin(euler[0].rad() / 2.0);
+    valType sp2 = sin(euler[1].rad() / 2.0);
+    valType sy2 = sin(euler[2].rad() / 2.0);
     
     q[0] = cr2*cp2*cy2 + sr2*sp2*sy2;
     q[1] = sr2*cp2*cy2 - cr2*sp2*sy2;
@@ -1353,9 +1406,9 @@ void Utilities::eulerToQuaternion(valType *q, AngleType<valType> *euler)
 template<typename TempType>
 void Utilities::quaternionToEuler(TempType *euler, TempType *q)
 {
-    euler[0] = atan2(2*q[2]*q[3] + 2*q[0]*q[1], 2*q[0]*q[0] + 2*q[3]*q[3] - 1) / Utilities::deg2rad;
-    euler[1] = asin(-2*q[1]*q[3] + 2*q[0]*q[2]) / Utilities::deg2rad;
-    euler[2] = atan2(2*q[1]*q[2] + 2*q[0]*q[3], 2*q[0]*q[0] + 2*q[1]*q[1] - 1) / Utilities::deg2rad;
+    euler[0] = atan2(2*q[2]*q[3] + 2*q[0]*q[1], 2*q[0]*q[0] + 2*q[3]*q[3] - 1);
+    euler[1] = asin(-2*q[1]*q[3] + 2*q[0]*q[2]);
+    euler[2] = atan2(2*q[1]*q[2] + 2*q[0]*q[3], 2*q[0]*q[0] + 2*q[1]*q[1] - 1);
 }
 
 template<typename valType>
@@ -1383,6 +1436,198 @@ void Utilities::quaternionToEuler(AngleType<valType> *euler, valType *q)
 
 }
 
+template<typename TempType>
+void Utilities::quaternionToDcm(TempType *dcm, TempType *q)
+{
+    TempType q0 = q[0];
+    TempType q1 = q[1];
+    TempType q2 = q[2];
+    TempType q3 = q[3];
+    
+    int n = 3;
+    *(dcm+0*n+0) = q3*q3 + q0*q0 - q1*q1 - q2*q2;
+    *(dcm+0*n+1) = 2.0*(q0*q1 + q2*q3);
+    *(dcm+0*n+2) = 2.0*(q0*q2 - q1*q3);
+    
+    *(dcm+1*n+0) = 2.0*(q0*q1 - q2*q3);
+    *(dcm+1*n+1) = q3*q3 - q0*q0 + q1*q1 - q2*q2;
+    *(dcm+1*n+2) = 2.0*(q1*q2 + q0*q3);
+    
+    *(dcm+2*n+0) = 2.0*(q0*q2 + q1*q3);
+    *(dcm+2*n+1) = 2.0*(q1*q2 - q0*q3);
+    *(dcm+2*n+2) = q3*q3 - q0*q0 - q1*q1 + q2*q2;
+}
+
+template<typename TempType>
+void Utilities::dcmToQuaternion(TempType *q, TempType *dcm)
+{
+    int n = 3;
+    TempType dcm00 = *(dcm+0*n+0);
+    TempType dcm11 = *(dcm+1*n+1);
+    TempType dcm22 = *(dcm+2*n+2);
+    TempType dcm12 = *(dcm+1*n+2);
+    TempType dcm21 = *(dcm+2*n+1);
+    TempType dcm20 = *(dcm+2*n+0);
+    TempType dcm02 = *(dcm+0*n+2);
+    TempType dcm01 = *(dcm+0*n+1);
+    TempType dcm10 = *(dcm+1*n+0);
+    
+    q[0] = 0.5*sqrt(dcm00 + dcm11 + dcm22 + 1.0);
+    q[1] = (dcm12 - dcm21)/(4.0*q[0]);
+    q[2] = (dcm20 - dcm02)/(4.0*q[0]);
+    q[3] = (dcm01 - dcm10)/(4.0*q[0]);
+}
+
+// ECEF/LLH Math
+template<typename TempType>
+void Utilities::LLHtoECEF(TempType* ECEF, TempType* LLH)
+{
+    TempType lat = LLH[0];
+    TempType lon = LLH[1];
+    TempType alt = LLH[2];
+    TempType slat = sin(lat);
+    TempType clat = cos(lat);
+    TempType clon = cos(lon);
+    TempType slon = sin(lon);
+    TempType N = EARTHCONSTANTS::a/( sqrt(1.0 - EARTHCONSTANTS::e2*slat*slat) );
+
+    ECEF[0] = (N+alt)*clat*clon;
+    ECEF[1] = (N+alt)*clat*slon;
+    ECEF[2] = (EARTHCONSTANTS::b2/EARTHCONSTANTS::a2*N + alt)*slat;
+}
+
+template<typename TempType>
+void Utilities::ECEFtoLLH(TempType* LLH, TempType* ECEF)
+{
+    TempType X = ECEF[0];
+    TempType Y = ECEF[1];
+    TempType Z = ECEF[2];
+    TempType Z2 = Z*Z;
+    
+    TempType ePrime = (EARTHCONSTANTS::a2 - EARTHCONSTANTS::b2)/EARTHCONSTANTS::b2;
+    TempType p = sqrt(X*X + Y*Y);
+    TempType F = 54.0*EARTHCONSTANTS::b2*Z2;
+    TempType G = p*p + (1.0 - EARTHCONSTANTS::e2)*Z2 - EARTHCONSTANTS::e2*(EARTHCONSTANTS::a2 - EARTHCONSTANTS::b2);
+    TempType c = EARTHCONSTANTS::e2*EARTHCONSTANTS::e2*F*p*p/(G*G*G);
+    TempType s = pow(1.0+c+sqrt(c*c+2*c), 1/3);
+    TempType k = s + 1.0 + 1.0/s;
+    TempType P = F/(3.0*k*k*G*G);
+    TempType Q = sqrt(1.0 + 2.0*EARTHCONSTANTS::e2*EARTHCONSTANTS::e2*P);
+    
+    TempType r0_1 = -P*EARTHCONSTANTS::e2*p/(1.0+Q);
+    TempType r0_2 = sqrt(0.5*EARTHCONSTANTS::a2*(1.0+1.0/Q) - P*(1.0-EARTHCONSTANTS::e2)*Z2/(Q*(1.0+Q)) - 0.5*P*p*p);
+    TempType r0 = r0_1 + r0_2;
+    
+    TempType U = sqrt(pow(p-EARTHCONSTANTS::e2*r0,2) + Z2);
+    TempType V = sqrt(pow(p-EARTHCONSTANTS::e2*r0,2) + (1.0-EARTHCONSTANTS::e2)*Z2);
+    TempType z0 = EARTHCONSTANTS::b2*Z/(EARTHCONSTANTS::a*V);
+    
+    LLH[0] = atan((Z + ePrime*ePrime*z0)/p);
+    LLH[1] = atan2(Y, X);
+    LLH[2] = U*(1.0 - EARTHCONSTANTS::b2/(EARTHCONSTANTS::a*V));
+}
+
+template<typename TempType>
+void Utilities::ECEFtoLLH(TempType* LLH, TempType* ECEF, TempType k_init)
+{
+    // phi = lat
+    // lambda = lon
+    
+    TempType c;
+    TempType c_num;
+    TempType c_den;
+    
+    TempType k0;
+    TempType k;
+    TempType k_num;
+    TempType k_den;
+    TempType k_prev;
+    
+    TempType X = ECEF[0];
+    TempType Y = ECEF[1];
+    TempType Z = ECEF[2];
+    TempType p = sqrt(X*X + Y*Y);
+    
+    k0 = 1.0/(1.0 - EARTHCONSTANTS::e2);
+    if (k_init == 0) { k = k0; }
+    else { k = k_init; }
+    
+    const int maxiter = 100;
+    int iter = 0;
+    TempType k_diff = 100;
+    TempType e = 1e-20;
+    
+    while(k_diff > e && iter < maxiter)
+    {
+        k_prev = k;
+        c_num = p*p + (1 - EARTHCONSTANTS::e2)*Z*Z*k*k;
+        c_den = EARTHCONSTANTS::a*EARTHCONSTANTS::e2;
+        c = pow(c_num, 1.5)/c_den;
+
+        k_num = p*p + (1 - EARTHCONSTANTS::e2)*Z*Z*k_prev*k_prev*k_prev;
+        k_den = c - p*p;
+        k = 1.0 + k_num/k_den;
+        
+        k_diff = k - k_prev;
+        if (k_diff < 0) { k_diff *= -1.0; }
+        iter++;
+    }
+    
+    LLH[0] = atan(k*Z/p);
+    LLH[1] = atan2(Y, X);
+    LLH[2] = 1.0/EARTHCONSTANTS::e2*(1.0/k - 1.0/k0)*sqrt(p*p + Z*Z*k*k);
+}
+
+template<typename TempType>
+void Utilities::dcmECEFtoNED(TempType* dcm, TempType* LLH)
+{
+    TempType lat = LLH[0];
+    TempType lon = LLH[1];
+    TempType slat = sin(lat);
+    TempType clat = cos(lat);
+    TempType slon = sin(lon);
+    TempType clon = cos(lon);
+    
+    TempType dcm_ECEFtoENU[3][3];
+    initMatrix(*dcm_ECEFtoENU, (TempType) 0.0, 3, 3);
+    
+    TempType dcm_ENUtoNED[3][3] = {
+        {0.0, 1.0, 0.0},
+        {1.0, 0.0, 0.0},
+        {0.0, 0.0, -1.0}
+    };
+
+    dcm_ECEFtoENU[0][0] = -slon;
+    dcm_ECEFtoENU[0][1] = clon;
+    dcm_ECEFtoENU[0][2] = 0.0;
+    
+    dcm_ECEFtoENU[1][0] = -slat*clon;
+    dcm_ECEFtoENU[1][1] = -slat*slon;
+    dcm_ECEFtoENU[1][2] = clat;
+    
+    dcm_ECEFtoENU[2][0] = clat*clon;
+    dcm_ECEFtoENU[2][1] = clat*slon;
+    dcm_ECEFtoENU[2][2] = slat;
+    
+    //dcmECEFtoNED = dcm_ENUtoNED*dcm_ECEFtoENU
+    initMatrix(dcm, (TempType) 0.0, 3, 3);
+    mmult(dcm, *dcm_ENUtoNED, 3, 3, *dcm_ECEFtoENU, 3, 3);
+}
+
+bool Utilities::isLittleEndian()
+{
+    unsigned short a = 0x1234;
+    if (*((unsigned char *)&a)==0x12)
+    {
+        //std::cout << "BIG_ENDIAN" << std::endl;
+        return false;
+    }
+    else
+    {
+        //std::cout << "LITTLE_ENDIAN" << std::endl;
+        return true;
+    }
+}
 /* --------------------  Template Definitions -------------------- */
 template void Utilities::print(int*, int , std::string);
 template void Utilities::print(float*, int , std::string);
@@ -1659,6 +1904,8 @@ template void Utilities::LUdecomp(int*, int* , int* , int);
 template void Utilities::LUdecomp(float*, float* , float* , int);
 template void Utilities::LUdecomp(double*, double* , double* , int);
 
+template double Utilities::checkOrthonormal(double *A, int n);
+
 template void Utilities::setupRotation(int* , int*);
 template void Utilities::setupRotation(float* , float*);
 template void Utilities::setupRotation(double* , double*);
@@ -1666,6 +1913,9 @@ template void Utilities::setupRotation(double* , double*);
 template void Utilities::setupRotation(int*, AngleType<int>*);
 template void Utilities::setupRotation(float*, AngleType<float>*);
 template void Utilities::setupRotation(double*, AngleType<double>*);
+
+template void Utilities::dcmToEuler(float*, float*);
+template void Utilities::dcmToEuler(double*, double*);
 
 template void Utilities::setupEulerRateToBodyRate(int* , int*);
 template void Utilities::setupEulerRateToBodyRate(float* , float*);
@@ -1750,3 +2000,18 @@ template void Utilities::quaternionToEuler(AngleType<int>* , int*);
 template void Utilities::quaternionToEuler(AngleType<float>* , float*);
 template void Utilities::quaternionToEuler(AngleType<double>* , double*);
 
+template void Utilities::quaternionToDcm(double*, double*);
+
+template void Utilities::dcmToQuaternion(double*, double*);
+
+template void Utilities::LLHtoECEF(float* ECEF, float* LLH);
+template void Utilities::LLHtoECEF(double* ECEF, double* LLH);
+
+template void Utilities::ECEFtoLLH(float* LLH, float* ECEF);
+template void Utilities::ECEFtoLLH(double* LLH, double* ECEF);
+
+template void Utilities::ECEFtoLLH(float* LLH, float* ECEF, float k_init);
+template void Utilities::ECEFtoLLH(double* LLH, double* ECEF, double k_init);
+
+template void Utilities::dcmECEFtoNED(float* dcm, float* LLH);
+template void Utilities::dcmECEFtoNED(double* dcm, double* LLH);

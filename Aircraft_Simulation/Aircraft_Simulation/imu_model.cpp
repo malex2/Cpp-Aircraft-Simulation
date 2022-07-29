@@ -28,7 +28,7 @@ IMUModelBase::IMUModelBase(ModelMap *pMapInit, bool debugFlagIn)
     LSBg   = 0.0;
     LSBuT  = 0.0;
     refGravity = 9.80665;
-    perfectSensor = false;
+    //perfectSensor = false;
     imuReady = false;
     onlyGravity = false;
     
@@ -117,9 +117,15 @@ IMUModelBase::IMUModelBase(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("IMU normal acc y (g)", &accNormalBody[1], savePlot, 2);
     //pMap->addLogVar("IMU normal acc z (g)", &accNormalBody[2], savePlot, 2);
     //pMap->addLogVar("IMU deltaPitch", &dTheta[1], savePlot, 3);
+    //pMap->addLogVar("dTheta X", &dTheta[0], savePlot, 2);
+    //pMap->addLogVar("dTheta Y", &dTheta[1], savePlot, 2);
+    //pMap->addLogVar("dTheta Z", &dTheta[2], savePlot, 2);
     //pMap->addLogVar("dVelocity X", &dVelocity[0], savePlot, 2);
     //pMap->addLogVar("dVelocity Y", &dVelocity[1], savePlot, 2);
-    //pMap->addLogVar("IMU deltaVD", &dVelocity[2], savePlot, 2);
+    //pMap->addLogVar("dVelocity Z", &dVelocity[2], savePlot, 2);
+    //pMap->addLogVar("dVelocity Dyn X", &dVelocity_dyn[0], savePlot, 2);
+    //pMap->addLogVar("dVelocity Dyn Y", &dVelocity_dyn[1], savePlot, 2);
+    //pMap->addLogVar("dVelocity Dyn z", &dVelocity_dyn[2], savePlot, 2);
     //pMap->addLogVar("IntSumTime", &sumTime, printSavePlot, 3);
     
     //pMap->addLogVar("IMU mag x (uT)", &magInUnits[0], savePlot, 2);
@@ -156,8 +162,8 @@ bool IMUModelBase::update(void)
     util.setUnitClassUnit(bodyRates, radiansPerSecond, 3);
     
     // Update States
-    util.setArray(bodyRates  , pDyn->getBodyRates()  , 3);
-    util.setArray(eulerAngles, pDyn->getEulerAngles(), 3);
+    util.setUnitClassArray(bodyRates  , pDyn->getBodyRates()  , radiansPerSecond, 3);
+    util.setUnitClassArray(eulerAngles, pDyn->getEulerAngles(), radians, 3);
     util.setArray(bodyAcc    , pDyn->getAccBody()    , 3);
     util.setArray(bodyAngularAcc, pDyn->getbodyAngularAcc(), 3);
     gravity        = pAtmo->getGravity();
@@ -289,20 +295,28 @@ void IMUModelBase::accelerometerModel(void)
 
 void IMUModelBase::deltaIMU(double dt)
 {
+    double accelBody[3];
+    double gyroBody[3];
+    
+    pRotate->imuToBody(gyroBody, getGyroscopeDps());
+    pRotate->imuToBody(accelBody, getAccelerometerGs());
+    util.vgain(accelBody, refGravity, 3);
+    
     for (int i=0; i<3; i++)
     {
-        dTheta[i]    += gyroIMU[i]*dt;
-        dVelocity[i] += accIMUnoGravity[i]*dt;
+        dTheta[i]    += gyroBody[i]*dt;
+        dVelocity[i] += accelBody[i]*dt;
     }
+    util.vSubtract(dVelocity_dyn, pDyn->getVelBody(), preVelBody, 3);
     sumTime += dt;
 }
 
 void IMUModelBase::reset()
 {
-    pDyn->updateIntegralQuaternion(dTheta, sumTime);
-    
+    util.setArray(preVelBody, pDyn->getVelBody(), 3);
     util.setArray(dTheta, zero_init, 3);
     util.setArray(dVelocity, zero_init, 3);
+    util.setArray(dVelocity_dyn, zero_init, 3);
     sumTime = 0.0;
 }
 

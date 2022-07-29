@@ -42,6 +42,18 @@ double errorToVariance(double maxError)
     return variance;
 }
 
+double vectorMag(double* vec)
+{
+    return sqrt(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
+}
+
+void crossProduct(double *cross, double *a, double *b)
+{
+    *(cross+0) = a[1]*b[2] - a[2]*b[1];
+    *(cross+1) = a[2]*b[0] - a[0]*b[2];
+    *(cross+2) = a[0]*b[1] - a[1]*b[0];
+}
+
 // LED
 void LEDon()
 {

@@ -10,6 +10,7 @@
 #include "imu_model.hpp"
 #include "atmosphere_model.hpp"
 #include "actuator_model.hpp"
+#include "gps_model.hpp"
 
 SimulationWire::SimulationWire()
 {
@@ -439,6 +440,159 @@ void Servo::servo_setSimulationModels(ModelMap* pMap)
 ArduinoSerial::ArduinoSerial() { }
 
 void ArduinoSerial::begin(long baudRate) { }
+
+SoftwareSerial::SoftwareSerial()
+{
+    baud_rate  = 0;
+    baud_begin = false;
+    
+    memset(rx_buffer, max_buffer_size, 0);
+    rx_buffer_index = 0;
+    rx_pin   = 0;
+    
+    memset(tx_buffer, max_buffer_size, 0);
+    tx_buffer_index = 0;
+    tx_pin   = 0;
+    
+    pModel = 0;
+    print_serial = false;
+}
+
+SoftwareSerial::SoftwareSerial(int rx_pin, int tx_pin)
+{
+    baud_rate  = 0;
+    baud_begin = false;
+    
+    memset(rx_buffer, max_buffer_size, 0);
+    rx_buffer_index  = 0;
+    rx_buffer_length = 0;
+    this->rx_pin     = rx_pin;
+    
+    memset(tx_buffer, max_buffer_size, 0);
+    tx_buffer_index  = 0;
+    tx_buffer_length = 0;
+    this->tx_pin     = tx_pin;
+    
+    pModel = 0;
+    print_serial = false;
+}
+
+void SoftwareSerial::begin(int baud)
+{
+    baud_rate = baud;
+    baud_begin = true;
+}
+
+byte SoftwareSerial::read()
+{
+    byte val;
+    if (rx_buffer_length>0)
+    {
+        val = rx_buffer[rx_buffer_index];
+        rx_buffer_length--;
+        if (rx_buffer_length>0) { rx_buffer_index++; }
+        else { rx_buffer_index = 0; }
+        return val;
+    }
+    else
+    {
+        rx_buffer_index = 0;
+        return 0x00;
+    }
+}
+
+byte SoftwareSerial::slave_read()
+{
+    byte val;
+    if (tx_buffer_length>0)
+    {
+        val = tx_buffer[tx_buffer_index];
+        tx_buffer_length--;
+        if (tx_buffer_length>0) { tx_buffer_index++; }
+        else { tx_buffer_index = 0; }
+        return val;
+    }
+    else
+    {
+        tx_buffer_index = 0;
+        return 0x00;
+    }
+}
+
+int SoftwareSerial::write(byte val)
+{
+    if (!baud_begin) { return 0; }
+    //std::cout << "SoftwareSerial::write " << std::hex << std::setfill('0') << std::setw(2) << +val << std::endl;
+    
+    tx_buffer[tx_buffer_length] = val;
+    tx_buffer_length++;
+    return 1;
+}
+
+int SoftwareSerial::write(byte* val, int length)
+{
+    int tx_count;
+    if (!baud_begin) { return 0; }
+    
+    tx_count = 0;
+    for (int i = 0; i < length; i++)
+    {
+        tx_count += write(val[i]);
+    }
+    return tx_count;
+}
+
+int SoftwareSerial::slave_write(byte val)
+{
+    if (!baud_begin) { return 0; }
+    rx_buffer[rx_buffer_length] = val;
+    rx_buffer_length++;
+    return 1;
+}
+
+int SoftwareSerial::slave_write(byte* val, int length)
+{
+    int rx_count;
+    if (!baud_begin) { return 0; }
+    
+    rx_count = 0;
+    for (int i = 0; i < length; i++)
+    {
+        rx_count += slave_write(val[i]);
+    }
+    return rx_count;
+}
+
+int SoftwareSerial::available()
+{
+    if (rx_buffer_length==0) { rx_buffer_index = 0; }
+    return rx_buffer_length;
+}
+
+int SoftwareSerial::slave_available()
+{
+    if (tx_buffer_length==0) { tx_buffer_index = 0; }
+    return tx_buffer_length;
+}
+
+void SoftwareSerial::serial_setSimulationModels(ModelMap* pMap, std::string model, bool print)
+{
+    print_serial = print;
+    
+    if (pMap)
+    {
+        pModel = (GenericSensorModel*) pMap->getModel(model);
+        if (pModel)
+        {
+            pModel->setSerialIO(this);
+            pModel = 0;
+        }
+        else
+        {
+            std::cout << "SoftwareSerial::serial_setSimulationModels: cannot find " << model << " model." << std::endl;
+        }
+    }
+}
 
 void pinMode(int pin, enum pinMode mode) { }
 

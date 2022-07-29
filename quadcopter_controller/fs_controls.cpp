@@ -61,9 +61,9 @@ double kp_vz;
 
 // Attitude Channels
 double wn_roll    = 5.0 * hz2rps;
-double zeta_roll  = 1.0;
+double zeta_roll  = 2.0;
 double wn_pitch   = 5.0 * hz2rps;
-double zeta_pitch = 1.0;
+double zeta_pitch = 2.0;
 double wn_yaw     = 20.0 * hz2rps;
 
 double kp_roll;
@@ -95,7 +95,7 @@ void FsControls_setup()
         velLL[i] = 0.0;
     }
     accelZ = 0.0;
-    
+
     // Control Gains
     altHoldLatchCounter = 0;
     groundCount = 0;
@@ -158,13 +158,20 @@ void FsControls_groundDetection()
     }
     
     // Check for ground contact
-    else if (position[2] < 1.5 || accelZ < -2.0*Gravity)
+    else if (position[2] < 1.5)
     {
-        if (position[2] < 1.0) { groundCount++; }
+        if (position[2] < 0.2) { groundCount++; }
         else { groundCount = 0; }
         
-        if (accelZ < -0.4*Gravity || groundCount > 10)
+        if (accelZ < -0.4*Gravity)// || groundCount > 10)
         {
+            display("Fs_Constrols on ground. ");
+            display("Accel: ");
+            display(accelZ);
+            display(" groundCount: ");
+            display(groundCount);
+            display("\n");
+
             controlData.onGround = true;
             controlData.takeOff  = false;
         }
@@ -268,13 +275,17 @@ void performControls()
         controlData.da = kp_roll *(controlData.rollCmd    - eulerAngles[0]) - kd_roll*bodyRates[0];
         controlData.de = kp_pitch*(controlData.pitchCmd   - eulerAngles[1]) - kd_pitch*bodyRates[1];
         controlData.dr = kp_yaw  *(controlData.yawRateCmd - bodyRates[2]);
-        
+
         // Increase throttle to allow attitude following
         minAttitudeThrottle();
     }
     
     // Limit Commands
     controlData.dT = limit(controlData.dT, minThrottle, maxThrottle);
+    
+    controlData.daRaw = controlData.da;
+    controlData.deRaw = controlData.de;
+    controlData.drRaw = controlData.dr;
     
     // Prevent RPM's less than 0
     controlData.da = limit(controlData.da, -controlData.dT/3.0, controlData.dT/3.0);
@@ -377,7 +388,7 @@ void FsControls_setControlsData(IMUtype* pIMUdataIn, NavType* pNavDataIn)
 {
     for (int i=0; i<3; i++)
     {
-        bodyRates[i]   = pIMUdataIn->gyro[i]*degree2radian - pNavDataIn->gyroBias[i];
+        bodyRates[i]   = pIMUdataIn->gyro[i] - pNavDataIn->gyroBias[i];
         eulerAngles[i] = pNavDataIn->eulerAngles[i];
         position[i]    = pNavDataIn->position[i];
     }
@@ -426,7 +437,7 @@ int discretize(int desiredCommand, int command, int minCmd, int maxCmd, int delt
 
 void rpmPwmLimits(float value, float threshold)
 {
-    if (value < threshold)
+    /*if (value < threshold)
     {
         minPWM = PWMMIN;
         maxPWM = PWMMINRPM;
@@ -436,14 +447,14 @@ void rpmPwmLimits(float value, float threshold)
         maxThrottle = MINTHROTTLE;
     }
     else
-    {
+    {*/
         minPWM = PWMMINRPM;
         maxPWM = PWMMAX;
         minRPM = MINRPM;
         maxRPM = MAXRPM;
         minThrottle = MINTHROTTLE;
         maxThrottle = MAXTHROTTLE;
-    }
+    //}
 }
 
 void minAttitudeThrottle()

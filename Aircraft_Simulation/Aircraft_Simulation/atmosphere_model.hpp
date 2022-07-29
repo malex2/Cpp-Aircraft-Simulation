@@ -52,14 +52,14 @@ public:
     layerInfoType layerInfo;
     
     // Getters
-    SpeedType<double>* getVelWindBody(void) { return velWindBody; }
-    SpeedType<double>* getVelWindNED(void)  { return velWindNED; }
-    double             getGravity(void)     { return gravity; }
-    double*            getGravityNED(void)  { return nedGravity; }
-    double*            getGravityBody(void) { return bodyGravity; }
-    double*            getAir(void)         { return air; }
-    double             getRe(void)          { return Re;  }
-    double             getMach(void)        { return Mach; }
+    double* getVelWindBody(void) { return velWindBody; }
+    double* getVelWindNED(void)  { return velWindNED; }
+    double  getGravity(void)     { return gravity; }
+    double* getGravityNED(void)  { return nedGravity; }
+    double* getGravityBody(void) { return bodyGravity; }
+    double* getAir(void)         { return air; }
+    double  getRe(void)          { return Re;  }
+    double  getMach(void)        { return Mach; }
     
 private:
     class DynamicsModel *pDyn;
@@ -80,8 +80,8 @@ private:
     double gradientDensity(double baseDensity, double baseTemperature, double temperatre, double dTdH);
     double gradientTemperature(double baseTemperature, double baseAltitude, double altitude, double dTdH);
     
-    SpeedType<double> velWindNED[3];
-    SpeedType<double> velWindBody[3];
+    double velWindNED[3];
+    double velWindBody[3];
     
     double nedForce[3];
     double bodyGravity[3];

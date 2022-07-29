@@ -58,19 +58,19 @@ private:
     
     // Tables
     
-    static const int lengthTable = 5;
+    static const int lengthTable = 6;
     double signalTimes[nChannels][lengthTable] = {
-        {0.0, 5.0, 30.0, 50.0, 55.0},
-        {0.0, 5.0, 30.0, 50.0, 55.0},
-        {0.0, 5.0, 30.0, 50.0, 55.0},
-        {0.0, 5.0, 30.0, 50.0, 55.0}
+        {0.0, 10.0, 20.0, 30.0, 35.0, 40.0},
+        {0.0, 10.0, 20.0, 30.0, 35.0, 40.0},
+        {0.0, 10.0, 20.0, 30.0, 35.0, 40.0},
+        {0.0, 10.0, 20.0, 30.0, 35.0, 40.0}
     };
     
     double signalValues[nChannels][lengthTable] = {
-        {1.5, 0.0, -0.5, 0.0 , 0.0}, // Velocity (m/s)
-        {0.0, 0.0 , 0.0  , 5.0 , -5.0 }, // Roll  (deg)
-        {10.0, 2.0 , -1.0  , 0.0  , 0.0 }, // Pitch    (deg)
-        {0.0, 0.0 , 0.0  , 0.0  , 0.0 }  // YawRate  (deg/s)
+        {0.0 , 2.0, 0.0 , 0.0, 0.0, 0.0 }, // Velocity (m/s)
+        {0.0 , 0.0, 0.0 , 0.0, 0.0, 0.0 }, // Roll  (deg)
+        {0.0 , 0.0, 0.0 ,-5.0,-5.0, 5.0}, // Pitch    (deg)
+        {0.0 , 0.0, 0.0 , 0.0, 20.0, 0.0}  // YawRate  (deg/s)
     };
     /*
     double signalValues[nChannels][lengthTable] = {

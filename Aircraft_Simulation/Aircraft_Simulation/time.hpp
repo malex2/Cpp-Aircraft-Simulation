@@ -18,16 +18,28 @@ class Time : public GenericModel {
 public:
     // Constructor
     Time(ModelMap *pMapInit, bool debugFlagIn = false );
+    ~Time();
     
     // Getters
-    systemTime getSystemTime(void) { return systemtime; }
-    double getSimTime(void)        { return curTime; }
-    bool  performPrint(void)       { return print; }
-    bool  performSave(void)        { return save; }
-    bool  performDynamics(void)    { return dynamics; }
-    int   getCount(void)           { return counter; }      // get counter
-    int   getClockCount(void)      { return clockCounter; } // get counter at clock_dt rate
-    double getDeltaTime(void)      { return dt; }           // get delta time of simulation
+    systemTime getSystemTime()      { return systemtime; }
+    double     getSimTime()         { return curTime; }
+    bool       performPrint()       { return print; }
+    bool       performSave()        { return save; }
+    bool       performDynamics()    { return dynamics; }
+    int        getCount()           { return counter; }      // get counter
+    int        getClockCount()      { return clockCounter; } // get counter at clock_dt rate
+    double     getDeltaTime()       { return dt; }           // get delta time of simulation
+    
+    // GPS Getters
+    int getGPSTime()       { return pGPSTime->getGPSTime(); }
+    int getGPSTimeOfWeek() { return pGPSTime->getGPSTimeOfWeek(); }
+    int getUTCMonth()      { return pGPSTime->getUTCMonth(); }
+    int getUTCDay()        { return pGPSTime->getUTCDay(); }
+    int getUTCYear()       { return pGPSTime->getUTCYear(); }
+    int getUTCTimeOfDay()  { return pGPSTime->getUTCTimeOfDay(); }
+    int getUTCHour()       { return pGPSTime->getUTCHour(); }
+    int getUTCMinute()     { return pGPSTime->getUTCMinute(); }
+    int getUTCSeconds()    { return pGPSTime->getUTCSeconds(); }
     
     // Functions
     virtual bool update(void);
@@ -53,6 +65,15 @@ private:
     double printInterval;
     double saveInterval;
     const double dtPad = 1e-10;
+    /*
+    double timeofday;
+    int month;
+    int day;
+    int year;
+    double utc_time;
+    double gps_time;
+    */
+    GPSTimeType* pGPSTime;
     
     // Getters
     bool print;
