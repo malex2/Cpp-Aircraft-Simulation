@@ -24,6 +24,7 @@ struct GpsType {
     double posECEF[3];
     double ref_posECEF[3];
     double posENU[3];
+    double alt_3dFixBias;
     double alt_msl;
     double horizPosAcc;
     double vertPosAcc;
@@ -56,6 +57,7 @@ struct GpsType {
         posENU[0]      = 0.0;
         posENU[1]      = 0.0;
         posENU[2]      = 0.0;
+        alt_3dFixBias  = 0.0;
         alt_msl        = 0.0;
         horizPosAcc    = 0.0;
         vertPosAcc     = 0.0;

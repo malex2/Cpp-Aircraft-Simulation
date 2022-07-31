@@ -40,16 +40,19 @@ GPSModelBase::GPSModelBase(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("gps_posECEF X", &gps_posECEF[0], savePlot, 2);
     //pMap->addLogVar("gps_posECEF Y", &gps_posECEF[1], savePlot, 2);
     //pMap->addLogVar("gps_posECEF Z", &gps_posECEF[2], savePlot, 2);
-    //pMap->addLogVar("horizError", &horizError, savePlot, 2);
+    pMap->addLogVar("gps_horizPosAcc", &horizPosAcc, savePlot, 2);
+    pMap->addLogVar("gps_vertPosAcc", &vertPosAcc, savePlot, 2);
+    pMap->addLogVar("gps_velAcc", &velAcc, savePlot, 2);
+    pMap->addLogVar("horizError", &horizError, savePlot, 2);
     //pMap->addLogVar("horizDir", &horizDir_Deg, savePlot, 2);
-    //pMap->addLogVar("vertError", &vertError, savePlot, 2);
+    pMap->addLogVar("vertError", &vertError, savePlot, 2);
     //pMap->addLogVar("posErrorN", &posErrorNED[0], savePlot, 2);
     //pMap->addLogVar("posErrorE", &posErrorNED[1], savePlot, 2);
     //pMap->addLogVar("posErrorD", &posErrorNED[2], savePlot, 2);
     //pMap->addLogVar("posErrorECEF X", &posErrorECEF[0], savePlot, 2);
     //pMap->addLogVar("posErrorECEF Y", &posErrorECEF[1], savePlot, 2);
     //pMap->addLogVar("posErrorECEF Z", &posErrorECEF[2], savePlot, 2);
-    //pMap->addLogVar("velError", &velError, savePlot, 2);
+    pMap->addLogVar("velError", &velError, savePlot, 2);
     //pMap->addLogVar("velErrorYaw", &velErrorYaw_Deg, savePlot, 2);
     //pMap->addLogVar("velErrorPitch", &velErrorPitch_Deg, savePlot, 2);
     //pMap->addLogVar("velErrorN", &velErrorNED[0], savePlot, 2);
@@ -150,8 +153,8 @@ bool GPSModelBase::update()
 {
     updatePositionError();
     updateVelocityError();
-
     gps_timeofweek = pTime->getGPSTimeOfWeek();
+    
     if (perfectSensor)
     {
         util.setArray(gps_posECEF, pDyn->getPosECEF(), 3);
@@ -387,20 +390,27 @@ void GPSModelBase::writeOutputIO()
 }
 
 
-GPSNeo6m::GPSNeo6m(ModelMap *pMapInit, bool debugFlagIn)  : GPSModelBase(pMapInit, debugFlagIn)
+GPSNeo6m::GPSNeo6m(ModelMap *pMapInit, bool debugFlagIn)  : GPSModelBase(pMapInit, debugFlagIn),
+GPSFixLookup(GPSFixTimes, GPSFixValues, GPSFixLength),
+HorizAccLookup(HorizAccTimes, HorizAccValues, HorizAccLength),
+VertAccLookup(VertAccTimes, VertAccValues, VertAccLength),
+VelAccLookup(VelAccTimes, VelAccValues, VelAccLength)
 {
-    horizPosAcc      = 2.5;
-    vertPosAcc       = 2.5;
-    velAcc           = 0.1;
-    gps_acquire_time = 5.0;
+    
+    horizPosAcc      = HorizAccLookup.update(0.0);
+    vertPosAcc       = VertAccLookup.update(0.0);
+    velAcc           = VelAccLookup.update(0.0);
+    last_3dFixAlt    = 0.0;
+    last_3dFixMSL    = 0.0;
+    last_3dFixVD     = 0.0;
     
     initUBX = false;
     pUBX    = NULL;
     gpsData = new GpsType();
     
     pOutputMessages[NAV_STATUS] = new MessageType(0.0, 0.0);
-    pOutputMessages[NAV_POSLLH]  = new MessageType(0.0, 0.2);
-    pOutputMessages[NAV_VELNED]  = new MessageType(0.0, 0.4);
+    pOutputMessages[NAV_POSLLH] = new MessageType(0.0, 0.2);
+    pOutputMessages[NAV_VELNED] = new MessageType(0.0, 0.4);
 }
 
 
@@ -411,6 +421,24 @@ GPSNeo6m::~GPSNeo6m()
         delete pUBX;
     }
     delete gpsData;
+}
+
+void GPSNeo6m::updatePositionError()
+{
+    horizPosAcc = HorizAccLookup.update(pTime->getSimTime());
+    vertPosAcc  = VertAccLookup.update(pTime->getSimTime());
+    if (HorizAccLookup.valueChange()) { horizPosNoise.setNoise(horizPosAcc); }
+    if (VertAccLookup.valueChange())  { vertPosNoise.setNoise(vertPosAcc); }
+    
+    Base::updatePositionError();
+}
+
+void GPSNeo6m::updateVelocityError()
+{
+    velAcc = VelAccLookup.update(pTime->getSimTime());
+    if (VelAccLookup.valueChange()) { velNoise.setNoise(velAcc); }
+    
+    Base::updateVelocityError();
 }
 
 void GPSNeo6m::readInputMessages()
@@ -450,39 +478,55 @@ void GPSNeo6m::constructOutputMessages()
     UBX_MSG::UBX_MSG_NAV_POSLLH posLLH;
     UBX_MSG::UBX_MSG_NAV_VELNED velNED;
     UBX_MSG::UBX_MSG_NAV_STATUS navStatus;
+    double alt;
+    double msl;
+    double velD;
     
-    if (pTime->getSimTime() >= gps_acquire_time)
+    // GPS fix status
+    int gpsFix = GPSFixLookup.update(pTime->getSimTime());
+    
+    // Set GPS acquired
+    if (gps_acquire_time == 0.0 && (gpsFix==2 || gpsFix==3)) { gps_acquire_time = pTime->getSimTime(); }
+    
+    // Set last 3D Fix Values
+    if (gpsFix == 3)
+    {
+        last_3dFixAlt = gps_posLLH[2];
+        last_3dFixMSL = gps_altMSL;
+        last_3dFixVD  = gps_velNED[2];
+    }
+    alt  = last_3dFixAlt;
+    msl  = last_3dFixMSL;
+    velD = last_3dFixVD;
+    
+    if (gpsFix > 0)
     {
         // Generate Lat/Lon/Alt Message
         posLLH.data.iTOW               = gps_timeofweek             / posLLH.scale.iTOW;
         posLLH.data.latitude           = gps_posLLH[0]/util.deg2rad / posLLH.scale.latitude;
         posLLH.data.longitude          = gps_posLLH[1]/util.deg2rad / posLLH.scale.longitude;
-        posLLH.data.altitude_geod      = gps_posLLH[2]              / posLLH.scale.altitude_geod;
-        posLLH.data.altitude_msl       = gps_altMSL                 / posLLH.scale.altitude_msl;
+        posLLH.data.altitude_geod      = alt                        / posLLH.scale.altitude_geod;
+        posLLH.data.altitude_msl       = msl                        / posLLH.scale.altitude_msl;
         posLLH.data.horizontalAccuracy = horizPosAcc                / posLLH.scale.horizontalAccuracy;
         posLLH.data.verticalAccuracy   = vertPosAcc                 / posLLH.scale.verticalAccuracy;
-    
+        
         // Generate NED Velocity Message
         velNED.data.iTOW            = gps_timeofweek  / velNED.scale.iTOW;
         velNED.data.velN            = gps_velNED[0]   / velNED.scale.velN;
         velNED.data.velE            = gps_velNED[1]   / velNED.scale.velE;
-        velNED.data.velD            = gps_velNED[2]   / velNED.scale.velD;
+        velNED.data.velD            = velD            / velNED.scale.velD;
         velNED.data.speed           = gps_speed       / velNED.scale.speed;
         velNED.data.gSpeed          = gps_groundSpeed / velNED.scale.gSpeed;
         velNED.data.heading         = gps_heading     / velNED.scale.heading;
         velNED.data.speedAccuracy   = velAcc          / velNED.scale.speedAccuracy;
         velNED.data.headingAccuracy = 0.5             / velNED.scale.headingAccuracy;
         
+            
         // Start NAV Status Message
         navStatus.data.iTOW    = gps_timeofweek  / navStatus.scale.iTOW;
-        navStatus.data.gpsFix  = 0x03;
+        navStatus.data.gpsFix  = gpsFix;
         navStatus.data.ttff    = gps_acquire_time / navStatus.scale.ttff;
-    }
-    else
-    {
-        // Start NAV Status Message
-        navStatus.data.gpsFix = 0x00;
-        navStatus.data.ttff   = 0.0 * navStatus.scale.ttff;
+        navStatus.data.ttff    = gps_acquire_time * navStatus.scale.ttff;
     }
     
     // Complete NAV Status Message

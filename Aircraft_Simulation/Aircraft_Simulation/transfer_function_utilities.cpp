@@ -50,8 +50,8 @@ void tf::dampfreq()
 
 void step(double input, double tFinal)
 {
-    bool save = false;
-    bool print = false;
+    //bool save = false;
+    //bool print = false;
     
     double tInitial = 0.0;
     double dt = 1e-3;

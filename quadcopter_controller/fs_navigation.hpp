@@ -16,11 +16,12 @@
 #define FILTERTEST
 
 // Types
-enum NavState {Calibration, INS, GPSUpdate, BaroUpdate, GroundAlign};
+enum NavState {Calibration, INS, GPSUpdate, GPSUpdate2D, BaroUpdate, GroundAlign};
 enum StateType {ROLL, PITCH, YAW, VN, VE, VD, N, E, ALT, GBIAS_X, GBIAS_Y, GBIAS_Z, ABIAS_X, ABIAS_Y, ABIAS_Z, GRAVITY, NSTATES};
 enum VECTORTYPE {X, Y, Z};
 enum GroundMeasurementType {GROUND_VN, GROUND_VE, GROUND_VD, GROUND_YAW, NGROUNDSTATES};
 enum GPSMeasurementType {GPS_N, GPS_E, GPS_ALT, GPS_VN, GPS_VE, GPS_VD, NGPSSTATES};
+enum GPS2DMeasurementType {GPS2D_N, GPS2D_E, GPS2D_VN, GPS2D_VE, N2DGPSSTATES};
 enum BAROMeasurementType {BARO_ALT, NBAROSTATES};
 
 const int NSTATES_BARO = 4;
@@ -122,6 +123,7 @@ void FsNavigation_calibrateIMU();
 
 // Getters
 NavType* FsNavigation_getNavData(bool useTruth = false);
+double   FsNavigation_getNavAlt();
 NavType* FsNavigation_getNavError();
 NavState FsNavigation_getNavState();
 double*  FsNavigation_getCovariance();

@@ -33,8 +33,8 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     
     //pMap->addLogVar("N (m)", &posNED[0], savePlot, 2);
     //pMap->addLogVar("E (m)", &posNED[1], savePlot, 2);
-    //pMap->addLogVar("D (m)", &posNED[2], savePlot, 2);
-    //pMap->addLogVar("gndAlt", &hGroundft, printSavePlot, 3);
+    pMap->addLogVar("D (m)", &posNED[2], savePlot, 2);
+    pMap->addLogVar("gndAlt", &hGround, savePlot, 2);
     
     //pMap->addLogVar("speed", &velMag, savePlot, 2);
     
@@ -49,7 +49,7 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     
     //pMap->addLogVar("VN  ", &velNED[0], savePlot, 2);
     //pMap->addLogVar("VE  ", &velNED[1], savePlot, 2);
-    //pMap->addLogVar("VD  ", &velNED[2], printSavePlot, 3);
+    pMap->addLogVar("VD  ", &velNED[2], printSavePlot, 3);
     
     //pMap->addLogVar("Roll Rate", &eulerRatesDeg[0].val, savePlot, 2);
     //pMap->addLogVar("Pitch Rate", &eulerRatesDeg[1].val, savePlot, 2);

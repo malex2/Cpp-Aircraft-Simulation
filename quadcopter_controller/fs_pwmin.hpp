@@ -57,7 +57,6 @@ private:
     static unsigned long validReadCount; // Number of valid reads from PWM;
     
     // Tables
-    
     static const int lengthTable = 6;
     double signalTimes[nChannels][lengthTable] = {
         {0.0, 10.0, 20.0, 30.0, 35.0, 40.0},

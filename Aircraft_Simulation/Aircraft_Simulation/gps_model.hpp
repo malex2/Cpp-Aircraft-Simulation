@@ -147,17 +147,41 @@ public:
     ~GPSNeo6m();
     
 private:
-    class UBX_MSG* pUBX;
-    struct GpsType* gpsData;
-    
     typedef GPSModelBase Base;
+    class  UBX_MSG* pUBX;
+    struct GpsType* gpsData;
     
     bool initUBX;
     enum GPSOutputMessgaes {NAV_STATUS, NAV_POSLLH, NAV_VELNED, NGPSMESSAGES};
+    double last_3dFixAlt;
+    double last_3dFixMSL;
+    double last_3dFixVD;
+    
+    static const int GPSFixLength  = 3;
+    int GPSFixTimes[GPSFixLength]  = {0, 5, 20};
+    int GPSFixValues[GPSFixLength] = {0, 2, 3};
+    LookupTable<int> GPSFixLookup;
+    
+    static const int HorizAccLength = 3;
+    double HorizAccTimes[HorizAccLength]  = {0.0, 5.0, 9.0};
+    double HorizAccValues[HorizAccLength] = {0.0, 10.0, 2.5};
+    LookupTable<double> HorizAccLookup;
+    
+    static const int VertAccLength = 3;
+    double VertAccTimes[VertAccLength]  = {0.0, 5.0, 9.0};
+    double VertAccValues[VertAccLength] = {0.0, 20.0, 2.5};
+    LookupTable<double> VertAccLookup;
+    
+    static const int VelAccLength = 3;
+    double VelAccTimes[VelAccLength]  = {0.0, 5.0, 9.0};
+    double VelAccValues[VelAccLength] = {0.0, 0.8 , 0.1};
+    LookupTable<double> VelAccLookup;
+    
+    virtual void updatePositionError();
+    virtual void updateVelocityError();
     virtual void readInputMessages();
     virtual void decodeInputMessages();
     virtual void constructOutputMessages();
-    
     int encodeOutputMessage(GPSOutputMessgaes gpsMsg, void* buffer, int buffer_length);
 };
 

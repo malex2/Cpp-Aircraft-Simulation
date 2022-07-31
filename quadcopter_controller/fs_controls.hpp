@@ -83,7 +83,7 @@ struct ControlType {
             TPWM[i]  = PWMMIN;
             rpmSq[i] = 0.0;
         }
-        takeOff   = false;
+        takeOff    = false;
         crashLand  = false;
         onGround   = true;
         
@@ -108,6 +108,7 @@ void FsControls_setControlsData(IMUtype* pIMUdataIn, NavType* pNavDataIn);
 
 // Getters
 ControlType* FsControls_getControlData();
+bool         FsControls_onGround();
 
 // Internal Access
 void discretizeCommands();

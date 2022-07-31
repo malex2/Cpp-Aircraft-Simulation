@@ -224,6 +224,7 @@ void performControls()
     
     else if (controlData.mode == VelocityControl)
     {
+        // Nav VN std < 0.1 m/s and Nav VE std < 0.1 m/s
         controlData.VLLzCmd    = -mapToValue(controlData.pwmCmd[THROTTLE_CHANNEL], (int) PWMMIN, (int) PWMMAX, (double) -MAXVELOCITY, (double) MAXVELOCITY); // (m/s)
         controlData.VLLyCmd    = mapToValue(controlData.pwmCmd[ROLL_CHANNEL]    , (int) PWMMIN, (int) PWMMAX, (double) -MAXVELOCITY, (double) MAXVELOCITY); // (m/s)
         controlData.VLLxCmd    = mapToValue(controlData.pwmCmd[PITCH_CHANNEL]   , (int) PWMMIN, (int) PWMMAX, (double) -MAXVELOCITY, (double) MAXVELOCITY); // (m/s)
@@ -399,6 +400,11 @@ void FsControls_setControlsData(IMUtype* pIMUdataIn, NavType* pNavDataIn)
 ControlType* FsControls_getControlData()
 {
     return &controlData;
+}
+
+bool FsControls_onGround()
+{
+    return controlData.onGround;
 }
 
 int discretize(int desiredCommand, int command, int minCmd, int maxCmd, int deltaPwm)

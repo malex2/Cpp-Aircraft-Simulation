@@ -63,6 +63,11 @@ double H_GPS[NGPSSTATES][NSTATES];
 double K_GPS[NSTATES][NGPSSTATES];
 double gpsResidual[NGPSSTATES];
 
+double R_GPS2D[N2DGPSSTATES][N2DGPSSTATES];
+double H_GPS2D[N2DGPSSTATES][NSTATES];
+double K_GPS2D[NSTATES][N2DGPSSTATES];
+double gpsResidual2D[N2DGPSSTATES];
+
 // Barometer Correction
 double R_BARO[NBAROSTATES][NBAROSTATES];
 double H_BARO[NBAROSTATES][NSTATES];
@@ -157,9 +162,14 @@ void FsNavigation_setupNavigation(double *initialPosition, double initialHeading
     H_GPS[GPS_VE][VE]   = 1.0;
     H_GPS[GPS_VD][VD]   = 1.0;
     
+    H_GPS2D[GPS2D_N][N]   = 1.0;
+    H_GPS2D[GPS2D_E][E]   = 1.0;
+    H_GPS2D[GPS2D_VN][VN] = 1.0;
+    H_GPS2D[GPS2D_VE][VE] = 1.0;
+    
     // State Covariance (State Uncertainties)
-    P[ROLL][ROLL]   = errorToVariance(5.0*degree2radian);
-    P[PITCH][PITCH] = errorToVariance(5.0*degree2radian);
+    P[ROLL][ROLL]   = 0.0;//errorToVariance(5.0*degree2radian);
+    P[PITCH][PITCH] = 0.0;//errorToVariance(5.0*degree2radian);
     P[YAW][YAW]     = errorToVariance(180.0*degree2radian);
     P[VN][VN]       = 0.0;
     P[VE][VE]       = 0.0;
@@ -170,10 +180,10 @@ void FsNavigation_setupNavigation(double *initialPosition, double initialHeading
     P[GBIAS_X][GBIAS_X] = errorToVariance(0.02*degree2radian);
     P[GBIAS_Y][GBIAS_Y] = errorToVariance(0.02*degree2radian);
     P[GBIAS_Z][GBIAS_Z] = errorToVariance(0.02*degree2radian);
-    P[ABIAS_X][ABIAS_X] = 0.0;errorToVariance(0.005*Gravity);
-    P[ABIAS_Y][ABIAS_Y] = 0.0;errorToVariance(0.005*Gravity);
-    P[ABIAS_Z][ABIAS_Z] = 0.0;errorToVariance(0.02*Gravity);
-    P[GRAVITY][GRAVITY] = 0.0;errorToVariance(0.1);
+    P[ABIAS_X][ABIAS_X] = 0.0;//errorToVariance(0.005*Gravity);
+    P[ABIAS_Y][ABIAS_Y] = 0.0;//errorToVariance(0.005*Gravity);
+    P[ABIAS_Z][ABIAS_Z] = 0.0;//errorToVariance(0.02*Gravity);
+    P[GRAVITY][GRAVITY] = 0.0;//errorToVariance(0.1);
     
     /*
     P[ROLL][ROLL]   = 0.0;
@@ -221,7 +231,7 @@ void FsNavigation_performNavigation( double &navDt )
     if (!navSetup) { return; }
     
     // Apply sensor updates
-    if (NavData.state == GPSUpdate || NavData.state == BaroUpdate || NavData.state == GroundAlign)
+    if (NavData.state != Calibration && NavData.state != INS)
     {
         applyCorrections();
         NavData.state = INS;
@@ -498,6 +508,11 @@ void applyCorrections()
         filterUpdate(gpsResidual, *R_GPS, *H_GPS, *K_GPS, NGPSSTATES);
         NavData.GpsUpdateCount++;
     }
+    else if (NavData.state == GPSUpdate2D)
+    {
+        filterUpdate(gpsResidual2D, *R_GPS2D, *H_GPS2D, *K_GPS2D, N2DGPSSTATES);
+        NavData.GpsUpdateCount++;
+    }
     else if (NavData.state == GroundAlign)
     {
         NavData.GroundAlignCount++;
@@ -588,7 +603,7 @@ void FsNavigation_performGPSUpdate(GpsType* gpsData)
     
     if(NavData.state != INS)
     {
-        display("FsNavigation_performGPSPVTUpdate: WARNING. Not in INS state");
+        display("FsNavigation_performGPSPVTUpdate: WARNING. Not in INS state.\n");
         //return;
     }
 
@@ -596,24 +611,40 @@ void FsNavigation_performGPSUpdate(GpsType* gpsData)
     {
         double horizPosVar = errorToVariance(gpsData->horizPosAcc);
         double vertPosVar  = errorToVariance(gpsData->vertPosAcc);
-        double speedVar = errorToVariance(gpsData->speedAcc);
+        double speedVar    = errorToVariance(gpsData->speedAcc);
         
-        R_GPS[GPS_N][GPS_N]     = horizPosVar;
-        R_GPS[GPS_E][GPS_E]     = horizPosVar;
-        R_GPS[GPS_ALT][GPS_ALT] = vertPosVar;
-        R_GPS[GPS_VN][GPS_VN] = speedVar;
-        R_GPS[GPS_VE][GPS_VE] = speedVar;
-        R_GPS[GPS_VD][GPS_VD] = speedVar;
-        
-        gpsResidual[GPS_N]   = gpsData->posENU[1] - NavData.position[0];
-        gpsResidual[GPS_E]   = gpsData->posENU[0] - NavData.position[1];
-        gpsResidual[GPS_ALT] = gpsData->posENU[2] - NavData.position[2];
-        gpsResidual[GPS_VN] = gpsData->velNED[0] - NavData.velNED[0];
-        gpsResidual[GPS_VE] = gpsData->velNED[1] - NavData.velNED[1];
-        gpsResidual[GPS_VD] = gpsData->velNED[2] - NavData.velNED[2];
-
-        NavData.state = GPSUpdate;
-        
+        if (gpsData->gpsFix == FIX2D)
+        {
+            R_GPS2D[GPS2D_N][GPS2D_N]   = horizPosVar;
+            R_GPS2D[GPS2D_E][GPS2D_E]   = horizPosVar;
+            R_GPS2D[GPS2D_VN][GPS2D_VN] = speedVar;
+            R_GPS2D[GPS2D_VE][GPS2D_VE] = speedVar;
+            
+            gpsResidual2D[GPS2D_N]  = gpsData->posENU[1] - NavData.position[0];
+            gpsResidual2D[GPS2D_E]  = gpsData->posENU[0] - NavData.position[1];
+            gpsResidual2D[GPS2D_VN] = gpsData->velNED[0] - NavData.velNED[0];
+            gpsResidual2D[GPS2D_VE] = gpsData->velNED[1] - NavData.velNED[1];
+            
+            NavData.state = GPSUpdate2D;
+        }
+        else //(gpsData->gpsFix == FIX3D)
+        {
+            R_GPS[GPS_N][GPS_N]     = horizPosVar;
+            R_GPS[GPS_E][GPS_E]     = horizPosVar;
+            R_GPS[GPS_ALT][GPS_ALT] = vertPosVar;
+            R_GPS[GPS_VN][GPS_VN] = speedVar;
+            R_GPS[GPS_VE][GPS_VE] = speedVar;
+            R_GPS[GPS_VD][GPS_VD] = speedVar;
+            
+            gpsResidual[GPS_N]   = gpsData->posENU[1] - NavData.position[0];
+            gpsResidual[GPS_E]   = gpsData->posENU[0] - NavData.position[1];
+            gpsResidual[GPS_ALT] = gpsData->posENU[2] - NavData.position[2];
+            gpsResidual[GPS_VN] = gpsData->velNED[0] - NavData.velNED[0];
+            gpsResidual[GPS_VE] = gpsData->velNED[1] - NavData.velNED[1];
+            gpsResidual[GPS_VD] = gpsData->velNED[2] - NavData.velNED[2];
+            
+            NavData.state = GPSUpdate;
+        }
         FsGPS_resetPositionValid();
         FsGPS_resetVelocityValid();
     }
@@ -625,7 +656,7 @@ void FsNavigation_performBarometerUpdate(barometerType* baroData)
     
     if(NavData.state != INS)
     {
-        display("FsNavigation_performBarometerUpdate: WARNING. Not in INS state");
+        display("FsNavigation_performBarometerUpdate: WARNING. Not in INS state.\n");
         //return;
     }
     
@@ -641,7 +672,7 @@ void FsNavigation_groundAlign()
     
     if(NavData.state != INS)
     {
-        display("FsNavigation_groundAlign: WARNING. Not in INS state");
+        display("FsNavigation_groundAlign: WARNING. Not in INS state.\n");
         //return;
     }
 
@@ -742,6 +773,11 @@ NavType* FsNavigation_getNavData(bool useTruth)
 #else
     return &NavData;
 #endif
+}
+
+double FsNavigation_getNavAlt()
+{
+    return NavData.position[2];
 }
 
 #ifdef SIMULATION

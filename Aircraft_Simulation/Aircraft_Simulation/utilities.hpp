@@ -579,6 +579,44 @@ private:
     
 };
 
+template<typename TempType>
+class LookupTable {
+public:
+    LookupTable(TempType* pTblTimes, TempType* pTblValues, int tblLength)
+    {
+       pTableTimes  = pTblTimes;
+       pTableValues = pTblValues;
+       tableLength  = tblLength;
+       value        = pTblValues[0];
+       prevValue    = pTblValues[0];
+    }
+    
+    TempType update(TempType t)
+    {
+        prevValue = value;
+        for (int i = 0; i < tableLength; i++)
+        {
+            if( t >= pTableTimes[i] )
+            {
+                value = pTableValues[i];
+            }
+        }
+        return value;
+    }
+    
+    bool valueChange()
+    {
+        if (prevValue != value) { return true; }
+        else { return false; }
+    }
+private:
+    TempType* pTableTimes;
+    TempType* pTableValues;
+    int       tableLength;
+    TempType  value;
+    TempType  prevValue;
+};
+
 class MonitorMacInput {
 public:
     // Constructor

@@ -39,11 +39,11 @@ const int second_init = 00;
 const bool saveOutput  = true;
 const bool printOutput = true;
 const bool plotOutput  = false;
-const std::string savefile = "output_gps_baro_yaw.csv";
+const std::string savefile = "output.csv";
 
 // Initial States
 const double velNED_init[3]  = {0, 0, 0};
-const double posLLH_init[3] = {28.5997222, -81.3394444, 1.968}; // deg, deg, ft
+const double posLLH_init[3] = {28.5997222, -81.3394444, 25+1.968}; // deg, deg, ft
 const double eulerAngles_init[3] = {0, 0.0, -45}; // {0, 6.507, 0};
 const double bodyRates_init[3]  = {0, 0, 0};
 const double actuators_init[4]   = {0.0, 0.0, 0.0, 0.0}; //{de,da,dr,dT}
@@ -90,7 +90,7 @@ const double quaternion_init2[4]  = {0, 0, 0, 0};
 const double identityMatrix[3][3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
 
 // World constants
-const double elevation_init = 0;
+const double elevation_init = 7.62;
 const double Rearth = 6371e+3;
 const double GM     = 3.9857e+14;
 const double zeroTolerance = 0.01;
