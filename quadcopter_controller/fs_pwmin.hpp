@@ -57,6 +57,22 @@ private:
     static unsigned long validReadCount; // Number of valid reads from PWM;
     
     // Tables
+    static const int lengthTable = 9;
+    double signalTimes[nChannels][lengthTable] = {
+        {0.0, 10.0, 20.0, 30.0, 35.0, 40.0, 50.0, 58.0, 70.0},
+        {0.0, 10.0, 20.0, 30.0, 35.0, 40.0, 50.0, 58.0, 70.0},
+        {0.0, 10.0, 20.0, 30.0, 35.0, 40.0, 50.0, 58.0, 70.0},
+        {0.0, 10.0, 20.0, 30.0, 35.0, 40.0, 50.0, 58.0, 70.0}
+    };
+    
+    double signalValues[nChannels][lengthTable] = {
+        {0.0 , 2.0, 0.0 , 0.0 , 0.0 ,  0.0, 0.0, -1.0, -0.1}, // Velocity (m/s)
+        {0.0 , 0.0, 0.0 , 0.0 , 0.0 ,  0.0, 1.0,  0.5,  0.0}, // Vy  (m/s)
+        {0.0 , 0.0, 0.0 , 1.0 , 1.0 ,  1.0,-1.0,  0.0,  0.0},  // Vx  (m/s)
+        {0.0 , 0.0, 0.0 , 0.0 , 20.0,  0.0, 0.0,-20.0,  0.0}  // YawRate  (deg/s)
+    };
+    
+    /*
     static const int lengthTable = 6;
     double signalTimes[nChannels][lengthTable] = {
         {0.0, 10.0, 20.0, 30.0, 35.0, 40.0},
@@ -71,14 +87,8 @@ private:
         {0.0 , 0.0, 0.0 ,-5.0,-5.0, 5.0}, // Pitch    (deg)
         {0.0 , 0.0, 0.0 , 0.0, 20.0, 0.0}  // YawRate  (deg/s)
     };
-    /*
-    double signalValues[nChannels][lengthTable] = {
-        {40.0, 40.0, 40.0 , 40.0 , 40.0}, // Velocity (m/s)
-        {0.0, 5.0 , 10.0  , 15.0  , 20.0 }, // Roll  (deg)
-        {5.0, 2.0 , -10.0  , -15.0  , 5.0 }, // Pitch    (deg)
-        {0.0, 0.0 , 0.0  , 0.0  , 0.0 }  // YawRate  (deg/s)
-    };
     */
+
     /*
     static const int lengthTable = 13;
     double signalTimes[nChannels][lengthTable] = {

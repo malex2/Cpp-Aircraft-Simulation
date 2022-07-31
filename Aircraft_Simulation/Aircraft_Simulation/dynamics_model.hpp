@@ -36,6 +36,7 @@ public:
     
     double* getVelBody(void)  { return velBody; }
     double* getVelNED(void)   { return velNED; }
+    double* getVelLL(void)    { return velLL; }
     
     double  getSpeed(void)    { return velMag; }
     
@@ -73,6 +74,7 @@ private:
     double velECEF[3];
     double velNED[3];
     double velBody[3];
+    double velLL[3];
     double velMag;
     
     double posECI[3];

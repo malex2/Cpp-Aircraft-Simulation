@@ -25,16 +25,16 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("Dyn deltaCount", &deltaCount, savePlot, 2);
     //pMap->addLogVar("Lat", &posLLH_deg[0], savePlot, 2);
     //pMap->addLogVar("Lon", &posLLH_deg[1], savePlot, 2);
-    pMap->addLogVar("Alt", &posLLH[2], printSavePlot, 3);
+    //pMap->addLogVar("Alt", &posLLH[2], printSavePlot, 3);
     
     //pMap->addLogVar("posECEF X", &posECEF[0], savePlot, 2);
     //pMap->addLogVar("posECEF Y", &posECEF[1], savePlot, 2);
     //pMap->addLogVar("posECEF Z", &posECEF[2], savePlot, 2);
     
-    //pMap->addLogVar("N (m)", &posNED[0], savePlot, 2);
-    //pMap->addLogVar("E (m)", &posNED[1], savePlot, 2);
-    pMap->addLogVar("D (m)", &posNED[2], savePlot, 2);
-    pMap->addLogVar("gndAlt", &hGround, savePlot, 2);
+    pMap->addLogVar("N (m)", &posNED[0], savePlot, 2);
+    pMap->addLogVar("E (m)", &posNED[1], savePlot, 2);
+    //pMap->addLogVar("D (m)", &posNED[2], savePlot, 2);
+    pMap->addLogVar("gndAlt", &hGround, printSavePlot, 3);
     
     //pMap->addLogVar("speed", &velMag, savePlot, 2);
     
@@ -47,9 +47,9 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("VbY  ", &velBody[1], savePlot, 2);
     //pMap->addLogVar("VbZ  ", &velBody[2], savePlot, 3);
     
-    //pMap->addLogVar("VN  ", &velNED[0], savePlot, 2);
-    //pMap->addLogVar("VE  ", &velNED[1], savePlot, 2);
-    pMap->addLogVar("VD  ", &velNED[2], printSavePlot, 3);
+    pMap->addLogVar("VN  ", &velNED[0], savePlot, 2);
+    pMap->addLogVar("VE  ", &velNED[1], savePlot, 2);
+    //pMap->addLogVar("VD  ", &velNED[2], printSavePlot, 3);
     
     //pMap->addLogVar("Roll Rate", &eulerRatesDeg[0].val, savePlot, 2);
     //pMap->addLogVar("Pitch Rate", &eulerRatesDeg[1].val, savePlot, 2);
@@ -59,9 +59,9 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("qdot", &bodyAngularAcc[1], savePlot, 2);
     //pMap->addLogVar("rdot", &bodyAngularAcc[2], printSavePlot, 3);
     
-    //pMap->addLogVar("p", &bodyRatesDeg[0], savePlot, 2);
-    //pMap->addLogVar("q", &bodyRatesDeg[1], savePlot, 2);
-    //pMap->addLogVar("r", &bodyRatesDeg[2], savePlot, 2);
+    pMap->addLogVar("p", &bodyRatesDeg[0], savePlot, 2);
+    pMap->addLogVar("q", &bodyRatesDeg[1], savePlot, 2);
+    pMap->addLogVar("r", &bodyRatesDeg[2], savePlot, 2);
     
     pMap->addLogVar("Roll ", &eulerAnglesDeg[0], savePlot, 2);
     pMap->addLogVar("Pitch", &eulerAnglesDeg[1], savePlot, 2);
@@ -98,97 +98,15 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("SumMX", &bodyMoment[0], savePlot, 2);
     //pMap->addLogVar("SumMY", &bodyMoment[1], savePlot, 2);
     //pMap->addLogVar("SumMZ", &bodyMoment[2], savePlot, 2);
-    /*
-    //deltaCount = 0;
     
-    // Initialize Angles
-    util.setArray(eulerAngles, eulerAngles_init, 3);
-    util.setUnitClassUnit(eulerAngles, radians, 3);
-    
-    util.eulerToQuaternion(q_B_NED, eulerAngles);
-    util.setArray(q_B_NED_dot, quaternion_init2, 4);
-    
-    util.eulerToQuaternion(q_B_NED_integralTheta, eulerAngles);
-    util.setArray(eulerAngles_integralTheta, eulerAngles, 3);
-    util.setArray(q_B_NED_error, quaternion_init2, 4);
-    util.setArray(eulerError, zero_init, 3);
-    
-    // Extract yaw and copmute q_B_LL
-    double temp1[3], tempQuat[4];
-    util.setArray(temp1, zero_init, 3);
-    temp1[2] = -eulerAngles[2].deg(); // -yaw
-    util.eulerToQuaternion(tempQuat, temp1); // -yaw in quaternion
-    util.quaternionProduct(q_B_LL, tempQuat, q_B_NED);
-    
-    // Initialize Position
-    util.setUnitClassArray(posRelNED, zero_init, meters, 3);
-    util.setArray(posBodyPrint, posBody_init, 3);
-    
-    posLLH[0] = posBodyPrint[0] * util.deg2rad;
-    posLLH[1] = posBodyPrint[1] * util.deg2rad;
-    posLLH[2] = posBodyPrint[2] * util.ft2m;
-    
-    util.LLHtoECEF(posECEF, posLLH);
-    util.setArray(posECEF_init, posECEF, 3);
-    
-    util.initArray(forceECEF, 0.0, 3);
-    util.initArray(accECEF, 0.0, 3);
-    util.initArray(velECEF, 0.0, 3);
-    
-    elevation.convertUnit(meters);
-    elevation.val = elevation_init;
-    
-    hGround.convertUnit(meters);
-    hGround.val = posBody_LLH[2] - elevation.m();
-    hGroundft = hGround.ft();
-    
-    hCenter.convertUnit(meters);
-    hCenter.val = posBody_LLH[2] + Rearth;
-    
-    // Initialize Velocity
-    util.setUnitClassArray(velNED, velNED_init, metersPerSecond, 3);
-    util.setUnitClassArray(velBody, zero_init, metersPerSecond, 3);
-    util.setUnitClassArray(velBodyRelWind, zero_init, metersPerSecond, 3);
-    util.setUnitClassArray(velNEDRelWind, zero_init, metersPerSecond, 3);
-    
-    gndVel.convertUnit(metersPerSecond);
-    gndVel.val = util.mag(velNED, 3);
-    
-    // Initialize Angle Rates
-    util.setUnitClassArray(eulerRates, eulerRates_init, degreesPerSecond, 3);
-    util.setUnitClassUnit(eulerRates, radiansPerSecond, 3);
-    
-    util.setUnitClassArray(bodyRates, zero_init, degreesPerSecond, 3);
-    util.setUnitClassUnit(bodyRates, radiansPerSecond, 3);
-    
-    // Initialize Accelerations
-    util.setArray(accBody, zero_init, 3);
-    util.setArray(bodyAngularAcc, zero_init, 3);
-    accMag = 0.0;
-     
-     // Initialize Forces
-     util.setArray(bodyForce, zero_init, 3);
-     util.setArray(bodyMoment, zero_init, 3);
-     
-     // Initialize Mass Properties
-     util.setMatrix(*inertia, *inertia_init, 3, 3);
-     mass = mass_init;
-     
-     groundElevation = elevation_init;
-     
-     dt = dynamicsInterval_init;
-     timestamp = 0.0;
-     
-    */
     util.initArray(forceECI, 0.0, 3);
     util.initArray(accelECI, 0.0, 3);
     util.initArray(accelBody, 0.0, 3);
     accelMag = 0.0;
-
-    
     util.initArray(velECI, 0.0, 3);
     util.initArray(velNED, 0.0, 3);
     util.initArray(velBody, 0.0, 3);
+    util.initArray(velLL, 0.0, 3);
     velMag = 0.0;
     
     util.initArray(posECI, 0.0, 3);
@@ -402,10 +320,12 @@ void DynamicsModel::updateStates()
     hMSL    = posLLH[2] + 32.0;
     
     // Body states
-    //pRotate->ECEFToBody(velBody, velECEF);
     pRotate->ECIToBody(velBody, velECI);
     pRotate->ECIToBody(accelBody, accelECI);
     util.quaternionToEuler(eulerAngles, q_B_NED);
+    
+    // Local Level states
+    pRotate->bodyToLL(velLL, velBody);
     
     // Magnitudes
     velMag   = util.mag(velECI, 3);

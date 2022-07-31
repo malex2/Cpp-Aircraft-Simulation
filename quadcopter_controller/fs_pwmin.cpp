@@ -59,8 +59,8 @@ void FsPwmIn_performPwmIn()
     }
 }
 
-int* FsPwmIn_getPWM()    { return pwmIn; }
-bool FsPwmIn_valid()     { return pwmValid; }
+int* FsPwmIn_getPWM() { return pwmIn; }
+bool FsPwmIn_valid()  { return pwmValid; }
 
 #ifdef SIMULATION
 PwmIn::PwmIn()
@@ -72,18 +72,42 @@ PwmIn::PwmIn()
     Pins[YAW_CHANNEL]      = YAWPIN;      // CH6
     
     // Initialize Ranges
-    //minValues[THROTTLE_CHANNEL] = 0.0;
+    // Velocity Control
     minValues[THROTTLE_CHANNEL] = -MAXVELOCITY;
+    minValues[ROLL_CHANNEL]     = -MAXVELOCITY;
+    minValues[PITCH_CHANNEL]    = -MAXVELOCITY;
+    minValues[YAW_CHANNEL]      = -MAXYAWRATE;
+    
+    maxValues[THROTTLE_CHANNEL] = MAXVELOCITY;
+    maxValues[ROLL_CHANNEL]     = MAXVELOCITY;
+    maxValues[PITCH_CHANNEL]    = MAXVELOCITY;
+    maxValues[YAW_CHANNEL]      = MAXYAWRATE;
+    
+    /*
+     //Attitude Contorl
+     minValues[THROTTLE_CHANNEL] = -MAXVELOCITY;
+     minValues[ROLL_CHANNEL]     = -MAXROLL;
+     minValues[PITCH_CHANNEL]    = -MAXPITCH;
+     minValues[YAW_CHANNEL]      = -MAXYAWRATE;
+     
+     maxValues[THROTTLE_CHANNEL] = MAXVELOCITY;
+     maxValues[ROLL_CHANNEL]     = MAXROLL;
+     maxValues[PITCH_CHANNEL]    = MAXPITCH;
+     maxValues[YAW_CHANNEL]      = MAXYAWRATE;
+     */
+    
+    /*
+     //(Legacy) Attitude Control
+    minValues[THROTTLE_CHANNEL] = 0.0;
     minValues[ROLL_CHANNEL]     = -MAXROLL;
     minValues[PITCH_CHANNEL]    = -MAXPITCH;
     minValues[YAW_CHANNEL]      = -MAXYAWRATE;
     
-    //maxValues[THROTTLE_CHANNEL] = 100.0;
-    maxValues[THROTTLE_CHANNEL] = MAXVELOCITY;
+    maxValues[THROTTLE_CHANNEL] = 100.0;
     maxValues[ROLL_CHANNEL]     = MAXROLL;
     maxValues[PITCH_CHANNEL]    = MAXPITCH;
     maxValues[YAW_CHANNEL]      = MAXYAWRATE;
-    
+    */
     // Initialize Variables
     channel  = THROTTLE_CHANNEL;
     pwm      = PWMMIN;
@@ -94,8 +118,10 @@ PwmIn::PwmIn()
     foundChannel = false;
     
     // Table To Radians
-    for (int iCh = ROLL_CHANNEL; iCh != nChannels; iCh++)
+    //for (int iCh = ROLL_CHANNEL; iCh != nChannels; iCh++)
+    for (int iCh = YAW_CHANNEL; iCh != nChannels; iCh++)
     {
+        // Attitude Control
         for (int col = 0; col < lengthTable; col++)
         {
             signalValues[iCh][col] *= degree2radian;

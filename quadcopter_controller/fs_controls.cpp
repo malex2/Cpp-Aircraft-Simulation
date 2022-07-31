@@ -53,6 +53,8 @@ double wn_h = 0.5 * hz2rps;
 double kp_h;
 
 // Velocity Channels
+double wn_vx = 0.3 * hz2rps;
+double wn_vy = 0.3 * hz2rps;
 double wn_vz = 5.0 * hz2rps;
 
 double kp_vx;
@@ -104,8 +106,8 @@ void FsControls_setup()
     kp_h = -wn_h;
     
     // Velocity Channel Gains
-    kp_vx  = 0.0;
-    kp_vy  = 0.0;
+    kp_vx  = wn_vx/(KVX);
+    kp_vy  = wn_vy/(KVY);
     kp_vz  = wn_vz/(KVZ);
     
     // Attitude Channel Gains

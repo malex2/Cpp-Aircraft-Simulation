@@ -22,7 +22,7 @@
 //#define RealTime
 
 // Time
-const double runTime_init          = 60.0;
+const double runTime_init          = 140.0;
 const double printInterval_init    = 1.0;
 const double saveInterval_init     = 1.0;
 const double dynamicsInterval_init = 1.0/800.0;
@@ -44,7 +44,7 @@ const std::string savefile = "output.csv";
 // Initial States
 const double velNED_init[3]  = {0, 0, 0};
 const double posLLH_init[3] = {28.5997222, -81.3394444, 25+1.968}; // deg, deg, ft
-const double eulerAngles_init[3] = {0, 0.0, -45}; // {0, 6.507, 0};
+const double eulerAngles_init[3] = {0, 0.0, 0.0}; // {0, 6.507, 0};
 const double bodyRates_init[3]  = {0, 0, 0};
 const double actuators_init[4]   = {0.0, 0.0, 0.0, 0.0}; //{de,da,dr,dT}
 const int inputMode_init = 0; // 0 - external, 1 - keyboard, 2 - table
