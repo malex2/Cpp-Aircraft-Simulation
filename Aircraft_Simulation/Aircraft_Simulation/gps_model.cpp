@@ -411,6 +411,17 @@ VelAccLookup(VelAccTimes, VelAccValues, VelAccLength)
     pOutputMessages[NAV_STATUS] = new MessageType(0.0, 0.0);
     pOutputMessages[NAV_POSLLH] = new MessageType(0.0, 0.2);
     pOutputMessages[NAV_VELNED] = new MessageType(0.0, 0.4);
+    
+    if (readGPSFile)
+    {
+        gps_msg_file.open(gps_file);
+        gps_msg_file_begin = gps_msg_file.tellg();
+        if (gps_msg_file.fail())
+        {
+            std::cout << "Failed to open output file: " << gps_file << "." << std::endl;
+        }
+
+    }
 }
 
 
@@ -421,6 +432,8 @@ GPSNeo6m::~GPSNeo6m()
         delete pUBX;
     }
     delete gpsData;
+    
+    if (readGPSFile) { gps_msg_file.close(); }
 }
 
 void GPSNeo6m::updatePositionError()
@@ -475,75 +488,168 @@ void GPSNeo6m::decodeInputMessages()
 
 void GPSNeo6m::constructOutputMessages()
 {
-    UBX_MSG::UBX_MSG_NAV_POSLLH posLLH;
-    UBX_MSG::UBX_MSG_NAV_VELNED velNED;
-    UBX_MSG::UBX_MSG_NAV_STATUS navStatus;
-    double alt;
-    double msl;
-    double velD;
-    
-    // GPS fix status
-    int gpsFix = GPSFixLookup.update(pTime->getSimTime());
-    
-    // Set GPS acquired
-    if (gps_acquire_time == 0.0 && (gpsFix==2 || gpsFix==3)) { gps_acquire_time = pTime->getSimTime(); }
-    
-    // Set last 3D Fix Values
-    if (gpsFix == 3)
+    if (readGPSFile && !gps_msg_file.fail())
     {
-        last_3dFixAlt = gps_posLLH[2];
-        last_3dFixMSL = gps_altMSL;
-        last_3dFixVD  = gps_velNED[2];
+        UBX_MSG::MSG_PACKET ubx_msg;
+        GPSOutputMessgaes gpsMsgType = NGPSMESSAGES;
+        bool done = false;
+        int gpsbyte = 0;
+        std::streampos ubx_msg_begin = gps_msg_file.tellg();
+        bool id_found     = false;
+        bool length_found = false;
+        int msg_count     = 0;
+        
+        while(!done && !gps_msg_file.eof())
+        {
+            msg_count++;
+            gps_msg_file >> gpsbyte;
+            if (!id_found && msg_count == 3)
+            {
+                ubx_msg.msg_class_id.data[0] = (byte) gpsbyte;
+            }
+            else if (!id_found && msg_count == 4)
+            {
+                ubx_msg.msg_class_id.data[1] = (byte) gpsbyte;
+                ubx_msg.determine_input_msg_id();
+                id_found = true;
+                if (ubx_msg.msg_id == UBX_MSG::UBX_MSG_ID::NAV_STATUS)
+                {
+                    gpsMsgType = NAV_STATUS;
+                }
+                else if (ubx_msg.msg_id == UBX_MSG::UBX_MSG_ID::NAV_POSLLH)
+                {
+                    gpsMsgType = NAV_POSLLH;
+                }
+                else if (ubx_msg.msg_id == UBX_MSG::UBX_MSG_ID::NAV_VELNED)
+                {
+                    gpsMsgType = NAV_VELNED;
+                }
+                else
+                {
+                    std::cout << "No MSG Found" << std::endl;
+                    done = true;
+                }
+            }
+            else if (msg_count > 4 && !length_found)
+            {
+                if ((byte) gpsbyte == UBX_HEADER_1 || gps_msg_file.eof())
+                {
+                    length_found = true;
+                    pOutputMessages[gpsMsgType]->buffer_length = msg_count-1;
+                    gps_msg_file.seekg(ubx_msg_begin);
+                    msg_count = 0;
+                }
+            }
+            else if (id_found && length_found)
+            {
+                if (msg_count == 1)
+                {
+                    // Already did this message
+                    if (pOutputMessages[gpsMsgType]->buffer != 0)
+                    {
+                        gps_msg_file.seekg(ubx_msg_begin);
+                        done = true;
+                    }
+                    else
+                    {
+                        pOutputMessages[gpsMsgType]->buffer = new byte[pOutputMessages[gpsMsgType]->buffer_length];
+                    }
+                }
+                if (!done)
+                {
+                    pOutputMessages[gpsMsgType]->buffer[msg_count-1] = (byte) gpsbyte;
+                    if (msg_count == pOutputMessages[gpsMsgType]->buffer_length)
+                    {
+                        if (debugFlag)
+                        {
+                            std::cout << std::dec << "pOutputMessages[" << gpsMsgType << "] " << pOutputMessages[gpsMsgType]->buffer_length << ": ";
+                            for (int i=0; i < pOutputMessages[gpsMsgType]->buffer_length; i++)
+                            {
+                                std::cout << std::hex << std::setfill('0') << std::setw(2) << (int) pOutputMessages[gpsMsgType]->buffer[i];
+                            }
+                            std::cout << std::dec << std::endl << std::endl;
+                        }
+                        msg_count     = 0;
+                        id_found      = false;
+                        length_found  = false;
+                        ubx_msg_begin = gps_msg_file.tellg();
+                    }
+                }
+            }
+        }
     }
-    alt  = last_3dFixAlt;
-    msl  = last_3dFixMSL;
-    velD = last_3dFixVD;
-    
-    if (gpsFix > 0)
+    else
     {
-        // Generate Lat/Lon/Alt Message
-        posLLH.data.iTOW               = gps_timeofweek             / posLLH.scale.iTOW;
-        posLLH.data.latitude           = gps_posLLH[0]/util.deg2rad / posLLH.scale.latitude;
-        posLLH.data.longitude          = gps_posLLH[1]/util.deg2rad / posLLH.scale.longitude;
-        posLLH.data.altitude_geod      = alt                        / posLLH.scale.altitude_geod;
-        posLLH.data.altitude_msl       = msl                        / posLLH.scale.altitude_msl;
-        posLLH.data.horizontalAccuracy = horizPosAcc                / posLLH.scale.horizontalAccuracy;
-        posLLH.data.verticalAccuracy   = vertPosAcc                 / posLLH.scale.verticalAccuracy;
+        UBX_MSG::UBX_MSG_NAV_POSLLH posLLH;
+        UBX_MSG::UBX_MSG_NAV_VELNED velNED;
+        UBX_MSG::UBX_MSG_NAV_STATUS navStatus;
+        double alt;
+        double msl;
+        double velD;
         
-        // Generate NED Velocity Message
-        velNED.data.iTOW            = gps_timeofweek  / velNED.scale.iTOW;
-        velNED.data.velN            = gps_velNED[0]   / velNED.scale.velN;
-        velNED.data.velE            = gps_velNED[1]   / velNED.scale.velE;
-        velNED.data.velD            = velD            / velNED.scale.velD;
-        velNED.data.speed           = gps_speed       / velNED.scale.speed;
-        velNED.data.gSpeed          = gps_groundSpeed / velNED.scale.gSpeed;
-        velNED.data.heading         = gps_heading     / velNED.scale.heading;
-        velNED.data.speedAccuracy   = velAcc          / velNED.scale.speedAccuracy;
-        velNED.data.headingAccuracy = 0.5             / velNED.scale.headingAccuracy;
+        // GPS fix status
+        int gpsFix = GPSFixLookup.update(pTime->getSimTime());
         
+        // Set GPS acquired
+        if (gps_acquire_time == 0.0 && (gpsFix==2 || gpsFix==3)) { gps_acquire_time = pTime->getSimTime(); }
+        
+        // Set last 3D Fix Values
+        if (gpsFix == 3)
+        {
+            last_3dFixAlt = gps_posLLH[2];
+            last_3dFixMSL = gps_altMSL;
+            last_3dFixVD  = gps_velNED[2];
+        }
+        alt  = last_3dFixAlt;
+        msl  = last_3dFixMSL;
+        velD = last_3dFixVD;
+        
+        if (gpsFix > 0)
+        {
+            // Generate Lat/Lon/Alt Message
+            posLLH.data.iTOW               = gps_timeofweek             / posLLH.scale.iTOW;
+            posLLH.data.latitude           = gps_posLLH[0]/util.deg2rad / posLLH.scale.latitude;
+            posLLH.data.longitude          = gps_posLLH[1]/util.deg2rad / posLLH.scale.longitude;
+            posLLH.data.altitude_geod      = alt                        / posLLH.scale.altitude_geod;
+            posLLH.data.altitude_msl       = msl                        / posLLH.scale.altitude_msl;
+            posLLH.data.horizontalAccuracy = horizPosAcc                / posLLH.scale.horizontalAccuracy;
+            posLLH.data.verticalAccuracy   = vertPosAcc                 / posLLH.scale.verticalAccuracy;
             
-        // Start NAV Status Message
-        navStatus.data.iTOW    = gps_timeofweek  / navStatus.scale.iTOW;
-        navStatus.data.gpsFix  = gpsFix;
-        navStatus.data.ttff    = gps_acquire_time / navStatus.scale.ttff;
-        navStatus.data.ttff    = gps_acquire_time * navStatus.scale.ttff;
+            // Generate NED Velocity Message
+            velNED.data.iTOW            = gps_timeofweek  / velNED.scale.iTOW;
+            velNED.data.velN            = gps_velNED[0]   / velNED.scale.velN;
+            velNED.data.velE            = gps_velNED[1]   / velNED.scale.velE;
+            velNED.data.velD            = velD            / velNED.scale.velD;
+            velNED.data.speed           = gps_speed       / velNED.scale.speed;
+            velNED.data.gSpeed          = gps_groundSpeed / velNED.scale.gSpeed;
+            velNED.data.heading         = gps_heading     / velNED.scale.heading;
+            velNED.data.speedAccuracy   = velAcc          / velNED.scale.speedAccuracy;
+            velNED.data.headingAccuracy = 0.5             / velNED.scale.headingAccuracy;
+            
+            
+            // Start NAV Status Message
+            navStatus.data.iTOW    = gps_timeofweek  / navStatus.scale.iTOW;
+            navStatus.data.gpsFix  = gpsFix;
+            navStatus.data.ttff    = gps_acquire_time / navStatus.scale.ttff;
+            navStatus.data.ttff    = gps_acquire_time * navStatus.scale.ttff;
+        }
+        
+        // Complete NAV Status Message
+        navStatus.data.flags   = 0x00;
+        navStatus.data.fixStat = 0x00;
+        navStatus.data.flags2  = 0x00;
+        navStatus.data.msss    = pTime->getSimTime() * navStatus.scale.msss;
+        
+        // Store output message
+        if (debugFlag) { navStatus.print(); }
+        encodeOutputMessage(NAV_STATUS, &navStatus.data, sizeof(navStatus.data));
+        
+        if (debugFlag) { posLLH.print(); }
+        encodeOutputMessage(NAV_POSLLH, &posLLH.data, sizeof(posLLH.data));
+        
+        if (debugFlag) { velNED.print(); }
+        encodeOutputMessage(NAV_VELNED, &velNED.data, sizeof(velNED.data));
     }
-    
-    // Complete NAV Status Message
-    navStatus.data.flags   = 0x00;
-    navStatus.data.fixStat = 0x00;
-    navStatus.data.flags2  = 0x00;
-    navStatus.data.msss    = pTime->getSimTime() * navStatus.scale.msss;
-
-    // Store output message
-    if (debugFlag) { navStatus.print(); }
-    encodeOutputMessage(NAV_STATUS, &navStatus.data, sizeof(navStatus.data));
-    
-    if (debugFlag) { posLLH.print(); }
-    encodeOutputMessage(NAV_POSLLH, &posLLH.data, sizeof(posLLH.data));
-    
-    if (debugFlag) { velNED.print(); }
-    encodeOutputMessage(NAV_VELNED, &velNED.data, sizeof(velNED.data));
 }
 
 int GPSNeo6m::encodeOutputMessage(GPSOutputMessgaes gpsMsgType, void* buffer, int buffer_length)

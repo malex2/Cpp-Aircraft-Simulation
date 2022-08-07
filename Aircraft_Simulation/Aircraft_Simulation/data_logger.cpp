@@ -60,9 +60,9 @@ void DataLogger::saveLog(void)
 {
     static bool firstTime = true;
     
-    // Print header
     if ( !outfile.fail() )
     {
+        // Print header
         if (firstTime)
         {
             for (int itr = 0; itr < pMap->getLogVarSize(saveVar); itr++)

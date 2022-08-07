@@ -25,11 +25,11 @@ bool   stateSetup;
 double c5, c6, mc, md, x0, x1, x2, py0, py1, py2, p0, p1, p2;
 byte pressureResolution;
 double refPressure;
-short errorCodeBaro;
 double altitudeRMS;
 
 void FsBarometer_setupBarometer()
 {
+#ifdef BAROMETER
     short AC1;
     short AC2;
     short AC3;
@@ -86,6 +86,7 @@ void FsBarometer_setupBarometer()
     barometerSetup = true;
     
     display("Barometer setup\n");
+#endif
 }
 
 short readCalVal(byte address)
@@ -94,7 +95,7 @@ short readCalVal(byte address)
     
     Wire.beginTransmission(BMP180_ADDR);
     Wire.write(address);
-    errorCodeBaro = Wire.endTransmission(false);
+    baroData.errorCodeBaro = Wire.endTransmission(false);
     
     Wire.requestFrom(BMP180_ADDR, 2, true);
     value = Wire.read() << 8 | Wire.read();
@@ -145,6 +146,7 @@ void FsBarometer_setPressureResolution(byte pressureResolutionIn)
 
 void FsBarometer_performBarometer()
 {
+#ifdef BAROMETER
     if (!barometerSetup) { return; }
     
     if (baroData.state == startSequence)
@@ -209,6 +211,7 @@ void FsBarometer_performBarometer()
         stateSetup = false;
         baroData.state = baroReady;
     }
+#endif
 }
 
 void requestTemp()
@@ -216,7 +219,7 @@ void requestTemp()
     Wire.beginTransmission(BMP180_ADDR);
     Wire.write(BMP180_REG_CONTROL);
     Wire.write(BMP180_COMMAND_TEMPERATURE);
-    errorCodeBaro = Wire.endTransmission(true);
+    baroData.errorCodeBaro = Wire.endTransmission(true);
 }
 
 void readTemp()
@@ -226,7 +229,7 @@ void readTemp()
     
     Wire.beginTransmission(BMP180_ADDR);
     Wire.write(BMP180_REG_RESULT);
-    errorCodeBaro = Wire.endTransmission(false);
+    baroData.errorCodeBaro = Wire.endTransmission(false);
     Wire.requestFrom(BMP180_ADDR, 2, true);
     
     tu = (Wire.read() * 256.0) + Wire.read();
@@ -241,7 +244,7 @@ void requestPres()
     Wire.beginTransmission(BMP180_ADDR);
     Wire.write(BMP180_REG_CONTROL);
     Wire.write(pressureResolution);
-    errorCodeBaro = Wire.endTransmission(true) ;
+    baroData.errorCodeBaro = Wire.endTransmission(true) ;
 }
 
 void readPres()
@@ -254,7 +257,7 @@ void readPres()
     
     Wire.beginTransmission(BMP180_ADDR);
     Wire.write(BMP180_REG_RESULT);
-    errorCodeBaro = Wire.endTransmission(false);
+    baroData.errorCodeBaro = Wire.endTransmission(false);
     Wire.requestFrom(BMP180_ADDR, 3, true);
     
     pu = (Wire.read() * 256.0) + Wire.read() + (Wire.read() / 256.0);
@@ -284,8 +287,10 @@ bool FsBarometer_startBarometerMeasurement()
     }
     else
     {
+#ifdef BAROMETER
         display(getTime());
         display(" Barometer not ready\n");
+#endif
         return false;
     }
 }

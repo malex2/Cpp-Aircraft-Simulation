@@ -38,6 +38,9 @@ struct GpsType {
     
     double timestamp;
     GPS_FIX_TYPE gpsFix;
+    
+    unsigned long rcvdByteCount;
+    unsigned long rcvdMsgCount;
     bool gpsGood;
     
     #ifdef SIMULATION
@@ -73,6 +76,9 @@ struct GpsType {
         
         timestamp = 0.0;
         gpsFix    = NO_FIX;
+        
+        rcvdByteCount = 0;
+        rcvdMsgCount  = 0;
         gpsGood   = false;
         
         #ifdef SIMULATION

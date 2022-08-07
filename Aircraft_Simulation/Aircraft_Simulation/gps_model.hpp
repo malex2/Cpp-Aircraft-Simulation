@@ -9,6 +9,8 @@
 #ifndef gps_model_hpp
 #define gps_model_hpp
 
+#include <iostream>
+#include <fstream>
 #include "generic_model.hpp"
 
 class GPSModelBase : public GenericSensorModel
@@ -157,6 +159,7 @@ private:
     double last_3dFixMSL;
     double last_3dFixVD;
     
+    // Fix = 2, [horiz, vert] = [15-30, 65]
     static const int GPSFixLength  = 3;
     int GPSFixTimes[GPSFixLength]  = {0, 5, 20};
     int GPSFixValues[GPSFixLength] = {0, 2, 3};
@@ -164,12 +167,12 @@ private:
     
     static const int HorizAccLength = 3;
     double HorizAccTimes[HorizAccLength]  = {0.0, 5.0, 9.0};
-    double HorizAccValues[HorizAccLength] = {0.0, 10.0, 2.5};
+    double HorizAccValues[HorizAccLength] = {0.0, 30.0, 2.5};
     LookupTable<double> HorizAccLookup;
     
     static const int VertAccLength = 3;
     double VertAccTimes[VertAccLength]  = {0.0, 5.0, 9.0};
-    double VertAccValues[VertAccLength] = {0.0, 20.0, 2.5};
+    double VertAccValues[VertAccLength] = {0.0, 65.0, 2.5};
     LookupTable<double> VertAccLookup;
     
     static const int VelAccLength = 3;
@@ -183,6 +186,9 @@ private:
     virtual void decodeInputMessages();
     virtual void constructOutputMessages();
     int encodeOutputMessage(GPSOutputMessgaes gpsMsg, void* buffer, int buffer_length);
+    
+    std::ifstream gps_msg_file;
+    std::streampos gps_msg_file_begin;
 };
 
 #endif /* gps_model_hpp */

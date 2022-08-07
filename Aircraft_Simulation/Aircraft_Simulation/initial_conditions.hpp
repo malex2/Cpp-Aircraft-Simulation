@@ -36,10 +36,12 @@ const int minute_init = 00;
 const int second_init = 00;
 
 // Print options
-const bool saveOutput  = true;
+const bool saveOutput  = false;
 const bool printOutput = true;
 const bool plotOutput  = false;
 const std::string savefile = "output.csv";
+const std::string gps_file = "/Users/alexandermclean/Documents/Cpp-Aircraft-Simulation/gps_messages.txt";
+const bool readGPSFile = false;
 
 // Initial States
 const double velNED_init[3]  = {0, 0, 0};

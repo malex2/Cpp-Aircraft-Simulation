@@ -14,6 +14,14 @@
 
 // MACROS
 #define SIMULATION
+#define IMU
+#define GPS
+#define BAROMETER
+#define PWM
+#define CONTROLS
+#define GROUND_DETECTION
+#define NAVIGATION
+//#define PRINT
 
 #ifdef SIMULATION
     #include "model_mapping.hpp"
@@ -33,6 +41,21 @@
     #endif
     #define LEDPIN LED_BUILTIN
 #endif
+
+/*
+ I2C Error Codes
+ 0: success.
+ 
+ 1: data too long to fit in transmit buffer.
+ 
+ 2: received NACK on transmit of address.
+ 
+ 3: received NACK on transmit of data.
+ 
+ 4: other error.
+ 
+ 5: timeout
+ */
 
 // Forward References
 struct IMUtype;

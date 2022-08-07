@@ -25,6 +25,8 @@ struct IMUtype {
     double accelQuantizationError_g;
     bool highDynamics;
     
+    short errorCodeIMU;
+    
     IMUtype()
     {
         for (int i=0; i<3; i++)
@@ -39,6 +41,7 @@ struct IMUtype {
         gyroQuantizationError_dps = 0.0;
         accelQuantizationError_g  = 0.0;
         highDynamics = false;
+        errorCodeIMU = 0;
     }
 };
 

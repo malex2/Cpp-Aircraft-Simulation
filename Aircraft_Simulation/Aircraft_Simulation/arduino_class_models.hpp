@@ -181,4 +181,6 @@ private:
 void pinMode(int pin, pinMode mode);
 
 extern SimulationWire Wire;
+extern SoftwareSerial Serial1;
+//#define Serial1 SoftwareSerial(0,1)
 #endif /* arduino_class_models_hpp */

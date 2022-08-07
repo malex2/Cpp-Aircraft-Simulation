@@ -35,7 +35,6 @@ float LSBdps;
 short rawAccel[3];
 short rawGyro[3];
 short rawTemp;
-short errorCodeIMU;
 
 float toBody[3] = {1.0, -1.0, -1.0};
 
@@ -50,6 +49,7 @@ double gyroSumSqr = 0.0;
 
 void FsImu_setupIMU(accSensitivityType accSensitivity, gyroSensitivityType gyroSensitivity)
 {
+#ifdef IMU
     LSBg   = accSensitivityLSB[accSensitivity];
     LSBdps = gyroSensitivityLSB[gyroSensitivity];
     
@@ -61,30 +61,33 @@ void FsImu_setupIMU(accSensitivityType accSensitivity, gyroSensitivityType gyroS
     Wire.beginTransmission(MPU_ADDR); // Begins a transmission to the I2C slave (GY-521 board)
     Wire.write(PWR_MGMT_1); // PWR_MGMT_1 register
     Wire.write(0); // set to zero (wakes up the MPU-6050)
-    errorCodeIMU = Wire.endTransmission(true);
+    IMUdata.errorCodeIMU = Wire.endTransmission(true);
     
     // Gyro range
     Wire.beginTransmission(MPU_ADDR);
     Wire.write(GYRO_REG); // Gryo register
     Wire.write( sensitivityByte[gyroSensitivity] );
-    errorCodeIMU = Wire.endTransmission(true);
+    IMUdata.errorCodeIMU = Wire.endTransmission(true);
     
     // Accelerometer range
     Wire.beginTransmission(MPU_ADDR);
     Wire.write(ACC_REG); // Accelerometer register
     Wire.write( sensitivityByte[accSensitivity] );
-    errorCodeIMU = Wire.endTransmission(true);
+    IMUdata.errorCodeIMU = Wire.endTransmission(true);
     
     imu_setup = true;
+#endif
 }
 
 void FsImu_performIMU( double &imuDt )
 {
+#ifdef IMU
     if (!imu_setup) { return; }
     
     readIMU();
     updateDelta(imuDt);
     IMUdata.timestamp = getTime();
+#endif
 }
 
 void readIMU()
@@ -94,7 +97,7 @@ void readIMU()
     // Get Raw Values
     Wire.beginTransmission(MPU_ADDR);
     Wire.write(ACC_OUT); // starting with register 0x3B (ACCEL_XOUT_H) [MPU-6000 and MPU-6050 Register Map and Descriptions Revision 4.2, p.40]
-    errorCodeIMU = Wire.endTransmission(false); // the parameter indicates that the Arduino will send a restart. As a result, the connection is kept active.
+    IMUdata.errorCodeIMU = Wire.endTransmission(false); // the parameter indicates that the Arduino will send a restart. As a result, the connection is kept active.
     Wire.requestFrom(MPU_ADDR, 7 * 2, true); // request a total of 7*2=14 registers
 
     // "Wire.read()<<8 | Wire.read();" means two registers are read and stored in the same variable

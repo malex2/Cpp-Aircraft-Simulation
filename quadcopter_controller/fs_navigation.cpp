@@ -85,6 +85,7 @@ NavType linNavStateError;
 
 void FsNavigation_setupNavigation(double *initialPosition, double initialHeading)
 {
+#ifdef NAVIGATION
     double initPosition[3];
     double initVelNED[3] = {0,0,0};
     double initHeading;
@@ -224,10 +225,12 @@ void FsNavigation_setupNavigation(double *initialPosition, double initialHeading
     navStates[E]     = NavData.position[1];
     navStates[ALT]   = NavData.position[2];
 #endif
+#endif
 }
 
 void FsNavigation_performNavigation( double &navDt )
 {
+#ifdef NAVIGATION
     if (!navSetup) { return; }
     
     // Apply sensor updates
@@ -263,6 +266,7 @@ void FsNavigation_performNavigation( double &navDt )
     }
     
     FsImu_zeroDelta();
+#endif
 }
 
 void updateGravity()

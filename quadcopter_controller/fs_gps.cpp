@@ -16,7 +16,6 @@ bool gps_setup    = false;
 bool positionInit = false;
 bool first3DFix   = true;
 int gpsFix_init   = 0;
-long rcvdCount    = 0;
 
 double d_posECEF[3];
 double ref_slon;
@@ -24,7 +23,8 @@ double ref_clon;
 double ref_slat;
 double ref_clat;
 
-SoftwareSerial gpsIO(GPSTXPIN, GPSRXPIN);
+//SoftwareSerial gpsIO(GPSTXPIN, GPSRXPIN);
+#define gpsIO Serial1
 UBX_MSG ubx_msg(&gpsIO);
 
 # ifdef SIMULATION
@@ -33,6 +33,7 @@ UBX_MSG ubx_msg(&gpsIO);
 
 void FsGPS_setupGPS(int baudRate)
 {
+#ifdef GPS
     gpsIO.begin(baudRate);
     ubx_msg.write_nmea_off_long();
     ubx_msg.write_ubx_off();
@@ -47,17 +48,19 @@ void FsGPS_setupGPS(int baudRate)
     ref_clat     = 0.0;
     
     gps_setup = true;
+#endif
 }
 
 void FsGPS_performGPS()
 {
+#ifdef GPS
     if (!gps_setup) { return; }
     
     int rcvd = ubx_msg.data_available();
     if (rcvd > 0)
     {
-        rcvdCount += rcvd;
-        ubx_msg.read(&GpsData);
+        GpsData.rcvdByteCount += rcvd;
+        GpsData.rcvdMsgCount += ubx_msg.read(&GpsData);
         
         if (GpsData.gpsFix == FIX2D || GpsData.gpsFix == FIX3D) { GpsData.gpsGood = true; }
         else { GpsData.gpsGood = false; }
@@ -112,6 +115,7 @@ void FsGPS_performGPS()
         }
         GpsData.timestamp = getTime();
     }
+#endif
 }
 
 void LLHtoECEF(double* ECEF, double* LLH)

@@ -78,6 +78,7 @@ bool controls_setup = false;
 
 void FsControls_setup()
 {
+#ifdef CONTROLS
     // Servos
     T1esc.attach(T1PIN);
     T2esc.attach(T2PIN);
@@ -131,10 +132,12 @@ void FsControls_setup()
         prevPwmCmd[iCh] = (PWMMIN+PWMMAX)/2.0;
     }
     controls_setup = true;
+#endif
 }
 
 void FsControls_groundDetection()
 {
+#ifdef GROUND_DETECTION
     if (controlData.onGround)
     {
         // Detect crash landings
@@ -182,10 +185,12 @@ void FsControls_groundDetection()
     {
         groundCount = 0;
     }
+#endif
 }
 
 void FsControls_performControls()
 {
+#ifdef CONTROLS
     // Not initialization for controls
     if ( (controlData.mode == NoControl) ||
         (!controls_setup) ||
@@ -200,6 +205,7 @@ void FsControls_performControls()
     setMotors();
     
     controlData.timestamp = getTime();
+#endif
 }
 
 void performControls()

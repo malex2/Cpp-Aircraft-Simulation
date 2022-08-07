@@ -597,3 +597,4 @@ void SoftwareSerial::serial_setSimulationModels(ModelMap* pMap, std::string mode
 void pinMode(int pin, enum pinMode mode) { }
 
 SimulationWire Wire = SimulationWire();
+SoftwareSerial Serial1 = SoftwareSerial(0,1);

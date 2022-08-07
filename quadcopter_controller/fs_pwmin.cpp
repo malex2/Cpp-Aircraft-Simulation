@@ -25,6 +25,7 @@ bool pwmSetup = false;;
 
 void FsPwmIn_setup()
 {
+#ifdef PWM
     pwmIn[THROTTLE_CHANNEL] = PWMMIN;
     pwmIn[ROLL_CHANNEL]     = (PWMMIN+PWMMAX)/2;
     pwmIn[PITCH_CHANNEL]    = (PWMMIN+PWMMAX)/2;
@@ -38,10 +39,12 @@ void FsPwmIn_setup()
     validReads = 0;
     pwmValid   = false;
     pwmSetup   = true;
+#endif
 }
 
 void FsPwmIn_performPwmIn()
 {
+#ifdef PWM
     pwmValid = false;
     if (!pwmSetup) { return; }
     
@@ -57,6 +60,7 @@ void FsPwmIn_performPwmIn()
         validReads = PwmIn::getValidReadCount();
         pwmValid = true;
     }
+#endif
 }
 
 int* FsPwmIn_getPWM() { return pwmIn; }

@@ -17,26 +17,27 @@
     #include "dynamics_model.hpp"
 #endif
 
-//#define PRINT
-
 // General Settings
 int baudRate;
 bool intiailized = false;
 
 // Print
 #ifdef PRINT
-bool printTiming;
-bool printIMU;
-bool printCalibration;
-bool printCalibratedIMU;
-bool printBarometer;
-bool printAngles;
-bool printVelocity;
-bool printPosition;
-bool printPWMIn;
-bool printCommands;
-bool printMotorPWM;
+    bool printTiming;
+    bool printIMU;
+    bool printCalibration;
+    bool printCalibratedIMU;
+    bool printBarometer;
+    bool printGPS;
+    bool printNavInputs;
+    bool printAngles;
+    bool printVelocity;
+    bool printPosition;
+    bool printPWMIn;
+    bool printCommands;
+    bool printMotorPWM;
 #endif
+
 // Simulation Classes
 #ifdef SIMULATION
     class ModelMap* pMap = 0;
@@ -131,16 +132,18 @@ ControlMode controlMode;
 // **********************************************************************
 void initialize(void)
 {
-    // Setup
+    // Initialize timing
     initializeVariables();
-    
+
     // Print Settings
 #ifdef PRINT
-    printTiming        = false;
+    printTiming        = true;
     printIMU           = false;
     printCalibration   = false;
     printCalibratedIMU = false;
     printBarometer     = false;
+    printGPS           = true;
+    printNavInputs     = false;
     printAngles        = false;
     printVelocity      = false;
     printPosition      = false;
@@ -290,8 +293,7 @@ bool mainFlightSoftware(void)
         prevTime[hz1] = getTime();
         
         // Start barometer measurements
-        bool goodStart = FsBarometer_startBarometerMeasurement();
-        if (!goodStart) { display("Barometer not ready\n"); }
+        FsBarometer_startBarometerMeasurement();
         
         // Ground align Navigation
         //if (pControlData->onGround && !FsGPS_GPSgood()) { FsNavigation_groundAlign(); }
@@ -472,20 +474,22 @@ void setPrintVariables()
     //pMap->addLogVar("Baro Altitude", &pBaroData->altitude, savePlot, 2);
     
     // GPS
-    //pMap->addLogVar("GPS Lat", &pGPSdata->posLLH[0], savePlot, 2);
-    //pMap->addLogVar("GPS Lon", &pGPSdata->posLLH[1], savePlot, 2);
-    //pMap->addLogVar("GPS Alt", &pGPSdata->posLLH[2], savePlot, 2);
+    pMap->addLogVar("GPS Lat", &pGPSdata->posLLH[0], savePlot, 2);
+    pMap->addLogVar("GPS Lon", &pGPSdata->posLLH[1], savePlot, 2);
+    pMap->addLogVar("GPS Alt", &pGPSdata->posLLH[2], savePlot, 2);
     //pMap->addLogVar("GPS ref_posECEF[0]", &pGPSdata->ref_posECEF[0], savePlot, 2);
     //pMap->addLogVar("GPS ref_posECEF[1]", &pGPSdata->ref_posECEF[1], savePlot, 2);
     //pMap->addLogVar("GPS ref_posECEF[2]", &pGPSdata->ref_posECEF[2], savePlot, 2);
-    //pMap->addLogVar("GPS posENU[0]", &pGPSdata->posENU[0], savePlot, 2);
-    //pMap->addLogVar("GPS posENU[1]", &pGPSdata->posENU[1], savePlot, 2);
-    //pMap->addLogVar("GPS posENU[2]", &pGPSdata->posENU[2], savePlot, 2);
+    pMap->addLogVar("GPS posENU[0]", &pGPSdata->posENU[0], savePlot, 2);
+    pMap->addLogVar("GPS posENU[1]", &pGPSdata->posENU[1], savePlot, 2);
+    pMap->addLogVar("GPS posENU[2]", &pGPSdata->posENU[2], savePlot, 2);
+    pMap->addLogVar("GPS horizPosAcc", &pGPSdata->horizPosAcc, savePlot, 2);
+    pMap->addLogVar("GPS vertPosAcc", &pGPSdata->vertPosAcc, savePlot, 2);
     //pMap->addLogVar("GPS 3D Fix Bias", &pGPSdata->alt_3dFixBias, savePlot, 2);
     //pMap->addLogVar("GPS VN", &pGPSdata->velNED[0], savePlot, 2);
     //pMap->addLogVar("GPS VE", &pGPSdata->velNED[1], savePlot, 2);
     //pMap->addLogVar("GPS VD", &pGPSdata->velNED[2], savePlot, 2);
-    //pMap->addLogVar("GPS Good", &gpsGood, savePlot, 2);
+    pMap->addLogVar("GPS Good", &gpsGood, savePlot, 2);
     pMap->addLogVar("GPS Fix", &gpsFix, savePlot, 2);
     
     // Navigation
@@ -727,13 +731,17 @@ void setupIO(void)
 
 void printData()
 {
-    #ifdef PRINT
+#ifdef PRINT
     bool anyPrint = false;
     
     if (printTiming)
     {
         display(getTime());
         display(" ");
+        
+        display("1hz rate: ");
+        display( 1.0/actualDelays[hz1] );
+        display(", ");
         
         display("50hz rate: ");
         display( 1.0/actualDelays[hz50] );
@@ -759,20 +767,24 @@ void printData()
         display(getTime());
         display(" ");
         
-        display("gyro raw (deg/s): ");
-        display(pIMUdata->gyro[0]);
+        display("IMU I2C code: ");
+        display((int) pIMUdata->errorCodeIMU);
         display(" ");
-        display(pIMUdata->gyro[1]);
+        
+        display("gyro (deg/s): ");
+        display(pIMUdata->gyro[0] * radian2degree);
         display(" ");
-        display(pIMUdata->gyro[2]);
+        display(pIMUdata->gyro[1] * radian2degree);
+        display(" ");
+        display(pIMUdata->gyro[2] * radian2degree);
         display(", ");
         
-        display("accel raw (g): ");
-        display(pIMUdata->accel[0]);
+        display("accel (g): ");
+        display(pIMUdata->accel[0] / (Gravity));
         display(" ");
-        display(pIMUdata->accel[1]);
+        display(pIMUdata->accel[1] / (Gravity));
         display(" ");
-        display(pIMUdata->accel[2]);
+        display(pIMUdata->accel[2] / (Gravity));
         display("\n");
         
         anyPrint = true;
@@ -810,11 +822,11 @@ void printData()
         display(" ");
         
         display("gyro (deg/s): ");
-        display(pIMUdata->gyro[0] - pNavData->gyroBias[0]*radian2degree);
+        display((pIMUdata->gyro[0] - pNavData->gyroBias[0])*radian2degree);
         display(" ");
-        display(pIMUdata->gyro[1] - pNavData->gyroBias[1]*radian2degree);
+        display((pIMUdata->gyro[1] - pNavData->gyroBias[1])*radian2degree);
         display(" ");
-        display(pIMUdata->gyro[2] - pNavData->gyroBias[2]*radian2degree);
+        display((pIMUdata->gyro[2] - pNavData->gyroBias[2])*radian2degree);
         display(", ");
         
         display("accel (m/s/s): ");
@@ -833,6 +845,10 @@ void printData()
         display(getTime());
         display(" ");
         
+        display("Baro I2C code: ");
+        display((int) pBaroData->errorCodeBaro);
+        display("\n");
+        
         display("Baro timestamp/pressure/temperature/altitude: ");
         display(pBaroData->timestamp);
         display(" ");
@@ -842,6 +858,78 @@ void printData()
         display(" ");
         display(pBaroData->altitude);
         display("\n");
+        
+        anyPrint = true;
+    }
+    
+    if (printGPS)
+    {
+        display(getTime());
+        display(" ");
+        
+        display("GPS timestamp: ");
+        display(pGPSdata->timestamp);
+        display("\n");
+        
+        display("GPS rcvdByte/rcvdMsg: ");
+        display((int) pGPSdata->rcvdByteCount);
+        display(" ");
+        display((int) pGPSdata->rcvdMsgCount);
+        display("\n");
+        
+        display("GPS Fix: ");
+        display((int) pGPSdata->gpsFix);
+        display("\n");
+        
+        display("GPS posLLH: ");
+        display(" [");
+        display(pGPSdata->posLLH[0]); display(","); display(pGPSdata->posLLH[1]); display(","); display(pGPSdata->posLLH[2]);
+        display("]\n");
+        
+        display("GPS posNEU: ");
+        display(" [");
+        display(pGPSdata->posENU[1]); display(","); display(pGPSdata->posENU[0]); display(","); display(pGPSdata->posENU[2]);
+        display("]\n");
+        
+        display("GPS velNED: ");
+        display(" [");
+        display(pGPSdata->velNED[0]); display(","); display(pGPSdata->velNED[1]); display(","); display(pGPSdata->velNED[2]);
+        display("]\n");
+        
+        display("GPS hor/vert/speed Acc: ");
+        display(pGPSdata->horizPosAcc);
+        display(" ");
+        display(pGPSdata->vertPosAcc);
+        display(" ");
+        display(pGPSdata->speedAcc);
+        display(" ");
+        display("\n");
+        
+        anyPrint = true;
+    }
+    
+    if (printNavInputs)
+    {
+        display(getTime());
+        display(" ");
+        
+        display("Body Rates (deg/s): ");
+        display(pNavData->bodyRates[0] * radian2degree);
+        display(" ");
+        display(pNavData->bodyRates[1] * radian2degree);
+        display(" ");
+        display(pNavData->bodyRates[2] * radian2degree);
+        display(", ");
+        
+        display("Body Accel (m/s/s): ");
+        display(pNavData->accelBody[0]);
+        display(" ");
+        display(pNavData->accelBody[1]);
+        display(" ");
+        display(pNavData->accelBody[2]);
+        display("\n");
+        
+        anyPrint = true;
     }
     
     if (printAngles)
@@ -889,12 +977,12 @@ void printData()
         display(getTime());
         display(" ");
         
-        display("Lat/Lon/Alt (deg/deg/m): ");
-        display(pNavData->position[0]*radian2degree);
+        display("N/E/U (m/m/m): ");
+        display(pNavData->position[0]);
         display(" ");
-        display(pNavData->position[1]*radian2degree);
+        display(pNavData->position[1]);
         display(" ");
-        display(pNavData->position[2]*radian2degree);
+        display(pNavData->position[2]);
         display("\n");
         
         anyPrint = true;
@@ -959,5 +1047,5 @@ void printData()
     }
     
     if (anyPrint) { display("\n"); }
-    #endif
+#endif
 }
