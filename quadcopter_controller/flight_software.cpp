@@ -53,7 +53,7 @@ bool   performRoutine[nRoutines];
 double actualDelays[nRoutines];
 
 // Event keeping (s)
-enum {startGNC, imuWarmup, nEvents};
+enum {imuWarmup, nEvents};
 double eventStartTimes[nEvents];
 bool eventStarted[nEvents];
 const double dtPad = 1e-10;
@@ -132,8 +132,7 @@ ControlMode controlMode;
 // **********************************************************************
 void initialize(void)
 {
-    // Initialize timing
-    initializeVariables();
+    initializeRoutines();
 
     // Print Settings
 #ifdef PRINT
@@ -191,6 +190,7 @@ void initialize(void)
     // Finish Setup
     getModels();
     setupIO();
+    initializeTime();
 }
 
 // **********************************************************************
@@ -676,12 +676,11 @@ void setPrintVariables()
 // **********************************************************************
 // Initialization
 // **********************************************************************
-void initializeVariables(void)
+void initializeRoutines(void)
 {
     // Initialize Time Routines
     for (int i=0; i<nRoutines; i++)
     {
-        prevTime[i] = 0.0;
         performRoutine[i] = false;
         routineDelays[i] = 0.0;
         actualDelays[i]  = 0.0;
@@ -692,6 +691,19 @@ void initializeVariables(void)
     {
         eventStartTimes[i] = 0.0;
         eventStarted[i] = false;
+    }
+}
+
+void initializeTime(void)
+{
+    for (int i=0; i<nRoutines; i++)
+    {
+        prevTime[i] = getTime();
+    }
+    
+    for (int i=0; i<nEvents; i++)
+    {
+        eventStartTimes[i] += getTime();
     }
 }
 
@@ -768,7 +780,7 @@ void printData()
         display(" ");
         
         display("IMU I2C code: ");
-        display((int) pIMUdata->errorCodeIMU);
+        display(pIMUdata->errorCodeIMU);
         display(" ");
         
         display("gyro (deg/s): ");
@@ -846,7 +858,7 @@ void printData()
         display(" ");
         
         display("Baro I2C code: ");
-        display((int) pBaroData->errorCodeBaro);
+        display(pBaroData->errorCodeBaro);
         display("\n");
         
         display("Baro timestamp/pressure/temperature/altitude: ");

@@ -36,7 +36,7 @@ const int minute_init = 00;
 const int second_init = 00;
 
 // Print options
-const bool saveOutput  = false;
+const bool saveOutput  = true;
 const bool printOutput = true;
 const bool plotOutput  = false;
 const std::string savefile = "output.csv";

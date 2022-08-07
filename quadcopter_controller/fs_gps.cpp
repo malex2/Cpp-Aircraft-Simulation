@@ -47,6 +47,7 @@ void FsGPS_setupGPS(int baudRate)
     ref_slat     = 0.0;
     ref_clat     = 0.0;
     
+    display("GPS setup.\n");
     gps_setup = true;
 #endif
 }

@@ -42,20 +42,7 @@
     #define LEDPIN LED_BUILTIN
 #endif
 
-/*
- I2C Error Codes
- 0: success.
- 
- 1: data too long to fit in transmit buffer.
- 
- 2: received NACK on transmit of address.
- 
- 3: received NACK on transmit of data.
- 
- 4: other error.
- 
- 5: timeout
- */
+enum I2C_Error_Code {I2C_0_SUCCESS, I2C_1_DATA_TOO_LONG, I2C_2_NACK_ADDRESS, I2C_3_NACK_DATA, I2C_4_OTHER, I2C_5_TIMEOUT};
 
 // Forward References
 struct IMUtype;
@@ -219,17 +206,18 @@ enum channelType {THROTTLE_CHANNEL, ROLL_CHANNEL, PITCH_CHANNEL, YAW_CHANNEL, nC
 
 // Time
 double getTime();
+#ifdef SIMULATION
+    void delay(int ms_delay);
+#endif
 
-// Errors
+// Math Support
 double errorToVariance(double maxError);
-
-//
-double vectorMag(double* vec);
 void crossProduct(double *cross, double *a, double *b);
 
 // Printing
 template<typename TempType>
 void display(TempType val);
+void display(I2C_Error_Code val);
 
 // LED
 void LEDon();

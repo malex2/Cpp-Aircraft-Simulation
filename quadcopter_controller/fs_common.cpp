@@ -28,6 +28,13 @@ double getTime()
 #endif
 }
 
+#ifdef SIMULATION
+void delay(int ms_delay)
+{
+    // do nothing
+}
+#endif
+
 // Errors
 double errorToVariance(double maxError)
 {
@@ -40,11 +47,6 @@ double errorToVariance(double maxError)
     variance = std*std;
     
     return variance;
-}
-
-double vectorMag(double* vec)
-{
-    return sqrt(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2]);
 }
 
 void crossProduct(double *cross, double *a, double *b)
@@ -77,6 +79,38 @@ void display(TempType val)
 #else
     Serial.print(val);
 #endif
+}
+
+void display(I2C_Error_Code val)
+{
+    if (val == I2C_0_SUCCESS)
+    {
+        display("0 - success.\n");
+    }
+    else if (val == I2C_1_DATA_TOO_LONG)
+    {
+        display("1 - data too long to fit in transmit buffer.\n");
+    }
+    else if (val == I2C_2_NACK_ADDRESS)
+    {
+        display("2 - received NACK on transmit of data.\n");
+    }
+    else if (val == I2C_3_NACK_DATA)
+    {
+        display("3 - received NACK on transmit of data.\n");
+    }
+    else if (val == I2C_4_OTHER)
+    {
+        display("4 - other error.\n");
+    }
+    else if (val == I2C_5_TIMEOUT)
+    {
+        display("5 - timeout.\n");
+    }
+    else
+    {
+        display("unkown error.\n");
+    }
 }
 
 template void display(const char*);

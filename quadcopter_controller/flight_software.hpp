@@ -15,7 +15,8 @@ class ModelMap;
 
 // Initialization Functions
 void initialize();
-void initializeVariables();
+void initializeRoutines();
+void initializeTime();
 void getModels();
 #ifdef SIMULATION
     void setPrintVariables();

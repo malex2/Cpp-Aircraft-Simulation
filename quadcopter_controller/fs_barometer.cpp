@@ -95,7 +95,7 @@ short readCalVal(byte address)
     
     Wire.beginTransmission(BMP180_ADDR);
     Wire.write(address);
-    baroData.errorCodeBaro = Wire.endTransmission(false);
+    baroData.errorCodeBaro = (I2C_Error_Code) Wire.endTransmission(false);
     
     Wire.requestFrom(BMP180_ADDR, 2, true);
     value = Wire.read() << 8 | Wire.read();
@@ -130,10 +130,10 @@ void FsBarometer_setPressureResolution(byte pressureResolutionIn)
             break;
             
         default:
-            //display(getTime());
-            //display(" Invalid pressure resolution: ");
-            //display(pressureResolution);
-            //display("\n");
+            display(getTime());
+            display(" Invalid pressure resolution: ");
+            display(pressureResolution);
+            display("\n");
             
             pressureResolution = BMP180_COMMAND_PRESSURE0;
             pressDelay = 5.0 / 1000.0;
@@ -219,7 +219,7 @@ void requestTemp()
     Wire.beginTransmission(BMP180_ADDR);
     Wire.write(BMP180_REG_CONTROL);
     Wire.write(BMP180_COMMAND_TEMPERATURE);
-    baroData.errorCodeBaro = Wire.endTransmission(true);
+    baroData.errorCodeBaro = (I2C_Error_Code) Wire.endTransmission(true);
 }
 
 void readTemp()
@@ -229,7 +229,7 @@ void readTemp()
     
     Wire.beginTransmission(BMP180_ADDR);
     Wire.write(BMP180_REG_RESULT);
-    baroData.errorCodeBaro = Wire.endTransmission(false);
+    baroData.errorCodeBaro = (I2C_Error_Code) Wire.endTransmission(false);
     Wire.requestFrom(BMP180_ADDR, 2, true);
     
     tu = (Wire.read() * 256.0) + Wire.read();
@@ -244,7 +244,7 @@ void requestPres()
     Wire.beginTransmission(BMP180_ADDR);
     Wire.write(BMP180_REG_CONTROL);
     Wire.write(pressureResolution);
-    baroData.errorCodeBaro = Wire.endTransmission(true) ;
+    baroData.errorCodeBaro = (I2C_Error_Code) Wire.endTransmission(true) ;
 }
 
 void readPres()
@@ -257,7 +257,7 @@ void readPres()
     
     Wire.beginTransmission(BMP180_ADDR);
     Wire.write(BMP180_REG_RESULT);
-    baroData.errorCodeBaro = Wire.endTransmission(false);
+    baroData.errorCodeBaro = (I2C_Error_Code) Wire.endTransmission(false);
     Wire.requestFrom(BMP180_ADDR, 3, true);
     
     pu = (Wire.read() * 256.0) + Wire.read() + (Wire.read() / 256.0);

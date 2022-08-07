@@ -20,7 +20,7 @@ struct barometerType {
     double altitude;
     baroStateType state;
     double timestamp;
-    short errorCodeBaro;
+    I2C_Error_Code errorCodeBaro;
     
     // temp vars
     double pu, tu;
@@ -31,7 +31,7 @@ struct barometerType {
         altitude    = 0.0;
         state       = baroStandby;
         timestamp   = 0.0;
-        errorCodeBaro = 0;
+        errorCodeBaro = I2C_0_SUCCESS;
     }
 };
 

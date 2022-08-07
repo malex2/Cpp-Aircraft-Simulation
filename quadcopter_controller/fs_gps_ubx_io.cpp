@@ -26,36 +26,42 @@ void UBX_MSG::write_nmea_off()
     output_msg.buffer_length = buffer_length;
     output_msg.buffer        = new byte[buffer_length] {NMEA,NMEA_GGA,0x00};
     write(&output_msg);
+    delay(5);
     
     // Clear GLL
     output_msg.msg_id        = CFG_MSG;
     output_msg.buffer_length = buffer_length;
     output_msg.buffer        = new byte[buffer_length] {NMEA,NMEA_GLL,0x00};
     write(&output_msg);
+    delay(5);
     
     // Clear GSA
     output_msg.msg_id        = CFG_MSG;
     output_msg.buffer_length = buffer_length;
     output_msg.buffer        = new byte[buffer_length] {NMEA,NMEA_GSA,0x00};
     write(&output_msg);
+    delay(5);
     
     // Clear GSV
     output_msg.msg_id        = CFG_MSG;
     output_msg.buffer_length = buffer_length;
     output_msg.buffer        = new byte[buffer_length] {NMEA,NMEA_GSV,0x00};
     write(&output_msg);
+    delay(5);
     
     // Clear RMC
     output_msg.msg_id        = CFG_MSG;
     output_msg.buffer_length = buffer_length;
     output_msg.buffer        = new byte[buffer_length] {NMEA,NMEA_RMC,0x00};
     write(&output_msg);
+    delay(5);
     
     // Clear VTG
     output_msg.msg_id        = CFG_MSG;
     output_msg.buffer_length = buffer_length;
     output_msg.buffer        = new byte[buffer_length] {NMEA,NMEA_VTG,0x00};
     write(&output_msg);
+    delay(5);
 }
 
 void UBX_MSG::write_nmea_off_long()
@@ -67,36 +73,42 @@ void UBX_MSG::write_nmea_off_long()
     output_msg.buffer_length = buffer_length;
     output_msg.buffer        = new byte[buffer_length] {NMEA,NMEA_GGA,0x00,0x00,0x00,0x00,0x00,0x01};
     write(&output_msg);
+    delay(5);
     
     // Clear GLL
     output_msg.msg_id        = CFG_MSG;
     output_msg.buffer_length = buffer_length;
     output_msg.buffer        = new byte[buffer_length] {NMEA,NMEA_GLL,0x00,0x00,0x00,0x00,0x00,0x01};
     write(&output_msg);
+    delay(5);
     
     // Clear GSA
     output_msg.msg_id        = CFG_MSG;
     output_msg.buffer_length = buffer_length;
     output_msg.buffer        = new byte[buffer_length] {NMEA,NMEA_GSA,0x00,0x00,0x00,0x00,0x00,0x01};
     write(&output_msg);
+    delay(5);
     
     // Clear GSV
     output_msg.msg_id        = CFG_MSG;
     output_msg.buffer_length = buffer_length;
     output_msg.buffer        = new byte[buffer_length] {NMEA,NMEA_GSV,0x00,0x00,0x00,0x00,0x00,0x01};
     write(&output_msg);
+    delay(5);
     
     // Clear RMC
     output_msg.msg_id        = CFG_MSG;
     output_msg.buffer_length = buffer_length;
     output_msg.buffer        = new byte[buffer_length] {NMEA,NMEA_RMC,0x00,0x00,0x00,0x00,0x00,0x01};
     write(&output_msg);
+    delay(5);
     
     // Clear VTG
     output_msg.msg_id        = CFG_MSG;
     output_msg.buffer_length = buffer_length;
     output_msg.buffer        = new byte[buffer_length] {NMEA,NMEA_VTG,0x00,0x00,0x00,0x00,0x00,0x01};
     write(&output_msg);
+    delay(5);
 }
 
 void UBX_MSG::write_ubx_off()
@@ -108,18 +120,21 @@ void UBX_MSG::write_ubx_off()
     output_msg.buffer_length = buffer_length;
     output_msg.buffer        = new byte[buffer_length] {UBX_NAV,UBX_NAV_POSLLH,0x00,0x00,0x00,0x00,0x00,0x00};
     write(&output_msg);
+    delay(5);
     
     // Clear NAV-STATUS
     output_msg.msg_id        = CFG_MSG;
     output_msg.buffer_length = buffer_length;
     output_msg.buffer        = new byte[buffer_length] {UBX_NAV,UBX_NAV_STATUS,0x00,0x00,0x00,0x00,0x00,0x00};
     write(&output_msg);
-  
+    delay(5);
+    
     // Clear NAV-VELNED
     output_msg.msg_id        = CFG_MSG;
     output_msg.buffer_length = buffer_length;
     output_msg.buffer        = new byte[buffer_length] {UBX_NAV,UBX_NAV_VELNED,0x00,0x00,0x00,0x00,0x00,0x00};
     write(&output_msg);
+    delay(5);
     
     // Disable UBX
     //0xB5,0x62,0x06,0x01,0x08,0x00,0x01,0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x12,0xB9,
@@ -135,18 +150,21 @@ void UBX_MSG::write_ubx_on()
     output_msg.buffer_length = buffer_length;
     output_msg.buffer        = new byte[buffer_length] {UBX_NAV,UBX_NAV_POSLLH,0x00,0x01,0x00,0x00,0x00,0x00};
     write(&output_msg);
+    delay(5);
     
     // Clear NAV-STATUS
     output_msg.msg_id        = CFG_MSG;
     output_msg.buffer_length = buffer_length;
     output_msg.buffer        = new byte[buffer_length] {UBX_NAV,UBX_NAV_STATUS,0x00,0x01,0x00,0x00,0x00,0x00};
     write(&output_msg);
+    delay(5);
     
     // Clear NAV-VELNED
     output_msg.msg_id        = CFG_MSG;
     output_msg.buffer_length = buffer_length;
     output_msg.buffer        = new byte[buffer_length] {UBX_NAV,UBX_NAV_VELNED,0x00,0x01,0x00,0x00,0x00,0x00};
     write(&output_msg);
+    delay(5);
     
     // Enable UBX
     //0xB5,0x62,0x06,0x01,0x08,0x00,0x01,0x02,0x00,0x01,0x00,0x00,0x00,0x00,0x13,0xBE, //NAV-POSLLH on
@@ -287,8 +305,8 @@ void UBX_MSG::write(MSG_PACKET* output_msg)
     output_msg->calc_checksum();
     gpsIO->write(output_msg->msg_checksum.data, UBX_MSG_CHECKSUM_SIZE);
     
+    // Clear message and buffer
     output_msg->clear();
-    // Clear buffer
     clear_buffer();
 }
 
