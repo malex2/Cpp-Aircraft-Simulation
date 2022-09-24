@@ -11,8 +11,8 @@
 #include "time.hpp"
 #include "rotate_frame.hpp"
 #include "arduino_class_models.hpp"
-#include "fs_gps_ubx_io.hpp"
 #include "fs_gps.hpp"
+#include "fs_gps_ubx_io.hpp"
 
 int GPSModelBase::MessageType::nGPSInputMessages = 0;
 int GPSModelBase::MessageType::nGPSOutputMessages = 0;
@@ -60,8 +60,8 @@ GPSModelBase::GPSModelBase(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("velErrorD", &velErrorNED[2], savePlot, 2);
     
     //pMap->addLogVar("GPS sendTime", &sendTime, savePlot, 2);
-    //pMap->addLogVar("GPS sendCount", &d_sendCount, savePlot, 2);
-    //pMap->addLogVar("GPS receiveCount", &d_receiveCount, savePlot, 2);
+    //pMap->addLogVar("GPS sendCount", &d_sendCount, printSavePlot, 3);
+    //pMap->addLogVar("GPS receiveCount", &d_receiveCount, printSavePlot, 3);
 
     util.initArray(gps_velNED, 0.0, 3);
     util.initArray(gps_posECEF, 0.0, 3);
@@ -289,6 +289,7 @@ void GPSModelBase::readInputIO()
         {
             pGPSIO->slave_write(pSerialIO->slave_read());
         }
+        //pGPSIO->display_rx_buffer();
     }
 }
 
@@ -354,12 +355,11 @@ void GPSModelBase::writeOutputMessages()
         }
         
         // Send periodic messages
-        if (pOutputMessages[i]->updateRate == 0.0)
+        if (pOutputMessages[i]->updateRate == 0.0 || pOutputMessages[i]->buffer == 0)
         {
             pOutputMessages[i]->send = false;
         }
-        else if (pTime->getSimTime() >= pOutputMessages[i]->prevUpdateTime + 1.0/pOutputMessages[i]->updateRate
-                 && pOutputMessages[i]->buffer != 0)
+        else if (pTime->getSimTime() >= pOutputMessages[i]->prevUpdateTime + 1.0/pOutputMessages[i]->updateRate)
         {
             pOutputMessages[i]->send = true;
         }
@@ -396,7 +396,6 @@ HorizAccLookup(HorizAccTimes, HorizAccValues, HorizAccLength),
 VertAccLookup(VertAccTimes, VertAccValues, VertAccLength),
 VelAccLookup(VelAccTimes, VelAccValues, VelAccLength)
 {
-    
     horizPosAcc      = HorizAccLookup.update(0.0);
     vertPosAcc       = VertAccLookup.update(0.0);
     velAcc           = VelAccLookup.update(0.0);
@@ -404,14 +403,11 @@ VelAccLookup(VelAccTimes, VelAccValues, VelAccLength)
     last_3dFixMSL    = 0.0;
     last_3dFixVD     = 0.0;
     
-    initUBX = false;
-    pUBX    = NULL;
-    gpsData = new GpsType();
-    
-    pOutputMessages[NAV_STATUS] = new MessageType(0.0, 0.0);
-    pOutputMessages[NAV_POSLLH] = new MessageType(0.0, 0.2);
-    pOutputMessages[NAV_VELNED] = new MessageType(0.0, 0.4);
-    
+    initUBX  = false;
+    pUBX     = NULL;
+    pUBXFIFO = NULL;
+    gpsData  = new GpsType();
+
     if (readGPSFile)
     {
         gps_msg_file.open(gps_file);
@@ -420,20 +416,50 @@ VelAccLookup(VelAccTimes, VelAccValues, VelAccLength)
         {
             std::cout << "Failed to open output file: " << gps_file << "." << std::endl;
         }
-
+        
+        double d_msg = 0.001;
+        double msg_time = 0.0;
+        for (int i=0; i<maxOutputMessages; i++)
+        {
+            pOutputMessages[i] = new MessageType(0.0, msg_time);
+            pOutputMessages[i]->updateRate = 1.0;
+            msg_time += d_msg;
+        }
+    }
+    else
+    {
+        pOutputMessages[NAV_STATUS] = new MessageType(0.0, 0.0);
+        pOutputMessages[NAV_DOP]    = new MessageType(0.0, 0.001);
+        pOutputMessages[NAV_POSLLH] = new MessageType(0.0, 0.002);
+        pOutputMessages[NAV_VELNED] = new MessageType(0.0, 0.004);
     }
 }
-
 
 GPSNeo6m::~GPSNeo6m()
 {
     if (pUBX)
     {
+        pUBX = 0;
         delete pUBX;
     }
+    
+    if (pUBXFIFO)
+    {
+        pUBXFIFO = 0;
+        delete pUBXFIFO;
+    }
+    
     delete gpsData;
     
     if (readGPSFile) { gps_msg_file.close(); }
+}
+
+void GPSNeo6m::updateSerial()
+{
+    if (pUBXFIFO)
+    {
+        pUBXFIFO->update_fifo();
+    }
 }
 
 void GPSNeo6m::updatePositionError()
@@ -458,7 +484,10 @@ void GPSNeo6m::readInputMessages()
 {
     if (!initUBX && pGPSIO)
     {
-        pUBX = new UBX_MSG(pGPSIO);
+        pUBXFIFO = new FS_FIFO(pGPSIO);
+        pUBX     = new UBX_MSG(pUBXFIFO);
+        
+        pUBXFIFO->begin(pGPSIO->getBaudRate());
         initUBX = true;
     }
 
@@ -472,117 +501,122 @@ void GPSNeo6m::readInputMessages()
 
 void GPSNeo6m::decodeInputMessages()
 {
-    if (pOutputMessages[NAV_STATUS]->updateRate != gpsData->msgRates[NAVSTAT])
+    if (!readGPSFile)
     {
-        pOutputMessages[NAV_STATUS]->updateRate = gpsData->msgRates[NAVSTAT];
-    }
-    if (pOutputMessages[NAV_POSLLH]->updateRate != gpsData->msgRates[POSLLH])
-    {
-        pOutputMessages[NAV_POSLLH]->updateRate = gpsData->msgRates[POSLLH];
-    }
-    if (pOutputMessages[NAV_VELNED]->updateRate != gpsData->msgRates[VELNED])
-    {
-        pOutputMessages[NAV_VELNED]->updateRate = gpsData->msgRates[VELNED];
+        if (pOutputMessages[NAV_STATUS]->updateRate != gpsData->msgRates[NAVSTAT])
+        {
+            pOutputMessages[NAV_STATUS]->updateRate = gpsData->msgRates[NAVSTAT];
+        }
+        if (pOutputMessages[NAV_DOP]->updateRate != gpsData->msgRates[NAVDOP])
+        {
+            pOutputMessages[NAV_DOP]->updateRate = gpsData->msgRates[NAVDOP];
+        }
+        if (pOutputMessages[NAV_POSLLH]->updateRate != gpsData->msgRates[POSLLH])
+        {
+            pOutputMessages[NAV_POSLLH]->updateRate = gpsData->msgRates[POSLLH];
+        }
+        if (pOutputMessages[NAV_VELNED]->updateRate != gpsData->msgRates[VELNED])
+        {
+            pOutputMessages[NAV_VELNED]->updateRate = gpsData->msgRates[VELNED];
+        }
     }
 }
 
 void GPSNeo6m::constructOutputMessages()
 {
+    if (gps_msg_file.fail())
+    {
+        //std::cout << pTime->getSimTime() << ") Failed to open GPS file" << std::endl;
+    }
+    
     if (readGPSFile && !gps_msg_file.fail())
     {
+        bool done     = false;
+        int msg_count = 0;
+        int gpsbyte   = 0;
         UBX_MSG::MSG_PACKET ubx_msg;
-        GPSOutputMessgaes gpsMsgType = NGPSMESSAGES;
-        bool done = false;
-        int gpsbyte = 0;
+        int i_msg     = 0;
+        bool look_for_next_msg = true;
         std::streampos ubx_msg_begin = gps_msg_file.tellg();
-        bool id_found     = false;
-        bool length_found = false;
-        int msg_count     = 0;
+        std::streampos ubx_msg_idx;
         
         while(!done && !gps_msg_file.eof())
         {
-            msg_count++;
+            ubx_msg_idx = gps_msg_file.tellg();
             gps_msg_file >> gpsbyte;
-            if (!id_found && msg_count == 3)
+
+            if (look_for_next_msg && (byte) gpsbyte == UBX_HEADER_1)
+            //if ((byte) gpsbyte == UBX_HEADER_1)
             {
-                ubx_msg.msg_class_id.data[0] = (byte) gpsbyte;
+                msg_count = 0;
+                file_info.check_for_sent_messages(pOutputMessages);
+                i_msg = file_info.get_available_msg_idx();
+                ubx_msg_begin = ubx_msg_idx;
+                look_for_next_msg = false;
+                if (i_msg == -1) { done = true; gps_msg_file.seekg(ubx_msg_begin); break; }
+                else { pOutputMessages[i_msg]->buffer = new byte[100]; }
             }
-            else if (!id_found && msg_count == 4)
+            else if (!look_for_next_msg && (byte) gpsbyte == UBX_HEADER_1)
+            {
+                look_for_next_msg = true;
+                msg_count = 0;
+            }
+            else if (!look_for_next_msg)
+            {
+                msg_count++;
+            }
+            
+            if (msg_count == 2) { ubx_msg.msg_class_id.data[0] = (byte) gpsbyte; }
+            if (msg_count == 3)
             {
                 ubx_msg.msg_class_id.data[1] = (byte) gpsbyte;
                 ubx_msg.determine_input_msg_id();
-                id_found = true;
-                if (ubx_msg.msg_id == UBX_MSG::UBX_MSG_ID::NAV_STATUS)
+                bool msg_stored = file_info.store_message(ubx_msg.msg_class, ubx_msg.msg_id);
+                if (!msg_stored)
                 {
-                    gpsMsgType = NAV_STATUS;
-                }
-                else if (ubx_msg.msg_id == UBX_MSG::UBX_MSG_ID::NAV_POSLLH)
-                {
-                    gpsMsgType = NAV_POSLLH;
-                }
-                else if (ubx_msg.msg_id == UBX_MSG::UBX_MSG_ID::NAV_VELNED)
-                {
-                    gpsMsgType = NAV_VELNED;
-                }
-                else
-                {
-                    std::cout << "No MSG Found" << std::endl;
-                    done = true;
-                }
-            }
-            else if (msg_count > 4 && !length_found)
-            {
-                if ((byte) gpsbyte == UBX_HEADER_1 || gps_msg_file.eof())
-                {
-                    length_found = true;
-                    pOutputMessages[gpsMsgType]->buffer_length = msg_count-1;
+                    pOutputMessages[i_msg]->reset();
+                    look_for_next_msg = true;
                     gps_msg_file.seekg(ubx_msg_begin);
-                    msg_count = 0;
+                    done = true;
+                    break;
                 }
             }
-            else if (id_found && length_found)
+            if (msg_count == 4) { ubx_msg.msg_length.data[0] = (byte) gpsbyte; }
+            if (msg_count == 5)
             {
-                if (msg_count == 1)
+                ubx_msg.msg_length.data[1] = (byte) gpsbyte;
+                ubx_msg.determine_input_msg_length();
+                pOutputMessages[i_msg]->buffer_length = ubx_msg.buffer_length + UBX_MSG_HEADER_SIZE
+                + UBX_MSG_CLASS_ID_SIZE
+                + UBX_MSG_LENGTH_SIZE
+                + UBX_MSG_CHECKSUM_SIZE;
+            }
+            if (!look_for_next_msg)
+            {
+                pOutputMessages[i_msg]->buffer[msg_count] = (byte) gpsbyte;
+                
+                if (msg_count > 5 && msg_count == pOutputMessages[i_msg]->buffer_length-1)
                 {
-                    // Already did this message
-                    if (pOutputMessages[gpsMsgType]->buffer != 0)
+                    look_for_next_msg = true;
+                    if (debugFlag)
                     {
-                        gps_msg_file.seekg(ubx_msg_begin);
-                        done = true;
-                    }
-                    else
-                    {
-                        pOutputMessages[gpsMsgType]->buffer = new byte[pOutputMessages[gpsMsgType]->buffer_length];
-                    }
-                }
-                if (!done)
-                {
-                    pOutputMessages[gpsMsgType]->buffer[msg_count-1] = (byte) gpsbyte;
-                    if (msg_count == pOutputMessages[gpsMsgType]->buffer_length)
-                    {
-                        if (debugFlag)
+                        std::cout << std::dec << "pOutputMessages[" << i_msg << "] " << pOutputMessages[i_msg]->buffer_length << ": ";
+                        for (int i=0; i < pOutputMessages[i_msg]->buffer_length; i++)
                         {
-                            std::cout << std::dec << "pOutputMessages[" << gpsMsgType << "] " << pOutputMessages[gpsMsgType]->buffer_length << ": ";
-                            for (int i=0; i < pOutputMessages[gpsMsgType]->buffer_length; i++)
-                            {
-                                std::cout << std::hex << std::setfill('0') << std::setw(2) << (int) pOutputMessages[gpsMsgType]->buffer[i];
-                            }
-                            std::cout << std::dec << std::endl << std::endl;
+                            std::cout << std::hex << std::setfill('0') << std::setw(2) << (int) pOutputMessages[i_msg]->buffer[i];
                         }
-                        msg_count     = 0;
-                        id_found      = false;
-                        length_found  = false;
-                        ubx_msg_begin = gps_msg_file.tellg();
+                        std::cout << std::dec << std::endl << std::endl;
                     }
                 }
             }
         }
     }
-    else
+    else if (!readGPSFile)
     {
-        UBX_MSG::UBX_MSG_NAV_POSLLH posLLH;
-        UBX_MSG::UBX_MSG_NAV_VELNED velNED;
-        UBX_MSG::UBX_MSG_NAV_STATUS navStatus;
+        UBX_MSG_TYPES::UBX_MSG_NAV_POSLLH posLLH;
+        UBX_MSG_TYPES::UBX_MSG_NAV_VELNED velNED;
+        UBX_MSG_TYPES::UBX_MSG_NAV_STATUS navStatus;
+        UBX_MSG_TYPES::UBX_MSG_NAV_DOP    navDOP;
         double alt;
         double msl;
         double velD;
@@ -643,6 +677,9 @@ void GPSNeo6m::constructOutputMessages()
         // Store output message
         if (debugFlag) { navStatus.print(); }
         encodeOutputMessage(NAV_STATUS, &navStatus.data, sizeof(navStatus.data));
+      
+        if (debugFlag) { navDOP.print(); }
+        encodeOutputMessage(NAV_DOP, &navDOP.data, sizeof(navDOP.data));
         
         if (debugFlag) { posLLH.print(); }
         encodeOutputMessage(NAV_POSLLH, &posLLH.data, sizeof(posLLH.data));
@@ -652,22 +689,30 @@ void GPSNeo6m::constructOutputMessages()
     }
 }
 
-int GPSNeo6m::encodeOutputMessage(GPSOutputMessgaes gpsMsgType, void* buffer, int buffer_length)
+int GPSNeo6m::encodeOutputMessage(int gpsMsgType, void* buffer, int buffer_length)
 {
     UBX_MSG::MSG_PACKET ubx_msg;
     
     // Determine msg_id
     if (gpsMsgType == NAV_STATUS)
     {
-        ubx_msg.msg_id = UBX_MSG::NAV_STATUS;
+        ubx_msg.msg_class = UBX_MSG_TYPES::NAV;
+        ubx_msg.msg_id    = UBX_MSG_TYPES::NAV_STATUS;
     }
-    else if (gpsMsgType ==  NAV_POSLLH)
+    else if (gpsMsgType == NAV_DOP)
     {
-        ubx_msg.msg_id = UBX_MSG::NAV_POSLLH;
+        ubx_msg.msg_class = UBX_MSG_TYPES::NAV;
+        ubx_msg.msg_id    = UBX_MSG_TYPES::NAV_DOP;
+    }
+    else if (gpsMsgType == NAV_POSLLH)
+    {
+        ubx_msg.msg_class = UBX_MSG_TYPES::NAV;
+        ubx_msg.msg_id    = UBX_MSG_TYPES::NAV_POSLLH;
     }
     else if (gpsMsgType == NAV_VELNED)
     {
-        ubx_msg.msg_id = UBX_MSG::NAV_VELNED;
+        ubx_msg.msg_class = UBX_MSG_TYPES::NAV;
+        ubx_msg.msg_id    = UBX_MSG_TYPES::NAV_VELNED;
     }
     else
     {
@@ -678,7 +723,6 @@ int GPSNeo6m::encodeOutputMessage(GPSOutputMessgaes gpsMsgType, void* buffer, in
     
     // Copy data
     ubx_msg.buffer_length = buffer_length;
-    ubx_msg.buffer        = new byte[ubx_msg.buffer_length];
     memcpy(ubx_msg.buffer, buffer, buffer_length);
     
     // Compute message length and checksum
@@ -701,15 +745,19 @@ int GPSNeo6m::encodeOutputMessage(GPSOutputMessgaes gpsMsgType, void* buffer, in
     int idx = 0;
     pOutputMessages[gpsMsgType]->buffer[0] = UBX_HEADER_1;
     pOutputMessages[gpsMsgType]->buffer[1] = UBX_HEADER_2;
+    
     // class ID
     idx += UBX_MSG_HEADER_SIZE;
     memcpy(pOutputMessages[gpsMsgType]->buffer+idx, &ubx_msg.msg_class_id.data, UBX_MSG_CLASS_ID_SIZE);
+    
     // message length
     idx += UBX_MSG_CLASS_ID_SIZE;
     memcpy(pOutputMessages[gpsMsgType]->buffer+idx, &ubx_msg.msg_length.data, UBX_MSG_LENGTH_SIZE);
+    
     // message content
     idx += UBX_MSG_LENGTH_SIZE;
     memcpy(pOutputMessages[gpsMsgType]->buffer+idx, ubx_msg.buffer, ubx_msg.buffer_length);
+    
     // checksum
     idx += ubx_msg.buffer_length;
     memcpy(pOutputMessages[gpsMsgType]->buffer+idx, &ubx_msg.msg_checksum.data, UBX_MSG_CHECKSUM_SIZE);
@@ -733,4 +781,120 @@ int GPSNeo6m::encodeOutputMessage(GPSOutputMessgaes gpsMsgType, void* buffer, in
     }
     
     return 1;
+}
+
+GPSNeo6m::gps_file_info::gps_file_info()
+{
+    duplicate_class[0] = UBX_MSG_TYPES::ACK;
+    duplicate_id[0]    = UBX_MSG_TYPES::ACK_ACK;
+    
+    duplicate_class[1] = UBX_MSG_TYPES::ACK;
+    duplicate_id[1]    = UBX_MSG_TYPES::ACK_NAK;
+    
+    duplicate_class[2] = UBX_MSG_TYPES::UNKNOWN_MSG_CLASS;
+    duplicate_id[2]    = UBX_MSG_TYPES::UNKNOWN_MSG_ID;
+    
+    duplicate_class[3] = UBX_MSG_TYPES::UNKNOWN_MSG_CLASS;
+    duplicate_id[3]    = UBX_MSG_TYPES::UNKNOWN_MSG_ID;
+    
+    duplicate_class[4] = UBX_MSG_TYPES::UNKNOWN_MSG_CLASS;
+    duplicate_id[4]    = UBX_MSG_TYPES::UNKNOWN_MSG_ID;
+    
+    clear();
+}
+
+int GPSNeo6m::gps_file_info::get_available_msg_idx()
+{
+    int idx = -1;
+    for (int i = 0; i < maxOutputMessages; i++)
+    {
+        if (prev_msg_class[i] == UBX_MSG_TYPES::UNKNOWN_MSG_CLASS ||  prev_msg_id[i] == UBX_MSG_TYPES::UNKNOWN_MSG_ID)
+        {
+            idx = i;
+            break;
+        }
+    }
+    return idx;
+}
+
+bool GPSNeo6m::gps_file_info::store_message(int msg_class, int msg_id)
+{
+    bool msg_already_stored = false;
+    bool msg_stored         = false;
+    bool msg_valid = msg_class != UBX_MSG_TYPES::UNKNOWN_MSG_CLASS && msg_id != UBX_MSG_TYPES::UNKNOWN_MSG_ID;
+
+    for (int i = 0; i < maxOutputMessages; i++)
+    {
+        if (prev_msg_class[i] == msg_class &&  prev_msg_id[i] == msg_id)
+        {
+            msg_already_stored = true;
+            if (!allow_duplicate(msg_class, msg_id))
+            {
+                break;
+            }
+        }
+        
+        if (msg_valid && (allow_duplicate(msg_class, msg_id) || !msg_already_stored) && prev_msg_class[i] == UBX_MSG_TYPES::UNKNOWN_MSG_CLASS && prev_msg_id[i] == UBX_MSG_TYPES::UNKNOWN_MSG_ID)
+        {
+            prev_msg_class[i] = msg_class;
+            prev_msg_id[i]    = msg_id;
+            msg_stored        = true;
+            break;
+        }
+    }
+    return msg_stored;
+}
+
+bool GPSNeo6m::gps_file_info::allow_duplicate(int msg_class, int msg_id)
+{
+    bool allow = false;
+    for (int i = 0; i < n_duplicate; i++)
+    {
+        if (duplicate_class[i] == msg_class && duplicate_id[i] == msg_id)
+        {
+            allow = true;
+            break;
+        }
+    }
+    
+    return allow;
+}
+
+void GPSNeo6m::gps_file_info::check_for_sent_messages(MessageType* pOutputMessages[maxOutputMessages])
+{
+    for (int i = 0; i < maxOutputMessages; i++)
+    {
+        if (pOutputMessages[i]->buffer == 0 && (prev_msg_class[i] != UBX_MSG_TYPES::UNKNOWN_MSG_CLASS || prev_msg_id[i] != UBX_MSG_TYPES::UNKNOWN_MSG_ID))
+        {
+            prev_msg_class[i] = UBX_MSG_TYPES::UNKNOWN_MSG_CLASS;
+            prev_msg_id[i]    = UBX_MSG_TYPES::UNKNOWN_MSG_ID;
+            //free_message(prev_msg_class[i], prev_msg_id[i]);
+        }
+    }
+}
+
+bool GPSNeo6m::gps_file_info::free_message(int msg_class, int msg_id)
+{
+    bool msg_removed = false;
+    for (int i = 0; i < maxOutputMessages; i++)
+    {
+        if (prev_msg_class[i] == msg_class &&  prev_msg_id[i] == msg_id)
+        {
+            prev_msg_class[i] = UBX_MSG_TYPES::UNKNOWN_MSG_CLASS;
+            prev_msg_id[i]    = UBX_MSG_TYPES::UNKNOWN_MSG_ID;
+            msg_removed = true;
+            break;
+        }
+    }
+    return msg_removed;
+}
+
+void GPSNeo6m::gps_file_info::clear()
+{
+    for (int i = 0; i < maxOutputMessages; i++)
+    {
+        prev_msg_class[i] = UBX_MSG_TYPES::UNKNOWN_MSG_CLASS;
+        prev_msg_id[i]    = UBX_MSG_TYPES::UNKNOWN_MSG_ID;
+    }
+    i_msg = 0;
 }

@@ -185,25 +185,7 @@ void FsNavigation_setupNavigation(double *initialPosition, double initialHeading
     P[ABIAS_Y][ABIAS_Y] = 0.0;//errorToVariance(0.005*Gravity);
     P[ABIAS_Z][ABIAS_Z] = 0.0;//errorToVariance(0.02*Gravity);
     P[GRAVITY][GRAVITY] = 0.0;//errorToVariance(0.1);
-    
-    /*
-    P[ROLL][ROLL]   = 0.0;
-    P[PITCH][PITCH] = 0.0;
-    P[YAW][YAW]     = 0.0;
-    P[VN][VN]       = 0.0;
-    P[VE][VE]       = 0.0;
-    P[VD][VD]       = 0.0;
-    P[N][N]         = 0.0;
-    P[E][E]         = 0.0;
-    P[ALT][ALT]     = 0.0;
-    P[GBIAS_X][GBIAS_X] = 0.0;
-    P[GBIAS_Y][GBIAS_Y] = 0.0;
-    P[GBIAS_Z][GBIAS_Z] = 0.0;
-    P[ABIAS_X][ABIAS_X] = 0.0;
-    P[ABIAS_Y][ABIAS_Y] = 0.0;
-    P[ABIAS_Z][ABIAS_Z] = 0.0;
-    P[GRAVITY][GRAVITY] = 0.0;
-    */
+
 #ifdef FILTERTEST
     linNavStates[ROLL]  = NavData.eulerAngles[0];
     linNavStates[PITCH] = NavData.eulerAngles[1];
@@ -272,7 +254,7 @@ void FsNavigation_performNavigation( double &navDt )
 void updateGravity()
 {
     double hCenter;
-    hCenter = RE + NavData.position[2];
+    hCenter = RE + NavData.altitude_msl;
     NavData.gravity = GMe/(hCenter*hCenter);
 }
 
@@ -299,7 +281,6 @@ void gyroUpdate( double &navDt)
     NavData.stateInputs.dTheta[i] = nav_pIMUdata->dTheta[i] - NavData.gyroBias[i]*navDt;
 
     // Angle change magnitude
-    
     dThetaMag = sqrt( NavData.stateInputs.dTheta[0]*NavData.stateInputs.dTheta[0] +
                      NavData.stateInputs.dTheta[1]*NavData.stateInputs.dTheta[1] +
                      NavData.stateInputs.dTheta[2]*NavData.stateInputs.dTheta[2] );
@@ -389,6 +370,9 @@ void performINS( double &navDt )
     NavData.position[0] = NavData.position[0] + a1.dPosition[0];///(NavData.position[2] + RE);
     NavData.position[1] = NavData.position[1] + a1.dPosition[1];///( (NavData.position[2] + RE)*cos(NavData.position[0]) );
     NavData.position[2] = NavData.position[2] - a1.dPosition[2];
+    
+    // height_above_ellipsoid = MSL + geoidHeight
+    NavData.altitude_msl = NavData.position[2] - NavData.geoidCorrection;
 }
 
 
@@ -572,7 +556,7 @@ void filterUpdate(double* residual, double* R, double* H, double* K, int nMeas)
     }
     
     // NSTATES x NMESAUREMENTS
-    // 10x1   = (10x10) * (10x1)  *    (  1x10  * 10x10 *  10x1   +   1x1 )
+    // 10x6   = (10x10) * (10x6)  *    (  6x10  * 10x10 *  10x6   +   6x6 )
     // K =    P    * H' * inv( H *   P   * H' + R);
     math_mtran(*HT, H, NSTATES, nMeas);
     math_mmult(*P_HT, *P, NSTATES, NSTATES, *HT, NSTATES, nMeas);
@@ -582,11 +566,11 @@ void filterUpdate(double* residual, double* R, double* H, double* K, int nMeas)
     math_mmult(*HT_inv_H_P_HT_R, *HT, NSTATES, nMeas, *inv_H_P_HT_R, nMeas, nMeas);
     math_mmult(K, *P, NSTATES, NSTATES, *HT_inv_H_P_HT_R, NSTATES, nMeas);
 
-    //    10x1    =  10x1  *   1x1
+    //    10x1    =  10x6  *   6x1
     // stateError = K * Residual
     math_mmult(stateError, K, residual, NSTATES, nMeas);
     
-    //10x10 = (10x10 -  10x1  *  1x10 ) * 10x10
+    //10x10 = (10x10 -  10x6  *  6x10 ) * 10x10
     // P    =  (  I  - K * H) *   P
     math_mmult(*K_H, K, NSTATES, nMeas, H, nMeas, NSTATES);
     math_msubtract(*diagOnes_K_H, *diagOnes, *K_H, NSTATES, NSTATES);
@@ -604,15 +588,22 @@ void filterUpdate(double* residual, double* R, double* H, double* K, int nMeas)
 void FsNavigation_performGPSUpdate(GpsType* gpsData)
 {
     if ( (NavData.state == Calibration) || (!navSetup) ) { return; }
-    
-    if(NavData.state != INS)
-    {
-        display("FsNavigation_performGPSPVTUpdate: WARNING. Not in INS state.\n");
-        //return;
-    }
 
+    // MSL correction
+    if (gpsData->positionValid)
+    {
+        // height_above_ellipsoid = MSL + geoidHeight
+        NavData.geoidCorrection = gpsData->posENU[2] - gpsData->alt_msl;
+    }
+    
     if (gpsData->positionValid && gpsData->velocityValid)
     {
+        if(NavData.state != INS)
+        {
+            //display("FsNavigation_performGPSPVTUpdate: WARNING. Not in INS state.\n");
+            return;
+        }
+        
         double horizPosVar = errorToVariance(gpsData->horizPosAcc);
         double vertPosVar  = errorToVariance(gpsData->vertPosAcc);
         double speedVar    = errorToVariance(gpsData->speedAcc);
@@ -636,16 +627,16 @@ void FsNavigation_performGPSUpdate(GpsType* gpsData)
             R_GPS[GPS_N][GPS_N]     = horizPosVar;
             R_GPS[GPS_E][GPS_E]     = horizPosVar;
             R_GPS[GPS_ALT][GPS_ALT] = vertPosVar;
-            R_GPS[GPS_VN][GPS_VN] = speedVar;
-            R_GPS[GPS_VE][GPS_VE] = speedVar;
-            R_GPS[GPS_VD][GPS_VD] = speedVar;
+            R_GPS[GPS_VN][GPS_VN]   = speedVar;
+            R_GPS[GPS_VE][GPS_VE]   = speedVar;
+            R_GPS[GPS_VD][GPS_VD]   = speedVar;
             
             gpsResidual[GPS_N]   = gpsData->posENU[1] - NavData.position[0];
             gpsResidual[GPS_E]   = gpsData->posENU[0] - NavData.position[1];
             gpsResidual[GPS_ALT] = gpsData->posENU[2] - NavData.position[2];
-            gpsResidual[GPS_VN] = gpsData->velNED[0] - NavData.velNED[0];
-            gpsResidual[GPS_VE] = gpsData->velNED[1] - NavData.velNED[1];
-            gpsResidual[GPS_VD] = gpsData->velNED[2] - NavData.velNED[2];
+            gpsResidual[GPS_VN]  = gpsData->velNED[0] - NavData.velNED[0];
+            gpsResidual[GPS_VE]  = gpsData->velNED[1] - NavData.velNED[1];
+            gpsResidual[GPS_VD]  = gpsData->velNED[2] - NavData.velNED[2];
             
             NavData.state = GPSUpdate;
         }
@@ -661,7 +652,7 @@ void FsNavigation_performBarometerUpdate(barometerType* baroData)
     if(NavData.state != INS)
     {
         display("FsNavigation_performBarometerUpdate: WARNING. Not in INS state.\n");
-        //return;
+        return;
     }
     
     R_BARO[BARO_ALT][BARO_ALT] = FsBarometer_getAltitudeVariance();
@@ -677,7 +668,7 @@ void FsNavigation_groundAlign()
     if(NavData.state != INS)
     {
         display("FsNavigation_groundAlign: WARNING. Not in INS state.\n");
-        //return;
+        return;
     }
 
     NavData.state = GroundAlign;
@@ -749,7 +740,7 @@ void FsNavigation_calibrateIMU()
         accelCov[0][0] = accelError[0]->variance + accelQuatizationVariance;
         accelCov[1][1] = accelError[1]->variance + accelQuatizationVariance;
         accelCov[2][2] = accelError[2]->variance + accelQuatizationVariance;
-
+        
         gyroVar = sqrt( gyroError[0]->variance*gyroError[0]->variance
                         + gyroError[1]->variance*gyroError[1]->variance
                         + gyroError[2]->variance*gyroError[2]->variance );
@@ -806,6 +797,16 @@ double* FsNavigation_getProcessNoise()
     return *Q;
 }
 
+double* FsNavigation_getStateError()
+{
+    return stateError;
+}
+
+double* FsNavigation_getCovarianceCorrection()
+{
+    return *Pcorrection;
+}
+
 double* FsNavigation_getBaroKalmanGain()
 {
     return *K_BARO;
@@ -816,14 +817,14 @@ double* FsNavigation_getBaroResidual()
     return baroResidual;
 }
 
-double* FsNavigation_getStateError()
+double* FsNavigation_getGPSMeasVariance()
 {
-    return stateError;
+    return *R_GPS;
 }
 
-double* FsNavigation_getCovarianceCorrection()
+double* FsNavigation_getGPSResidual()
 {
-    return *Pcorrection;
+    return gpsResidual;
 }
 
 #ifdef SIMULATION

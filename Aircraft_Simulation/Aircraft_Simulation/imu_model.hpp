@@ -38,6 +38,7 @@ public:
     bool getIMUReady(void)               { return imuReady; }
     
     // setters
+    virtual void setPerfectSensor(bool input) { perfectSensor = input; }
     //void setPerfectSensor(bool input) { perfectSensor = input; }
     void setLSBdps(double LSBdps_in)  { LSBdps = LSBdps_in;    }
     void setLSBg(double LSBg_in)      { LSBg   = LSBg_in;      }

@@ -9,8 +9,10 @@
 #include "fs_pwmin.hpp"
 
 # ifndef SIMULATION
+#ifdef PWM
     #define EI_ARDUINO_INTERRUPTED_PIN
     #include <EnableInterrupt.h>
+#endif
 #endif
 
 PwmIn throttleChannel;
@@ -218,6 +220,7 @@ PwmIn::PwmIn()
 
 void PwmIn::attach(int pinIn)
 {
+#ifdef PWM
     // Store Pin
     thisPin = pinIn;
     thisPinLoc = nPins;
@@ -239,6 +242,7 @@ void PwmIn::attach(int pinIn)
     
     // Increment Pins
     nPins++;
+#endif
 }
 int PwmIn::getPwm()
 {
@@ -250,15 +254,18 @@ int PwmIn::getPwm()
 
 void PwmIn::riseInterrupt()
 {
+#ifdef PWM
     if (arduinoInterruptedPin == pinArray[iPin])
     {
         tRise = micros();
         enableInterrupt(pinArray[iPin], PwmIn::fallInterrupt, FALLING);
     }
+#endif
 }
 
 void PwmIn::fallInterrupt()
 {
+#ifdef PWM
     if (arduinoInterruptedPin == pinArray[iPin])
     {
         int tempPWM = micros() - tRise;
@@ -272,6 +279,7 @@ void PwmIn::fallInterrupt()
         if (iPin >= nPins) { iPin = 0; validReadCount++; }
         enableInterrupt(pinArray[iPin], PwmIn::riseInterrupt, RISING);
     }
+#endif
 }
 #endif
 

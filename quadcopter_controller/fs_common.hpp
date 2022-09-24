@@ -18,10 +18,11 @@
 #define GPS
 #define BAROMETER
 #define PWM
-#define CONTROLS
+//#define CONTROLS
 #define GROUND_DETECTION
 #define NAVIGATION
 //#define PRINT
+//#define UBX_PRINT
 
 #ifdef SIMULATION
     #include "model_mapping.hpp"
@@ -68,8 +69,10 @@ enum channelType {THROTTLE_CHANNEL, ROLL_CHANNEL, PITCH_CHANNEL, YAW_CHANNEL, nC
 // Conversions
 #define degree2radian M_PI/180.0
 #define radian2degree 180.0/M_PI
-#define hz2rps        2.0*M_PI;
+#define hz2rps        2.0*M_PI
 #define rpm2rps       2.0*M_PI/60.0
+#define inv_sqrt2     1.0/sqrt(2.0)
+#define inv_sqrt3     1.0/sqrt(3.0)
 
 // Constants
 #define RE       6371e+3
@@ -93,6 +96,17 @@ enum channelType {THROTTLE_CHANNEL, ROLL_CHANNEL, PITCH_CHANNEL, YAW_CHANNEL, nC
 #define T2PIN  9
 #define T3PIN  10
 #define T4PIN  11
+
+// TEENSY
+#ifdef SIMULATION
+    #define TEENSY_4_CLOCK_SPEED 1.0/clock_dt
+#else
+    #define TEENSY_4_CLOCK_SPEED 600e6
+#endif
+
+// High Dynamics
+#define highRate  5.0*degree2radian
+#define highAccel 30.0
 
 // GPS Pins
 #define GPSRXPIN 2 // Rcv GPS msgs, connect to GPS TX
@@ -161,48 +175,114 @@ enum channelType {THROTTLE_CHANNEL, ROLL_CHANNEL, PITCH_CHANNEL, YAW_CHANNEL, nC
 #define BMP180_COMMAND_PRESSURE1   0x74
 #define BMP180_COMMAND_PRESSURE2   0xB4
 #define BMP180_COMMAND_PRESSURE3   0xF4
-#define AC1_ADDR  0xAA
-#define AC2_ADDR  0xAC
-#define AC3_ADDR  0xAE
-#define AC4_ADDR  0xB0
-#define AC5_ADDR  0xB2
-#define AC6_ADDR  0xB4
-#define VB1_ADDR  0xB6
-#define VB2_ADDR  0xB8
-#define MB_ADDR   0xBA
-#define MC_ADDR   0xBC
-#define MD_ADDR   0xBE
+#define AC1_ADDR                   0xAA
+#define AC2_ADDR                   0xAC
+#define AC3_ADDR                   0xAE
+#define AC4_ADDR                   0xB0
+#define AC5_ADDR                   0xB2
+#define AC6_ADDR                   0xB4
+#define VB1_ADDR                   0xB6
+#define VB2_ADDR                   0xB8
+#define MB_ADDR                    0xBA
+#define MC_ADDR                    0xBC
+#define MD_ADDR                    0xBE
 
 // GPS Addresses
-#define UBX_HEADER_1 0xB5
-#define UBX_HEADER_2 0x62
+#define UBX_HEADER_1   0xB5
+#define UBX_HEADER_2   0x62
 
-#define NMEA     0xF0
-#define NMEA_GGA 0x00
-#define NMEA_GLL 0x01
-#define NMEA_GSA 0x02
-#define NMEA_GSV 0x03
-#define NMEA_RMC 0x04
-#define NMEA_VTG 0x05
+#define NMEA           0xF0
+#define NMEA_GGA       0x00
+#define NMEA_GLL       0x01
+#define NMEA_GSA       0x02
+#define NMEA_GSV       0x03
+#define NMEA_RMC       0x04
+#define NMEA_VTG       0x05
 
 #define UBX_NAV        0x01
-#define UBX_NAV_STATUS 0x03
 #define UBX_NAV_POSLLH 0x02
+#define UBX_NAV_STATUS 0x03
+#define UBX_NAV_DOP    0x04
 #define UBX_NAV_VELNED 0x12
+#define UBX_NAV_SOL    0x06
 
-#define UBX_CFG           0x06
-#define UBX_CFG_MSG       0x01
-#define UBX_CFG_MSG_ON1Hz 0x01
-#define UBX_CFG_MSG_OFF   0x00
+#define UBX_RXM        0x02
 
-#define UBX_BUFFER_MAX_SIZE   100
-#define UBX_MSG_HEADER_SIZE   2
-#define UBX_MSG_CLASS_ID_SIZE 2
-#define UBX_MSG_LENGTH_SIZE   2
-#define UBX_MSG_CHECKSUM_SIZE 2
+#define UBX_INF        0x04
 
-#define highRate  5.0*degree2radian
-#define highAccel 30.0
+#define UBX_ACK        0x05
+#define UBX_ACK_ACK    0x01
+#define UBX_ACK_NAK    0x00
+
+#define UBX_CFG        0x06
+#define UBX_CFG_MSG    0x01
+#define UBX_CFG_NAV5   0x24
+
+#define UBX_MON        0x0A
+
+#define UBX_AID        0x0B
+
+#define UBX_TIM        0x0D
+
+#define UBX_BUFFER_MAX_SIZE       100
+#define UBX_CFG_ON_OFF_SHORT_SIZE 3
+#define UBX_CFG_ON_OFF_LONG_SIZE  8
+
+#define UBX_MSG_HEADER_SIZE       2
+#define UBX_MSG_CLASS_ID_SIZE     2
+#define UBX_MSG_LENGTH_SIZE       2
+#define UBX_MSG_CHECKSUM_SIZE     2
+
+// Serial Fifo
+#define MAX_SERIAL_FIFO_SIZE 500
+
+// Classes
+class FS_FIFO {
+public:
+    FS_FIFO(HardwareSerial* serialIO);
+    ~FS_FIFO();
+    
+    void begin(int baud_rate);
+    
+    // Update
+    void update_fifo();
+    
+    // serialIO to Flight Software
+    byte read();
+    int available();
+    unsigned long read_count() { return read_byte_count; }
+    
+    // Flight Software to Serial IO
+    int write(byte val);
+    int write(byte* val, int length);
+    int write_available();
+    unsigned long write_count() { return write_byte_count; };
+    
+    // Debug
+    void display_read_buffer();
+    void display_write_buffer();
+private:
+    byte read_val;
+    byte read_buffer[MAX_SERIAL_FIFO_SIZE];
+    int  read_buffer_index;
+    int  read_buffer_length;
+    unsigned long  read_byte_count;
+    
+    byte write_buffer[MAX_SERIAL_FIFO_SIZE];
+    int  write_buffer_index;
+    int  write_buffer_length;
+    unsigned long  write_byte_count;
+    double baud_rate;
+    double prevWriteTime;
+    
+    HardwareSerial* serialIO;
+    
+    bool read_fifo_full();
+    bool write_fifo_full();
+    
+    void reset_read_buffer();
+    void reset_write_buffer();
+};
 
 // Time
 double getTime();
@@ -217,6 +297,8 @@ void crossProduct(double *cross, double *a, double *b);
 // Printing
 template<typename TempType>
 void display(TempType val);
+template<typename TempType>
+void display(TempType val, int printMode);
 void display(I2C_Error_Code val);
 
 // LED

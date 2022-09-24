@@ -522,7 +522,6 @@ byte SoftwareSerial::slave_read()
 int SoftwareSerial::write(byte val)
 {
     if (!baud_begin) { return 0; }
-    //std::cout << "SoftwareSerial::write " << std::hex << std::setfill('0') << std::setw(2) << +val << std::endl;
     
     tx_buffer[tx_buffer_length] = val;
     tx_buffer_length++;
@@ -592,6 +591,28 @@ void SoftwareSerial::serial_setSimulationModels(ModelMap* pMap, std::string mode
             std::cout << "SoftwareSerial::serial_setSimulationModels: cannot find " << model << " model." << std::endl;
         }
     }
+}
+
+void SoftwareSerial::display_rx_buffer()
+{
+    if (!available()) { return; }
+    std::cout << "SoftwareSerial::rx_buffer [" << rx_buffer_index << "-" << rx_buffer_length << "]: ";
+    for (int i = rx_buffer_index; i < rx_buffer_length; i++)
+    {
+        std::cout << std::hex << std::setfill('0') << std::setw(2) << +rx_buffer[i];
+    }
+    std::cout << std::dec << std::endl;
+}
+
+void SoftwareSerial::display_tx_buffer()
+{
+    if (!slave_available()) { return; }
+    std::cout << "SoftwareSerial::tx_buffer [" << tx_buffer_index << "-" << tx_buffer_length << "]: ";
+    for (int i = tx_buffer_index; i < tx_buffer_length; i++)
+    {
+        std::cout << std::hex << std::setfill('0') << std::setw(2) << +tx_buffer[i];
+    }
+    std::cout << std::dec << std::endl;
 }
 
 void pinMode(int pin, enum pinMode mode) { }

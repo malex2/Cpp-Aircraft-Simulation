@@ -15,6 +15,7 @@
 #include "barometer_model.hpp"
 
 enum pinMode {INPUT, OUTPUT};
+enum PrintMode {BIN, OCT, DEC, HEX};
 const unsigned int LEDPIN = 0;
 
 class SimulationWire {
@@ -158,6 +159,9 @@ public:
     int getRXPin()    { return rx_pin; }
     int getTXPin()    { return tx_pin; }
     int getBaudRate() { return baud_rate; }
+    void display_rx_buffer();
+    void display_tx_buffer();
+    
     void serial_setSimulationModels(ModelMap* pMap, std::string model, bool print = false);
 private:
     static const int max_buffer_size = 64;
@@ -180,7 +184,8 @@ private:
 
 void pinMode(int pin, pinMode mode);
 
+#define HardwareSerial SoftwareSerial
 extern SimulationWire Wire;
 extern SoftwareSerial Serial1;
-//#define Serial1 SoftwareSerial(0,1)
+
 #endif /* arduino_class_models_hpp */

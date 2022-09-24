@@ -14,7 +14,7 @@
 enum GPS_FIX_TYPE {NO_FIX, DEAD_RECKON, FIX2D, FIX3D, GPS_DEAD_RECKON, TIME_ONLY};
 
 #ifdef SIMULATION
-    enum GPS_MSG {GGA, GLL, GSA, GSV, RMC, VTG, NAVSTAT, POSLLH, VELNED, NMESSAGES};
+    enum GPS_MSG {GGA, GLL, GSA, GSV, RMC, VTG, NAVSTAT, NAVDOP, POSLLH, VELNED, NMESSAGES};
 #endif
 
 struct GpsType {
@@ -36,13 +36,30 @@ struct GpsType {
     double hdgAcc;
     bool   velocityValid;
     
-    double timestamp;
+    double       timestamp;
     GPS_FIX_TYPE gpsFix;
+    int          fixOk;
+    int          numSV;
+    bool         gpsGood;
+    double       ttff;
     
     unsigned long rcvdByteCount;
     unsigned long rcvdMsgCount;
-    bool gpsGood;
+    unsigned long fifoReadCount;
+    unsigned long fifoWriteCount;
     
+    struct DOP_t {
+        double gDOP;
+        double pDOP;
+        double tDOP;
+        double vDOP;
+        double hDOP;
+        double nDOP;
+        double eDOP;
+    } DOP;
+
+    double GPStimestamp;
+    double dt_FS_GPS;
     #ifdef SIMULATION
         int msgRates[NMESSAGES];
     #endif
@@ -76,11 +93,18 @@ struct GpsType {
         
         timestamp = 0.0;
         gpsFix    = NO_FIX;
+        fixOk     = 0;
+        numSV     = 0;
+        ttff      = 0.0;
         
         rcvdByteCount = 0;
         rcvdMsgCount  = 0;
-        gpsGood   = false;
+        gpsGood       = false;
+        GPStimestamp  = 0.0;
+        dt_FS_GPS     = 0.0;
         
+        fifoReadCount  = 0;
+        fifoWriteCount = 0;
         #ifdef SIMULATION
             for (int i=0; i<NMESSAGES; i++)
             {
@@ -92,8 +116,9 @@ struct GpsType {
 };
 
 void LLHtoECEF(double* ECEF, double* LLH);
-void FsGPS_setupGPS(int baudRate);
+void FsGPS_setupGPS(int baudRate, bool fs_allow2DFix);
 void FsGPS_performGPS();
+void FsGPS_performSerialIO();
 
 // Getters
 bool FsGPS_GPSgood();

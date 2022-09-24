@@ -15,6 +15,7 @@ GpsType GpsData;
 bool gps_setup    = false;
 bool positionInit = false;
 bool first3DFix   = true;
+bool allow2DFix   = false;
 int gpsFix_init   = 0;
 
 double d_posECEF[3];
@@ -23,21 +24,26 @@ double ref_clon;
 double ref_slat;
 double ref_clat;
 
-//SoftwareSerial gpsIO(GPSTXPIN, GPSRXPIN);
 #define gpsIO Serial1
-UBX_MSG ubx_msg(&gpsIO);
+FS_FIFO gpsFIFO(&gpsIO);
+UBX_MSG ubx_msg(&gpsFIFO);
 
 # ifdef SIMULATION
     bool print_serial = false;
 #endif
 
-void FsGPS_setupGPS(int baudRate)
+void FsGPS_setupGPS(int baudRate, bool fs_allow2DFix)
 {
 #ifdef GPS
-    gpsIO.begin(baudRate);
-    ubx_msg.write_nmea_off_long();
+    allow2DFix = fs_allow2DFix;
+    gpsFIFO.begin(baudRate);
+    //ubx_msg.write_nmea_off_long();
+    ubx_msg.write_nmea_off();
     ubx_msg.write_ubx_off();
     ubx_msg.write_ubx_on();
+    ubx_msg.get_nav_config();
+    ubx_msg.set_nav_config();
+    ubx_msg.get_nav_config();
     
     d_posECEF[0] = 0.0;
     d_posECEF[1] = 0.0;
@@ -47,7 +53,8 @@ void FsGPS_setupGPS(int baudRate)
     ref_slat     = 0.0;
     ref_clat     = 0.0;
     
-    display("GPS setup.\n");
+    display(getTime());
+    display(") GPS setup.\n");
     gps_setup = true;
 #endif
 }
@@ -57,13 +64,16 @@ void FsGPS_performGPS()
 #ifdef GPS
     if (!gps_setup) { return; }
     
+    GpsData.fifoReadCount  = gpsFIFO.read_count();
+    GpsData.fifoWriteCount = gpsFIFO.write_count();
+    
     int rcvd = ubx_msg.data_available();
     if (rcvd > 0)
     {
         GpsData.rcvdByteCount += rcvd;
         GpsData.rcvdMsgCount += ubx_msg.read(&GpsData);
         
-        if (GpsData.gpsFix == FIX2D || GpsData.gpsFix == FIX3D) { GpsData.gpsGood = true; }
+        if ((GpsData.gpsFix == FIX2D && allow2DFix) || GpsData.gpsFix == FIX3D) { GpsData.gpsGood = true; }
         else { GpsData.gpsGood = false; }
         
         if (!GpsData.gpsGood)
@@ -73,7 +83,7 @@ void FsGPS_performGPS()
         }
         
         // Compute ECEF Position
-        if (GpsData.positionValid && GpsData.input_msg_id==UBX_MSG::NAV_POSLLH)
+        if (GpsData.positionValid)
         {
             // ECEF Position
             LLHtoECEF(GpsData.posECEF, GpsData.posLLH);
@@ -115,7 +125,15 @@ void FsGPS_performGPS()
             GpsData.posENU[2] += GpsData.alt_3dFixBias;
         }
         GpsData.timestamp = getTime();
+        GpsData.dt_FS_GPS = GpsData.timestamp - GpsData.GPStimestamp;
     }
+#endif
+}
+
+void FsGPS_performSerialIO()
+{
+#ifdef GPS
+    gpsFIFO.update_fifo();
 #endif
 }
 

@@ -61,6 +61,8 @@ struct NavType {
     double q_B_NED[4]; // Quaternion of Body relative to NED
     double accBias[3];
     double gyroBias[3];
+    double altitude_msl;
+    double geoidCorrection;
     double gravity;
     double velBody[3];
     double accelBody[3];
@@ -79,7 +81,9 @@ struct NavType {
     {
         state = Calibration;
         timestamp = 0.0;
-        gravity = 9.81;
+        gravity = (double) (Gravity);
+        altitude_msl = 0.0;
+        geoidCorrection = 0.0;
         initNED = false;
         InsUpdateCount  = 0;
         BaroUpdateCount = 0;
@@ -129,9 +133,11 @@ NavState FsNavigation_getNavState();
 double*  FsNavigation_getCovariance();
 double*  FsNavigation_getProcessNoise();
 double*  FsNavigation_getStateError();
+double*  FsNavigation_getCovarianceCorrection();
 double*  FsNavigation_getBaroKalmanGain();
 double*  FsNavigation_getBaroResidual();
-double*  FsNavigation_getCovarianceCorrection();
+double*  FsNavigation_getGPSMeasVariance();
+double*  FsNavigation_getGPSResidual();
 
 // Setters
 void FsNavigation_setIMUdata(IMUtype* pIMUdataIn);

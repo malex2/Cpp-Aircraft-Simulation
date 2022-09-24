@@ -140,7 +140,7 @@ void FsBarometer_setPressureResolution(byte pressureResolutionIn)
             break;
     }
     display("Barometer resolution set: ");
-    display(pressureResolution);
+    display(+pressureResolution, HEX);
     display("\n");
 }
 

@@ -26,7 +26,7 @@ public:
     virtual double getPressure()    { return pressureSensor; }
     virtual double getTemperature() { return temperatureSensor; }
     
-    void setPerfectSensor(bool input) { perfectSensor = input; }
+    virtual void setPerfectSensor(bool input) { perfectSensor = input; }
 protected:
     virtual void updatePressure();
     virtual void updateTemperature();

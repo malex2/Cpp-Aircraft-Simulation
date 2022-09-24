@@ -28,7 +28,8 @@ public:
     // Update obejct states and forces
     virtual bool update(void);
     
-    void setPerfectSensor(bool input) { perfectSensor = input; }
+    virtual void updateSerial() { };
+    virtual void setPerfectSensor(bool input) { perfectSensor = input; }
     
 protected:
     class DynamicsModel* pDyn;
@@ -148,36 +149,63 @@ public:
     GPSNeo6m(ModelMap *pMapInit, bool debugFlagIn = false);
     ~GPSNeo6m();
     
+    virtual void updateSerial();
 private:
     typedef GPSModelBase Base;
-    class  UBX_MSG* pUBX;
-    struct GpsType* gpsData;
+    class   FS_FIFO* pUBXFIFO;
+    class   UBX_MSG* pUBX;
+    struct  GpsType* gpsData;
     
     bool initUBX;
-    enum GPSOutputMessgaes {NAV_STATUS, NAV_POSLLH, NAV_VELNED, NGPSMESSAGES};
+    enum GPSOutputMessgaes {NAV_STATUS, NAV_DOP, NAV_POSLLH, NAV_VELNED, NGPSMESSAGES};
     double last_3dFixAlt;
     double last_3dFixMSL;
     double last_3dFixVD;
     
+    struct gps_file_info {
+        gps_file_info();
+        
+        static const int n_duplicate = 5;
+        int duplicate_class[n_duplicate];
+        int duplicate_id[n_duplicate];
+        
+        int prev_msg_class[maxOutputMessages];
+        int prev_msg_id[maxOutputMessages];
+        int i_msg;
+        
+        int  get_available_msg_idx();
+        
+        bool store_message(int msg_class, int msg_id);
+        bool allow_duplicate(int msg_class, int msg_id);
+        bool free_message(int msg_class, int msg_id);
+        void check_for_sent_messages(MessageType* pOutputMessages[maxOutputMessages]);
+        void clear();
+    } file_info;
+    
+    // Lake Eola Park
+    // Fix = 0, [horiz, vert, speed] = [16875.61 11932.86 20.00]
+    // Fix = 3, [horiz, vert, speed] = [42.22 230.59 3.38]
+ 
+    // Adeline
     // Fix = 2, [horiz, vert] = [15-30, 65]
     static const int GPSFixLength  = 3;
     int GPSFixTimes[GPSFixLength]  = {0, 5, 20};
-    int GPSFixValues[GPSFixLength] = {0, 2, 3};
+    int GPSFixValues[GPSFixLength] = {3, 3, 3};
     LookupTable<int> GPSFixLookup;
     
     static const int HorizAccLength = 3;
     double HorizAccTimes[HorizAccLength]  = {0.0, 5.0, 9.0};
-    double HorizAccValues[HorizAccLength] = {0.0, 30.0, 2.5};
+    double HorizAccValues[HorizAccLength] = {10.0, 10.0, 10.0};
     LookupTable<double> HorizAccLookup;
     
     static const int VertAccLength = 3;
     double VertAccTimes[VertAccLength]  = {0.0, 5.0, 9.0};
-    double VertAccValues[VertAccLength] = {0.0, 65.0, 2.5};
+    double VertAccValues[VertAccLength] = {10.0, 10.0, 10.0};
     LookupTable<double> VertAccLookup;
     
     static const int VelAccLength = 3;
     double VelAccTimes[VelAccLength]  = {0.0, 5.0, 9.0};
-    double VelAccValues[VelAccLength] = {0.0, 0.8 , 0.1};
+    double VelAccValues[VelAccLength] = {1.0, 1.0 , 1.0};
     LookupTable<double> VelAccLookup;
     
     virtual void updatePositionError();
@@ -185,7 +213,7 @@ private:
     virtual void readInputMessages();
     virtual void decodeInputMessages();
     virtual void constructOutputMessages();
-    int encodeOutputMessage(GPSOutputMessgaes gpsMsg, void* buffer, int buffer_length);
+    int encodeOutputMessage(int gpsMsg, void* buffer, int buffer_length);
     
     std::ifstream gps_msg_file;
     std::streampos gps_msg_file_begin;

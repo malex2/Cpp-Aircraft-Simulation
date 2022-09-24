@@ -17,6 +17,166 @@
     class Time* pTime = 0;
 #endif
 
+FS_FIFO::FS_FIFO(HardwareSerial* serialIO)
+{
+    this->serialIO   = serialIO;
+    read_byte_count  = 0.0;
+    write_byte_count = 0.0;
+    prevWriteTime = 0.0;
+    baud_rate     = 0.0;
+    reset_read_buffer();
+    reset_write_buffer();
+}
+
+FS_FIFO::~FS_FIFO()
+{
+    serialIO = 0;
+    reset_read_buffer();
+    reset_write_buffer();
+}
+
+void FS_FIFO::begin(int baud_rate)
+{
+    if (serialIO)
+    {
+        serialIO->begin(baud_rate);
+        this->baud_rate = 1.0/baud_rate;
+        prevWriteTime = getTime();
+    }
+}
+
+void FS_FIFO::update_fifo()
+{
+    if (!serialIO || baud_rate==0.0) { return ;}
+    
+    // Read from SerialIO
+    while (serialIO->available())
+    {
+        if (!read_fifo_full())
+        {
+            read_buffer[read_buffer_length] = serialIO->read();
+            read_buffer_length++;
+            read_byte_count++;
+        }
+    }
+    
+    // Write to SerialIO
+    if (write_available() &&  getTime() - prevWriteTime >= baud_rate)
+    {
+        serialIO->write(write_buffer[write_buffer_index]);
+        write_buffer_index++;
+        prevWriteTime = getTime();
+        if (!write_available()) { reset_write_buffer(); }
+        write_byte_count++;
+    }
+    
+}
+
+// Read from SerilaIO
+byte FS_FIFO::read()
+{
+    if (available())
+    {
+        read_val = read_buffer[read_buffer_index];
+        read_buffer_index++;
+        if (!available()) { reset_read_buffer(); }
+    }
+    else
+    {
+        read_val = 0x00;
+    }
+    
+    return read_val;
+}
+
+int FS_FIFO::available()
+{
+    return (read_buffer_length - read_buffer_index);
+}
+
+bool FS_FIFO::read_fifo_full()
+{
+    return (read_buffer_length >= (int) (MAX_SERIAL_FIFO_SIZE));
+}
+
+// Write to SerialIO
+int FS_FIFO::write(byte write_val)
+{
+    if (!write_fifo_full())
+    {
+        write_buffer[write_buffer_length] = write_val;
+        write_buffer_length++;
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+int FS_FIFO::write(byte* write_val, int length)
+{
+    int tx_count = 0;
+    for (int i = 0; i < length; i++)
+    {
+        tx_count += write(write_val[i]);
+    }
+    return tx_count;
+}
+
+int FS_FIFO::write_available()
+{
+    return (write_buffer_length - write_buffer_index);
+}
+
+bool FS_FIFO::write_fifo_full()
+{
+    return (write_buffer_length >= (int) (MAX_SERIAL_FIFO_SIZE));
+}
+
+void FS_FIFO::reset_read_buffer()
+{
+    memset(read_buffer, 0x00, MAX_SERIAL_FIFO_SIZE);
+    read_buffer_index  = 0;
+    read_buffer_length = 0;
+}
+
+void FS_FIFO::reset_write_buffer()
+{
+    memset(write_buffer, 0x00, MAX_SERIAL_FIFO_SIZE);
+    write_buffer_index  = 0;
+    write_buffer_length = 0;
+}
+
+void FS_FIFO::display_read_buffer()
+{
+    display("FS_FIFO::read_buffer [");
+    display(read_buffer_index);
+    display("-");
+    display(read_buffer_length);
+    display("]: ");
+    for (int i = read_buffer_index; i < read_buffer_length; i++)
+    {
+        display(+read_buffer[i], HEX);
+    }
+    display("\n");
+}
+
+void FS_FIFO::display_write_buffer()
+{
+    display("FS_FIFO::write_buffer [");
+    display(write_buffer_index);
+    display("-");
+    display(write_buffer_length);
+    display("]: ");
+    for (int i = write_buffer_index; i < write_buffer_length; i++)
+    {
+        display(+write_buffer[i], HEX);
+    }
+    display("\n");
+}
+
+
 // Time
 double getTime()
 {
@@ -81,6 +241,24 @@ void display(TempType val)
 #endif
 }
 
+template<typename TempType>
+void display(TempType val, int printMode)
+{
+#ifdef SIMULATION
+    if (printMode == HEX)
+    {
+        std::cout << std::hex << std::setfill('0') << std::setw(2) << val;
+        std::cout << std::dec;
+    }
+    else
+    {
+        display(val);
+    }
+#else
+    Serial.print(val, printMode);
+#endif
+}
+
 void display(I2C_Error_Code val)
 {
     if (val == I2C_0_SUCCESS)
@@ -114,10 +292,25 @@ void display(I2C_Error_Code val)
 }
 
 template void display(const char*);
+template void display(char);
 template void display(String);
+template void display(short);
+template void display(unsigned short);
 template void display(int);
+template void display(unsigned int);
+template void display(long);
+template void display(unsigned long);
 template void display(double);
 template void display(byte);
+
+template void display(short, int printMode);
+template void display(unsigned short, int printMode);
+template void display(int, int printMode);
+template void display(unsigned int, int printMode);
+template void display(long, int printMode);
+template void display(unsigned long, int printMode);
+template void display(double, int printMode);
+template void display(byte, int printMode);
 
 #ifdef SIMULATION
 void FsCommon_setSimulationModels(ModelMap* pMap)

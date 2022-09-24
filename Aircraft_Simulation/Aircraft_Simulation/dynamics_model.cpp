@@ -49,8 +49,12 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     
     pMap->addLogVar("VN  ", &velNED[0], savePlot, 2);
     pMap->addLogVar("VE  ", &velNED[1], savePlot, 2);
-    //pMap->addLogVar("VD  ", &velNED[2], printSavePlot, 3);
+    pMap->addLogVar("VD  ", &velNED[2], printSavePlot, 3);
     
+    //pMap->addLogVar("velLL X  ", &velLL[0], savePlot, 2);
+    //pMap->addLogVar("velLL Y  ", &velLL[1], savePlot, 2);
+    //pMap->addLogVar("velLL Z  ", &velLL[2], savePlot, 2);
+
     //pMap->addLogVar("Roll Rate", &eulerRatesDeg[0].val, savePlot, 2);
     //pMap->addLogVar("Pitch Rate", &eulerRatesDeg[1].val, savePlot, 2);
     //pMap->addLogVar("Yaw Rate", &eulerRatesDeg[2].val, savePlot, 2);
@@ -59,13 +63,13 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("qdot", &bodyAngularAcc[1], savePlot, 2);
     //pMap->addLogVar("rdot", &bodyAngularAcc[2], printSavePlot, 3);
     
-    pMap->addLogVar("p", &bodyRatesDeg[0], savePlot, 2);
-    pMap->addLogVar("q", &bodyRatesDeg[1], savePlot, 2);
-    pMap->addLogVar("r", &bodyRatesDeg[2], savePlot, 2);
+    //pMap->addLogVar("p", &bodyRatesDeg[0], savePlot, 2);
+    //pMap->addLogVar("q", &bodyRatesDeg[1], savePlot, 2);
+    //pMap->addLogVar("r", &bodyRatesDeg[2], savePlot, 2);
     
-    pMap->addLogVar("Roll ", &eulerAnglesDeg[0], savePlot, 2);
-    pMap->addLogVar("Pitch", &eulerAnglesDeg[1], savePlot, 2);
-    pMap->addLogVar("Yaw  ", &eulerAnglesDeg[2], savePlot, 2);
+    //pMap->addLogVar("Roll ", &eulerAnglesDeg[0], savePlot, 2);
+    //pMap->addLogVar("Pitch", &eulerAnglesDeg[1], savePlot, 2);
+    //pMap->addLogVar("Yaw  ", &eulerAnglesDeg[2], savePlot, 2);
     
     //pMap->addLogVar("q_B_NED[0]", &q_B_NED[0], savePlot, 2);
     //pMap->addLogVar("q_B_NED[1]", &q_B_NED[1], savePlot, 2);
@@ -92,7 +96,7 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
  
     //pMap->addLogVar("Body Accel X", &accelBody[0], savePlot, 2);
     //pMap->addLogVar("Body Accel Y", &accelBody[1], savePlot, 2);
-    pMap->addLogVar("Body Accel Z", &accelBody[2], savePlot, 2);
+    //pMap->addLogVar("Body Accel Z", &accelBody[2], savePlot, 2);
     //pMap->addLogVar("Accel Mag", &accelMag, savePlot, 2);
     
     //pMap->addLogVar("SumMX", &bodyMoment[0], savePlot, 2);

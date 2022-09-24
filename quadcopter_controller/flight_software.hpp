@@ -26,6 +26,9 @@ void setupIO();
 // Main Function
 bool mainFlightSoftware();
 
+// Functions
+void performSerialIO();
+
 // Setters
 #ifdef SIMULATION
     void flightSoftware_setMapPointer(ModelMap* pMapInit);
