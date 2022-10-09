@@ -24,6 +24,8 @@ FS_FIFO::FS_FIFO(HardwareSerial* serialIO)
     write_byte_count = 0.0;
     prevWriteTime = 0.0;
     baud_rate     = 0.0;
+    max_read_buffer_length  = 0;
+    max_write_buffer_length = 0;
     reset_read_buffer();
     reset_write_buffer();
 }
@@ -57,6 +59,7 @@ void FS_FIFO::update_fifo()
             read_buffer[read_buffer_length] = serialIO->read();
             read_buffer_length++;
             read_byte_count++;
+            if (read_buffer_length > max_read_buffer_length) { max_read_buffer_length = read_buffer_length; }
         }
     }
     
@@ -106,6 +109,7 @@ int FS_FIFO::write(byte write_val)
     {
         write_buffer[write_buffer_length] = write_val;
         write_buffer_length++;
+        if (write_buffer_length > max_write_buffer_length) { max_write_buffer_length = write_buffer_length; }
         return 1;
     }
     else

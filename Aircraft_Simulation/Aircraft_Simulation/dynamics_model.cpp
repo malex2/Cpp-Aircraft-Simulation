@@ -31,12 +31,12 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("posECEF Y", &posECEF[1], savePlot, 2);
     //pMap->addLogVar("posECEF Z", &posECEF[2], savePlot, 2);
     
-    pMap->addLogVar("N (m)", &posNED[0], savePlot, 2);
-    pMap->addLogVar("E (m)", &posNED[1], savePlot, 2);
+    //pMap->addLogVar("N (m)", &posNED[0], savePlot, 2);
+    //pMap->addLogVar("E (m)", &posNED[1], savePlot, 2);
     //pMap->addLogVar("D (m)", &posNED[2], savePlot, 2);
     pMap->addLogVar("gndAlt", &hGround, printSavePlot, 3);
     
-    //pMap->addLogVar("speed", &velMag, savePlot, 2);
+    pMap->addLogVar("speed", &velMag, savePlot, 2);
     
     
     //pMap->addLogVar("velECEF X", &velECEF[0], savePlot, 2);
@@ -49,7 +49,7 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     
     pMap->addLogVar("VN  ", &velNED[0], savePlot, 2);
     pMap->addLogVar("VE  ", &velNED[1], savePlot, 2);
-    pMap->addLogVar("VD  ", &velNED[2], printSavePlot, 3);
+    pMap->addLogVar("VD  ", &velNED[2], savePlot, 2);
     
     //pMap->addLogVar("velLL X  ", &velLL[0], savePlot, 2);
     //pMap->addLogVar("velLL Y  ", &velLL[1], savePlot, 2);
@@ -67,8 +67,8 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("q", &bodyRatesDeg[1], savePlot, 2);
     //pMap->addLogVar("r", &bodyRatesDeg[2], savePlot, 2);
     
-    //pMap->addLogVar("Roll ", &eulerAnglesDeg[0], savePlot, 2);
-    //pMap->addLogVar("Pitch", &eulerAnglesDeg[1], savePlot, 2);
+    pMap->addLogVar("Roll ", &eulerAnglesDeg[0], savePlot, 2);
+    pMap->addLogVar("Pitch", &eulerAnglesDeg[1], savePlot, 2);
     //pMap->addLogVar("Yaw  ", &eulerAnglesDeg[2], savePlot, 2);
     
     //pMap->addLogVar("q_B_NED[0]", &q_B_NED[0], savePlot, 2);

@@ -47,6 +47,8 @@ struct GpsType {
     unsigned long rcvdMsgCount;
     unsigned long fifoReadCount;
     unsigned long fifoWriteCount;
+    unsigned int  fifoMaxReadLength;
+    unsigned int  fifoMaxWriteLength;
     
     struct DOP_t {
         double gDOP;
@@ -59,7 +61,7 @@ struct GpsType {
     } DOP;
 
     double GPStimestamp;
-    double dt_FS_GPS;
+    double dt_GPS_FS;
     #ifdef SIMULATION
         int msgRates[NMESSAGES];
     #endif
@@ -101,10 +103,13 @@ struct GpsType {
         rcvdMsgCount  = 0;
         gpsGood       = false;
         GPStimestamp  = 0.0;
-        dt_FS_GPS     = 0.0;
+        dt_GPS_FS     = 0.0;
         
-        fifoReadCount  = 0;
-        fifoWriteCount = 0;
+        fifoReadCount      = 0;
+        fifoWriteCount     = 0;
+        fifoMaxReadLength  = 0;
+        fifoMaxWriteLength = 0;
+        
         #ifdef SIMULATION
             for (int i=0; i<NMESSAGES; i++)
             {
@@ -119,6 +124,8 @@ void LLHtoECEF(double* ECEF, double* LLH);
 void FsGPS_setupGPS(int baudRate, bool fs_allow2DFix);
 void FsGPS_performGPS();
 void FsGPS_performSerialIO();
+
+void FsGPS_requestAidningInfo();
 
 // Getters
 bool FsGPS_GPSgood();

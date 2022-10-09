@@ -14,28 +14,32 @@
 namespace UBX_MSG_TYPES {
     static const int UNKNOWN_MSG_ID    = -1;
     static const int UNKNOWN_MSG_CLASS = -1;
+    static const int ALM_WEEK_INVALID  = 0;
     
     // Navigation Dynamic Modes
     enum DynamicPlatformModel {Portable=0, Stationary=2, Pedestrian, Automotive, Sea, Airbone_1g, Airbone_2g, Airbone_4g};
     enum NavConfigMask {NavConfig_dyn, NavConfig_minEl, NavConfig_fixMode, NavConfig_drLim, NavConfig_posMask, NavConfig_timeMask, NavConfig_staticHoldMeask, NavConfig_dgpsMask};
+    enum NavStatusFlag {GPSFixOk, DiffSoln, WKNSET, TOWSET};
+    enum AidInitFlags {INI_POS, INI_TIME, INI_clockD, INI_tp, INI_clockF, INI_lla, INI_altInv, INI_prevTm};
     // Messages
     enum UBX_MSG_CLASS_ID {NAV, RXM, INF, ACK, CFG, MON, AID, TIM, NUBXCLASSES};
     enum UBX_MSG_NAV_ID   {NAV_STATUS, NAV_DOP, NAV_POSLLH, NAV_VELNED, NAV_SOL, NNAVMESSAGES};
     enum UBX_MSG_ACK_ID   {ACK_ACK, ACK_NAK, NACKMESSAGES};
     enum UBX_MSG_CFG_ID   {CFG_MSG, CFG_NAV5, NCFGMESSAGES};
+    enum UBX_MSG_AID_ID   {AID_INI, AID_ALM, AID_EPH, AID_HUI, AID_DATA, AID_REQ, NAIDMESSAGES};
     
     static const byte UBX_MSG_CLASS[NUBXCLASSES] = {UBX_NAV, UBX_RXM, UBX_INF, UBX_ACK, UBX_CFG, UBX_MON, UBX_AID, UBX_TIM};
-    static const int N_UBX_MSG_ID[NUBXCLASSES]   = {NNAVMESSAGES, 0, 0, NACKMESSAGES, NCFGMESSAGES, 0, 0, 0};
+    static const int N_UBX_MSG_ID[NUBXCLASSES]   = {NNAVMESSAGES, 0, 0, NACKMESSAGES, NCFGMESSAGES, 0, NAIDMESSAGES, 0};
     
-    static const byte UBX_MSG_ID[NUBXCLASSES][5] = {
-        {UBX_NAV_STATUS, UBX_NAV_DOP , UBX_NAV_POSLLH, UBX_NAV_VELNED, UBX_NAV_SOL}, // NAV
-        {0x00          , 0x00        , 0x00          , 0x00          , 0x00       }, // RXM
-        {0x00          , 0x00        , 0x00          , 0x00          , 0x00       }, // INF
-        {UBX_ACK_ACK   , UBX_ACK_NAK , 0x00          , 0x00          , 0x00       }, // ACK
-        {UBX_CFG_MSG   , UBX_CFG_NAV5, 0x00          , 0x00          , 0x00       }, // CFG
-        {0x00          , 0x00        , 0x00          , 0x00          , 0x00       }, // MON
-        {0x00          , 0x00        , 0x00          , 0x00          , 0x00       }, // AID
-        {0x00          , 0x00        , 0x00          , 0x00          , 0x00       }  // TIM
+    static const byte UBX_MSG_ID[NUBXCLASSES][6] = {
+        {UBX_NAV_STATUS, UBX_NAV_DOP , UBX_NAV_POSLLH, UBX_NAV_VELNED, UBX_NAV_SOL , 0x00       }, // NAV
+        {0x00          , 0x00        , 0x00          , 0x00          , 0x00        , 0x00       }, // RXM
+        {0x00          , 0x00        , 0x00          , 0x00          , 0x00        , 0x00       }, // INF
+        {UBX_ACK_ACK   , UBX_ACK_NAK , 0x00          , 0x00          , 0x00        , 0x00       }, // ACK
+        {UBX_CFG_MSG   , UBX_CFG_NAV5, 0x00          , 0x00          , 0x00        , 0x00       }, // CFG
+        {0x00          , 0x00        , 0x00          , 0x00          , 0x00        , 0x00       }, // MON
+        {UBX_AID_INI   , UBX_AID_ALM , UBX_AID_EPH   , UBX_AID_HUI   , UBX_AID_DATA, UBX_AID_REQ}, // AID
+        {0x00          , 0x00        , 0x00          , 0x00          , 0x00        , 0x00       }  // TIM
     };
     
     /*---------------------------------------------------*/
@@ -48,7 +52,7 @@ namespace UBX_MSG_TYPES {
             uint32_t iTOW               = 0;
             int32_t  longitude          = 0;
             int32_t  latitude           = 0;
-            int32_t  altitude_geod      = 0;
+            int32_t  altitude_ellipsoid = 0;
             int32_t  altitude_msl       = 0;
             uint32_t horizontalAccuracy = 0;
             uint32_t verticalAccuracy   = 0;
@@ -59,11 +63,13 @@ namespace UBX_MSG_TYPES {
             double iTOW               = 1.0e-3;
             double longitude          = 1.0e-7;
             double latitude           = 1.0e-7;
-            double altitude_geod      = 1.0e-3;
+            double altitude_ellipsoid = 1.0e-3;
             double altitude_msl       = 1.0e-3;
             double horizontalAccuracy = 1.0e-3;
             double verticalAccuracy   = 1.0e-3;
         } scale;
+        
+        void clear() { memset(&data, 0, sizeof(data)); }
         
         void print()
         {
@@ -71,7 +77,7 @@ namespace UBX_MSG_TYPES {
             display("iTOW "); display(data.iTOW); display(", ");
             display("longitude "); display(data.longitude); display(", ");
             display("latitude "); display(data.latitude); display(", ");
-            display("altitude_geod "); display(data.altitude_geod); display(", ");
+            display("altitude_ellipsoid "); display(data.altitude_ellipsoid); display(", ");
             display("altitude_msl "); display(data.altitude_msl); display(", ");
             display("horizontalAccuracy "); display(data.horizontalAccuracy); display(", ");
             display("verticalAccuracy "); display(data.verticalAccuracy); display(", ");
@@ -117,6 +123,8 @@ namespace UBX_MSG_TYPES {
             double speedAccuracy   = 1.0e-2;
             double headingAccuracy = 1.0e-5;
         } scale;
+        
+        void clear() { memset(&data, 0, sizeof(data)); }
         
         void print()
         {
@@ -169,6 +177,8 @@ namespace UBX_MSG_TYPES {
             double msss    = 1.0e-3;
         } scale;
         
+        void clear() { memset(&data, 0, sizeof(data)); }
+        
         void print()
         {
             display("UBX_MSG_NAV_STATUS (data): ");
@@ -219,6 +229,8 @@ namespace UBX_MSG_TYPES {
             double nDOP    = 0.01;
             double eDOP    = 0.01;
         } scale;
+        
+        void clear() { memset(&data, 0, sizeof(data)); }
         
         void print()
         {
@@ -289,6 +301,8 @@ namespace UBX_MSG_TYPES {
             double reserved2 = 1.0;
         } scale;
         
+        void clear() { memset(&data, 0, sizeof(data)); }
+        
         void print()
         {
             display("UBX_MSG_NAV_SOL (data): ");
@@ -337,6 +351,8 @@ namespace UBX_MSG_TYPES {
             double msgID    = 1.0;
             double rate     = 1.0;
         } scale;
+        
+        void clear() { memset(&data, 0, sizeof(data)); }
     };
     
     /*---------------------------------------------------*/
@@ -367,10 +383,33 @@ namespace UBX_MSG_TYPES {
             double rateTgt5 = 1.0;
             double rateTgt6 = 1.0;
         } scale;
+        
+        void clear() { memset(&data, 0, sizeof(data)); }
+    };
+    
+    
+    /*---------------------------------------------------*/
+    /*--------------------ACK_ACK------------------------*/
+    /*---------------------------------------------------*/
+    struct UBX_MSG_ACK
+    {
+        struct data_t
+        {
+            byte clsID = 0;
+            byte msgID = 0;
+        } data;
+        
+        struct scale_t
+        {
+            double clsID = 1.0;
+            double msgID = 1.0;
+        } scale;
+        
+        void clear() { memset(&data, 0, sizeof(data)); }
     };
     
     /*---------------------------------------------------*/
-    /*-----------------CFG_NAV5---------------------*/
+    /*--------------------CFG_NAV5-----------------------*/
     /*---------------------------------------------------*/
     struct UBX_MSG_CFG_NAV5
     {
@@ -414,6 +453,240 @@ namespace UBX_MSG_TYPES {
             double reserved3        = 1.0;
             double reserved4        = 1.0;
         } scale;
+        
+        void clear() { memset(&data, 0, sizeof(data)); }
+    };
+    
+    /*---------------------------------------------------*/
+    /*---------------------AID_INI-----------------------*/
+    /*---------------------------------------------------*/
+    struct UBX_MSG_AID_INI
+    {
+        struct data_t
+        {
+            int32_t  ecefXOrLat       = 0;
+            int32_t  ecefYOrLon       = 0;
+            int32_t  ecefZOrAlt       = 0;
+            uint32_t posAcc           = 0;
+            uint16_t tmCfg            = 0;
+            uint16_t wn               = 0;
+            uint32_t tow              = 0;
+            int32_t  towNs            = 0;
+            uint32_t tAccMs           = 0;
+            uint32_t tAccNs           = 0;
+            int32_t  clkDOrFreq       = 0;
+            uint32_t clkDAccOrFreqAcc = 0;
+            uint32_t flags            = 0;
+        } data;
+        
+        struct scale_t
+        {
+            double ecefX            = 1.0e-2;
+            double ecefY            = 1.0e-2;
+            double ecefZ            = 1.0e-2;
+            double Lat              = 1.0e-7;
+            double Lon              = 1.0e-7;
+            double Alt              = 1.0e-2;
+            double posAcc           = 1.0e-2;
+            double tmCfg            = 1.0;
+            double wn               = 1.0;
+            double tow              = 1.0e-3;
+            double towNs            = 1.0e-9;
+            double tAccMs           = 1.0e-3;
+            double tAccNs           = 1.0e-9;
+            double clkD             = 1.0e-9;
+            double Freq             = 1.0e2;
+            double clkDAcc          = 1.0e-9;
+            double FreqAcc          = 1.0;
+            double flags            = 1.0;
+        } scale;
+        
+        void clear() { memset(&data, 0, sizeof(data)); }
+    };
+    
+    /*---------------------------------------------------*/
+    /*--------------------AID_ALM------------------------*/
+    /*---------------------------------------------------*/
+    struct UBX_MSG_AID_ALM_POLL_SV
+    {
+        struct data_t
+        {
+            byte svid = 0;
+        } data;
+        
+        struct scale_t
+        {
+            double svid = 1.0;
+        } scale;
+        
+        void clear() { memset(&data, 0, sizeof(data)); }
+    };
+    
+    struct UBX_MSG_AID_ALM_INVALID
+    {
+        struct data_t
+        {
+            uint32_t svid = 0;
+            uint32_t week = 0;
+        } data;
+        
+        struct scale_t
+        {
+            double svid = 1.0;
+            double week = 1.0;
+        } scale;
+        
+        void clear() { memset(&data, 0, sizeof(data)); }
+    };
+    
+    struct UBX_MSG_AID_ALM
+    {
+        struct data_t
+        {
+            uint32_t svid    = 0;
+            uint32_t week    = 0;
+            uint32_t dwrd[8] = {0};
+        } data;
+        
+        struct scale_t
+        {
+            double svid    = 1.0;
+            double week    = 1.0;
+            double dwrd[8] = {1.0};
+        } scale;
+        
+        void clear() { memset(&data, 0, sizeof(data)); }
+    };
+    
+    /*---------------------------------------------------*/
+    /*--------------------AID_EPH------------------------*/
+    /*---------------------------------------------------*/
+    struct UBX_MSG_AID_EPH_POLL_SV
+    {
+        struct data_t
+        {
+            byte svid = 0;
+        } data;
+        
+        struct scale_t
+        {
+            double svid = 1.0;
+        } scale;
+        
+        void clear() { memset(&data, 0, sizeof(data)); }
+    };
+    
+    struct UBX_MSG_AID_EPH_INVALID
+    {
+        struct data_t
+        {
+            uint32_t svid = 0;
+            uint32_t how  = 0;
+        } data;
+        
+        struct scale_t
+        {
+            double svid = 1.0;
+            double how  = 1.0;
+        } scale;
+        
+        void clear() { memset(&data, 0, sizeof(data)); }
+    };
+    
+    struct UBX_MSG_AID_EPH
+    {
+        struct data_t
+        {
+            uint32_t svid    = 0;
+            uint32_t how     = 0;
+            uint32_t sf1d[8] = {0};
+            uint32_t sf2d[8] = {0};
+            uint32_t sf3d[8] = {0};
+        } data;
+        
+        struct scale_t
+        {
+            double svid    = 1.0;
+            double how     = 1.0;
+            double sf1d[8] = {1.0};
+            double sf2d[8] = {1.0};
+            double sf3d[8] = {1.0};
+        } scale;
+        
+        void clear() { memset(&data, 0, sizeof(data)); }
+    };
+    /*---------------------------------------------------*/
+    /*-------------------AID_HUI-------------------------*/
+    /*---------------------------------------------------*/
+    struct UBX_MSG_AID_HUI
+    {
+        struct data_t
+        {
+            uint32_t health   = 0;
+            double   utcA0    = 0.0;
+            double   utcA1    = 0.0;
+            int32_t  utcTOW   = 0;
+            int16_t  utcWNT   = 0;
+            int16_t  utcLS    = 0;
+            int16_t  utcWNF   = 0;
+            int16_t  utcDN    = 0;
+            int16_t  utcLSF   = 0;
+            int16_t  utcSpare = 0;
+            float    klobA0   = 0.0;
+            float    klobA1   = 0.0;
+            float    klobA2   = 0.0;
+            float    klobA3   = 0.0;
+            float    klobB0   = 0.0;
+            float    klobB1   = 0.0;
+            float    klobB2   = 0.0;
+            float    klobB3   = 0.0;
+            uint32_t flags    = 0;
+        } __attribute__((packed)) data;
+        
+        struct scale_t
+        {
+            double health   = 1.0;
+            double utcA0    = 1.0;
+            double utcA1    = 1.0;
+            double utcTOW   = 1.0;
+            double utcWNT   = 1.0;
+            double utcLS    = 1.0;
+            double utcWNF   = 1.0;
+            double utcDN    = 1.0;
+            double utcLSF   = 1.0;
+            double utcSpare = 1.0;
+            double klobA0   = 1.0;
+            double klobA1   = 1.0;
+            double klobA2   = 1.0;
+            double klobA3   = 1.0;
+            double klobB0   = 1.0;
+            double klobB1   = 1.0;
+            double klobB2   = 1.0;
+            double klobB3   = 1.0;
+            double flags    = 1.0;
+        } scale;
+        
+        void clear() { memset(&data, 0, sizeof(data)); }
+        
+        void print()
+        {
+            display("UBX_MSG_AID_HUI (data): ");
+            display("health "); display((int) data.health); display(", ");
+            display("utcA0 "); display((int) data.utcA0); display(", ");
+            display("utcA1 "); display((int) data.utcA1); display(", ");
+            display("utcTOW "); display((int) data.utcTOW); display(", ");
+            display("utcWNT "); display((int) data.utcWNT); display(", ");
+            display("utcLS "); display((int) data.utcLS); display(", ");
+            display("utcWNF "); display((int) data.utcWNF); display(", ");
+            display("\n");
+            
+            display("UBX_MSG_AID_HUI (bytes) "); display(sizeof(data)); display(": ");
+            for (int i=0; i < sizeof(data); i++)
+            {
+                display( +((char*)&data)[i], HEX);
+            }
+            display("\n");
+        }
     };
 }
 

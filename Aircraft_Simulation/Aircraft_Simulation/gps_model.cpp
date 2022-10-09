@@ -644,7 +644,7 @@ void GPSNeo6m::constructOutputMessages()
             posLLH.data.iTOW               = gps_timeofweek             / posLLH.scale.iTOW;
             posLLH.data.latitude           = gps_posLLH[0]/util.deg2rad / posLLH.scale.latitude;
             posLLH.data.longitude          = gps_posLLH[1]/util.deg2rad / posLLH.scale.longitude;
-            posLLH.data.altitude_geod      = alt                        / posLLH.scale.altitude_geod;
+            posLLH.data.altitude_ellipsoid = alt                        / posLLH.scale.altitude_ellipsoid;
             posLLH.data.altitude_msl       = msl                        / posLLH.scale.altitude_msl;
             posLLH.data.horizontalAccuracy = horizPosAcc                / posLLH.scale.horizontalAccuracy;
             posLLH.data.verticalAccuracy   = vertPosAcc                 / posLLH.scale.verticalAccuracy;
@@ -665,14 +665,21 @@ void GPSNeo6m::constructOutputMessages()
             navStatus.data.iTOW    = gps_timeofweek  / navStatus.scale.iTOW;
             navStatus.data.gpsFix  = gpsFix;
             navStatus.data.ttff    = gps_acquire_time / navStatus.scale.ttff;
-            navStatus.data.ttff    = gps_acquire_time * navStatus.scale.ttff;
+
+            navStatus.data.flags |= UBX_MSG_TYPES::GPSFixOk << 1;
+        }
+        else
+        {
+            navStatus.data.flags |= UBX_MSG_TYPES::GPSFixOk << 0;
         }
         
         // Complete NAV Status Message
-        navStatus.data.flags   = 0x00;
+        navStatus.data.flags |= UBX_MSG_TYPES::DiffSoln << 0;
+        navStatus.data.flags |= UBX_MSG_TYPES::WKNSET << 0;
+        navStatus.data.flags |= UBX_MSG_TYPES::TOWSET << 0;
         navStatus.data.fixStat = 0x00;
         navStatus.data.flags2  = 0x00;
-        navStatus.data.msss    = pTime->getSimTime() * navStatus.scale.msss;
+        navStatus.data.msss    = pTime->getSimTime() / navStatus.scale.msss;
         
         // Store output message
         if (debugFlag) { navStatus.print(); }

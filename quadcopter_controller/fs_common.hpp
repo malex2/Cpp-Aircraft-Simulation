@@ -13,15 +13,15 @@
 #include <math.h>
 
 // MACROS
-#define SIMULATION
-#define IMU
+//#define SIMULATION
+//#define IMU
 #define GPS
-#define BAROMETER
-#define PWM
+//#define BAROMETER
+//#define PWM
 //#define CONTROLS
-#define GROUND_DETECTION
-#define NAVIGATION
-//#define PRINT
+//#define GROUND_DETECTION
+//#define NAVIGATION
+#define PRINT
 //#define UBX_PRINT
 
 #ifdef SIMULATION
@@ -221,6 +221,12 @@ enum channelType {THROTTLE_CHANNEL, ROLL_CHANNEL, PITCH_CHANNEL, YAW_CHANNEL, nC
 #define UBX_MON        0x0A
 
 #define UBX_AID        0x0B
+#define UBX_AID_ALM    0x30
+#define UBX_AID_DATA   0x10
+#define UBX_AID_EPH    0x31
+#define UBX_AID_HUI    0x02
+#define UBX_AID_INI    0x01
+#define UBX_AID_REQ    0x00
 
 #define UBX_TIM        0x0D
 
@@ -251,12 +257,14 @@ public:
     byte read();
     int available();
     unsigned long read_count() { return read_byte_count; }
+    unsigned int get_max_read_buffer_length() { return max_read_buffer_length; }
     
     // Flight Software to Serial IO
     int write(byte val);
     int write(byte* val, int length);
     int write_available();
     unsigned long write_count() { return write_byte_count; };
+    unsigned int get_max_write_buffer_length() { return max_write_buffer_length; }
     
     // Debug
     void display_read_buffer();
@@ -264,14 +272,16 @@ public:
 private:
     byte read_val;
     byte read_buffer[MAX_SERIAL_FIFO_SIZE];
-    int  read_buffer_index;
-    int  read_buffer_length;
-    unsigned long  read_byte_count;
+    unsigned int  read_buffer_index;
+    unsigned int  read_buffer_length;
+    unsigned long read_byte_count;
+    unsigned int  max_read_buffer_length;
     
     byte write_buffer[MAX_SERIAL_FIFO_SIZE];
-    int  write_buffer_index;
-    int  write_buffer_length;
-    unsigned long  write_byte_count;
+    unsigned int  write_buffer_index;
+    unsigned int  write_buffer_length;
+    unsigned long write_byte_count;
+    unsigned int  max_write_buffer_length;
     double baud_rate;
     double prevWriteTime;
     

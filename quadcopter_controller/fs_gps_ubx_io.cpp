@@ -256,13 +256,35 @@ void UBX_MSG::get_nav_config()
     write(&output_msg);
 }
 
+void UBX_MSG::init_aid_request()
+{
+    byte temp_msg[UBX_CFG_ON_OFF_SHORT_SIZE];
+    temp_msg[0] = UBX_AID;
+    temp_msg[1] = UBX_AID_REQ;
+    temp_msg[2] = 0x01;
+    
+    // Write AID-REQ
+    output_msg.msg_class     = CFG;
+    output_msg.msg_id        = CFG_MSG;
+    output_msg.buffer_length = UBX_CFG_ON_OFF_SHORT_SIZE;
+    output_msg.set_buffer(temp_msg, output_msg.buffer_length);
+    write(&output_msg);
+}
+
+void UBX_MSG::request_aid_data()
+{
+    output_msg.msg_class = AID;
+    output_msg.msg_id    = AID_DATA;
+    write(&output_msg);
+}
+
 int UBX_MSG::data_available()
 {
     return (gpsFIFO->available());
 }
 
 int UBX_MSG::read(GpsType* gpsData)
-{
+{    
     int nRcvd = 0;
     while (gpsFIFO->available() > 0 || input_msg.state == COMPLETE)
     {
@@ -301,7 +323,7 @@ int UBX_MSG::read(GpsType* gpsData)
                 if (input_msg.msg_class_id.index == UBX_MSG_CLASS_ID_SIZE)
                 {
                     input_msg.determine_input_msg_id();
-                    if (input_msg.msg_id != UNKNOWN_MSG_ID)
+                    if (input_msg.msg_class != UNKNOWN_MSG_CLASS && input_msg.msg_id != UNKNOWN_MSG_ID)
                     {
                         input_msg.state = MSG_LENGTH;
                     }
@@ -319,19 +341,7 @@ int UBX_MSG::read(GpsType* gpsData)
                 if (input_msg.msg_length.index == UBX_MSG_LENGTH_SIZE)
                 {
                     input_msg.determine_input_msg_length();
-                    if (input_msg.buffer_length != 0)
-                    {
-                        input_msg.state = UPDATE_MSG;
-                    }
-                    else
-                    {
-                        clear_input_buffer();
-                        display("UBX_MSG::read - [");
-                        display(input_msg.msg_class);
-                        display(" ");
-                        display(input_msg.msg_id);
-                        display("] Invalid MSG Length\n");
-                    }
+                    input_msg.state = UPDATE_MSG;
                 }
                 break;
                 
@@ -459,14 +469,6 @@ int UBX_MSG::decode(int msg_class, int msg_id, byte* buffer, unsigned short buff
             valid_decode = 1;
         }
     }
-    else if (msg_class == CFG && msg_id == CFG_NAV5)
-    {
-        if (buffer_length == sizeof(configNav5.data))
-        {
-            memcpy(&configNav5.data, buffer, buffer_length);
-            valid_decode = 1;
-        }
-    }
 #ifdef SIMULATION
     else if (msg_class == CFG && msg_id == CFG_MSG)
     {
@@ -482,6 +484,82 @@ int UBX_MSG::decode(int msg_class, int msg_id, byte* buffer, unsigned short buff
         }
     }
 #endif
+    else if (msg_class == CFG && msg_id == CFG_NAV5)
+    {
+        if (buffer_length == sizeof(configNav5.data))
+        {
+            memcpy(&configNav5.data, buffer, buffer_length);
+            valid_decode = 1;
+        }
+    }
+    else if (msg_class == ACK && msg_id == ACK_ACK)
+    {
+        if (buffer_length == sizeof(ack.data))
+        {
+            memcpy(&ack.data, buffer, buffer_length);
+            valid_decode = 1;
+        }
+    }
+    else if (msg_class == ACK && msg_id == ACK_NAK)
+    {
+        if (buffer_length == sizeof(nak.data))
+        {
+            memcpy(&nak.data, buffer, buffer_length);
+            valid_decode = 1;
+        }
+    }
+    else if (msg_class == AID && msg_id == AID_INI)
+    {
+        if (buffer_length == sizeof(aidInit.data))
+        {
+            memcpy(&aidInit.data, buffer, buffer_length);
+            valid_decode = 1;
+        }
+    }
+    else if (msg_class == AID && msg_id == AID_HUI)
+    {
+        if (buffer_length == sizeof(gpsHealth.data))
+        {
+            memcpy(&gpsHealth.data, buffer, buffer_length);
+            valid_decode = 1;
+        }
+    }
+    else if (msg_class == AID && msg_id == AID_ALM)
+    {
+        if (buffer_length == sizeof(almanacInvalid.data))
+        {
+            memcpy(&almanacInvalid.data, buffer, buffer_length);
+            //memcpy(&almanac.data, buffer, buffer_length);
+            valid_decode = 1;
+        }
+        else if (buffer_length == sizeof(almanac.data))
+        {
+            memcpy(&almanac.data, buffer, buffer_length);
+            valid_decode = 1;
+        }
+    }
+    else if (msg_class == AID && msg_id == AID_EPH)
+    {
+        display("Decoding Ephemeris: ");
+        display(buffer_length);
+        display(" ");
+        display(sizeof(ephemerisInvalid.data));
+        display(" ");
+        display(sizeof(ephemeris.data));
+        display("\n");
+        
+        if (buffer_length == sizeof(ephemerisInvalid.data))
+        {
+            //memcpy(&ephemerisInvalid.data, buffer, buffer_length);
+            memcpy(&ephemeris.data, buffer, buffer_length);
+            valid_decode = 1;
+        }
+        else if (buffer_length == sizeof(ephemeris.data))
+        {
+            memcpy(&ephemeris.data, buffer, buffer_length);
+            valid_decode = 1;
+        }
+    }
     return valid_decode;
 }
 
@@ -495,7 +573,7 @@ int UBX_MSG::update_gps_data(int msg_class, int msg_id, GpsType* gpsData)
     {
         gpsData->posLLH[0]   = posLLH.data.latitude * posLLH.scale.latitude;
         gpsData->posLLH[1]   = posLLH.data.longitude * posLLH.scale.longitude;
-        gpsData->posLLH[2]   = posLLH.data.altitude_geod * posLLH.scale.altitude_geod;
+        gpsData->posLLH[2]   = posLLH.data.altitude_ellipsoid * posLLH.scale.altitude_ellipsoid;
         gpsData->alt_msl     = posLLH.data.altitude_msl * posLLH.scale.altitude_msl;
         gpsData->horizPosAcc = posLLH.data.horizontalAccuracy * posLLH.scale.horizontalAccuracy;
         gpsData->vertPosAcc  = posLLH.data.verticalAccuracy * posLLH.scale.verticalAccuracy;
@@ -518,7 +596,7 @@ int UBX_MSG::update_gps_data(int msg_class, int msg_id, GpsType* gpsData)
         gpsData->ttff         = navStatus.data.ttff * navStatus.scale.ttff;
         gpsData->GPStimestamp = navStatus.data.msss * navStatus.scale.msss;
         gpsData->gpsFix       = (GPS_FIX_TYPE) navStatus.data.gpsFix;
-        gpsData->fixOk        = (navStatus.data.flags >> 0) & 1;
+        gpsData->fixOk        = (navStatus.data.flags >> GPSFixOk) & 1;
         //int GPSFixOk = (navStatus.data.flags >> 0) & 1;
         //int DiffSoln = (navStatus.data.flags >> 1) & 1;
         //int WKNSET   = (navStatus.data.flags >> 2) & 1;
@@ -640,6 +718,96 @@ int UBX_MSG::update_gps_data(int msg_class, int msg_id, GpsType* gpsData)
         return 0;
     }
 #endif
+    else if (msg_class == ACK && msg_id == ACK_NAK)
+    {
+        display("Message not acknowledged! [classID, msgID] = [");
+        display(ack.data.clsID); display(", ");
+        display(ack.data.msgID); display("]\n");
+        return 1;
+    }
+    else if (msg_class == AID && msg_id == AID_INI)
+    {
+        int pos_valid           = (int) ((aidInit.data.flags >> INI_POS) & 1);
+        int time_valid          = (int) ((aidInit.data.flags >> INI_TIME) & 1);
+        int clock_drift_valid   = (int) ((aidInit.data.flags >> INI_clockD) & 1);
+        int use_time_pulse      = (int) ((aidInit.data.flags >> INI_tp) & 1);
+        int clock_freq_valid    = (int) ((aidInit.data.flags >> INI_clockF) & 1);
+        int pos_in_lla          = (int) ((aidInit.data.flags >> INI_lla) & 1);
+        int alt_invalid         = (int) ((aidInit.data.flags >> INI_altInv) & 1);
+        int mark_rcv_before_msg = (int) ((aidInit.data.flags >> INI_prevTm) & 1);
+        
+        display("AID_INI: \n");
+        display("\t[pos_valid, time_valid, alt_invalid] = [");
+        display(pos_valid); display(", ");
+        display(time_valid); display(", ");
+        display(alt_invalid); display("]\n");
+        
+        display("\t[clock_drift_valid, use_time_pulse, clock_freq_valid, mark_rcv_before_msg] = [");
+        display(clock_drift_valid); display(", ");
+        display(use_time_pulse); display(", ");
+        display(clock_freq_valid); display(", ");
+        display(mark_rcv_before_msg); display("]\n");
+        
+        if (pos_in_lla)
+        {
+            display("\tAID LLH = [");
+            display((double) aidInit.data.ecefXOrLat * aidInit.scale.Lat); display(",");
+            display((double) aidInit.data.ecefYOrLon * aidInit.scale.Lon); display(",");
+            display((double) aidInit.data.ecefZOrAlt * aidInit.scale.Alt); display("]\n");
+        }
+        else
+        {
+            display("\tAID ECEF = [");
+            display((double) aidInit.data.ecefXOrLat * aidInit.scale.ecefX); display(",");
+            display((double) aidInit.data.ecefYOrLon * aidInit.scale.ecefY); display(",");
+            display((double) aidInit.data.ecefZOrAlt * aidInit.scale.ecefZ); display("]\n");
+        }
+        display("\tPosAcc = "); display(aidInit.data.posAcc * aidInit.scale.posAcc); display("\n");
+
+        display("\t[Week Num, TOW, TOWns] = [");
+        display(aidInit.data.wn); display(", ");
+        display((double) aidInit.data.tow * aidInit.scale.tow); display(", ");
+        display(aidInit.data.towNs); display("]\n");
+       
+        display("\tTimeAcc = ");
+        display((double) aidInit.data.tAccMs * aidInit.scale.tAccMs);
+        display(" + ");
+        display(aidInit.data.tAccNs);
+        display(" ns\n");
+        
+        //uint16_t tmCfg            = 0;
+        //int32_t  clkDOrFreq       = 0;
+        //uint32_t clkDAccOrFreqAcc = 0;
+        
+        return 1;
+    }
+    else if (msg_class == AID && msg_id == AID_ALM)
+    {
+         if(almanac.data.week != ALM_WEEK_INVALID)
+         {
+             display("Received Almanac Data: ");
+             display(almanac.data.svid);
+             display("\n");
+         }
+        almanac.clear();
+        return 1;
+    }
+    else if (msg_class == AID && msg_id == AID_EPH)
+    {
+        if(ephemeris.data.how != 0)
+        {
+            display("Received Ephemeris Data: ");
+            display(ephemeris.data.svid);
+            display("\n");
+        }
+        ephemeris.clear();
+        return 1;
+    }
+    else if (msg_class == AID && msg_id == AID_HUI)
+    {
+        display("Received GPS Health Data\n");
+        return 1;
+    }
     return 0;
 }
 

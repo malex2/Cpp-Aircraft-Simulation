@@ -16,16 +16,13 @@
 #define FILTERTEST
 
 // Types
-enum NavState {Calibration, INS, GPSUpdate, GPSUpdate2D, BaroUpdate, GroundAlign};
+enum NavState {Calibration, INS, GPSUpdate, GPSUpdate2D, BaroUpdate, GroundAlign, NNAVSTATES};
 enum StateType {ROLL, PITCH, YAW, VN, VE, VD, N, E, ALT, GBIAS_X, GBIAS_Y, GBIAS_Z, ABIAS_X, ABIAS_Y, ABIAS_Z, GRAVITY, NSTATES};
 enum VECTORTYPE {X, Y, Z};
 enum GroundMeasurementType {GROUND_VN, GROUND_VE, GROUND_VD, GROUND_YAW, NGROUNDSTATES};
 enum GPSMeasurementType {GPS_N, GPS_E, GPS_ALT, GPS_VN, GPS_VE, GPS_VD, NGPSSTATES};
 enum GPS2DMeasurementType {GPS2D_N, GPS2D_E, GPS2D_VN, GPS2D_VE, N2DGPSSTATES};
 enum BAROMeasurementType {BARO_ALT, NBAROSTATES};
-
-const int NSTATES_BARO = 4;
-//StateType BaroKFStates[NSTATES_BARO] = {VD, ALT, ABIAS_Z, GRAVITY};
 
 struct SensorErrorType {
     double sum;
@@ -36,7 +33,7 @@ struct SensorErrorType {
     double sumSqr;
     double variance;
     
-    SensorErrorType() : sum(0), mean(0), max(-999), min(999), std(0), sumSqr(0), variance(0) {}
+    SensorErrorType() : sum(0.0), mean(0.0), max(-999999.0), min(999999.0), std(0.0), sumSqr(0.0), variance(0.0) {}
 };
 
 struct StateInputType {
@@ -76,7 +73,9 @@ struct NavType {
     unsigned int BaroUpdateCount;
     unsigned int GpsUpdateCount;
     unsigned int GroundAlignCount;
-    
+    unsigned int updateCount[NNAVSTATES];
+    double       sensorTimestamp[NNAVSTATES];
+    double       timestamp_diff[NNAVSTATES];
     NavType()
     {
         state = Calibration;
@@ -100,6 +99,13 @@ struct NavType {
             accelBody[i]   = 0.0;
         }
         q_B_NED[3] = 0.0;
+        
+        for (int i=0; i<NNAVSTATES; i++)
+        {
+            updateCount[i]     = 0;
+            sensorTimestamp[i] = 0.0;
+            timestamp_diff[i]  = 0.0;
+        }
     }
 };
 

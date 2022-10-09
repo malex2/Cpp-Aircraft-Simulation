@@ -173,19 +173,20 @@ int PwmIn::getPwm()
         /*
         if (channel == THROTTLE_CHANNEL)
         {
-         display("("); display(i); display(") ");
-         display("Time: ");
-         display( getTime() );
-         display(" Table Time: ");
-         display( pTable->pTableTimes[i] );
-         display(" Table Value: ");
-         display( pTable->pTableValues[i] );
-         display("\n");
+          display("("); display(i); display(") ");
+          display("Time: ");
+          display( getTime() );
+          display(" Table Time: ");
+          display( pTable->pTableTimes[i] );
+          display(" Table Value: ");
+          display( pTable->pTableValues[i] );
+          display("\n");
         }
         */
         if( getTime() >= pTable->pTableTimes[i] )
         {
             value = pTable->pTableValues[i];
+            //if (channel == THROTTLE_CHANNEL) { display("      Value:" ); display(value); display("\n");}
         }
     }
     

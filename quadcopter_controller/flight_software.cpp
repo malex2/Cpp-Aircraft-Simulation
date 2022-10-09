@@ -99,9 +99,7 @@ ControlMode controlMode;
     double fsTime;
     double countDelta50hz;
     double navState = 0.0;
-    double InsUpdateCount = 0.0;
-    double BaroUpdateCount = 0.0;
-    double GpsUpdateCount = 0.0;
+    double NavUpdateCounts[NNAVSTATES];
     double gpsGood = 0.0;
     double gpsFix = 0.0;
     double fixOk  = 0.0;
@@ -178,13 +176,13 @@ void initialize(void)
     initialPosition[0] = 0.0; // North    (m)
     initialPosition[1] = 0.0; // East     (m)
     initialPosition[2] = 0.0; // Altitude (m)
-    initialHeading = 0.0;
-    useTruthNav = false;
+    initialHeading     = 0.0;
+    useTruthNav        = false;
     
     // GPS
     fs_allow2DFix = false;
-    gpsBaudRate = 9600;
-    useGPS = true;
+    gpsBaudRate   = 9600;
+    useGPS        = true;
     
     // Control Settings
     controlMode = VelocityControl; //NoControl, ThrottleControl, AttitudeControl, VelocityControl
@@ -302,6 +300,7 @@ bool mainFlightSoftware(void)
         if (useGPS) { FsNavigation_performGPSUpdate(pGPSdata); }
     }
     
+    static int count = 0;
     if (performRoutine[hz1])
     {
         //Timing Info
@@ -313,6 +312,13 @@ bool mainFlightSoftware(void)
         
         // Ground align Navigation
         //if (pControlData->onGround && !FsGPS_GPSgood()) { FsNavigation_groundAlign(); }
+        
+        count++;
+        if (count == 30)
+        {
+            FsGPS_requestAidningInfo();
+            count = 0;
+        }
     }
     
     if (performRoutine[printRoutine])
@@ -330,9 +336,9 @@ bool mainFlightSoftware(void)
     
     highDynamics      = static_cast<double> (pIMUdata->highDynamics);
     navState          = static_cast<double> (pNavData->state);
-    InsUpdateCount    = static_cast<double> (pNavData->InsUpdateCount);
-    BaroUpdateCount   = static_cast<double> (pNavData->BaroUpdateCount);
-    GpsUpdateCount    = static_cast<double> (pNavData->GpsUpdateCount);
+    
+    for (int i = 0; i < NNAVSTATES; i++)
+    { NavUpdateCounts[i] = pNavData->updateCount[i]; }
     baroState         = static_cast<double> (pBaroData->state);
     gpsGood           = static_cast<double> (pGPSdata->gpsGood);
     gpsFix            = static_cast<double> (pGPSdata->gpsFix);
@@ -512,7 +518,7 @@ void setPrintVariables()
     // GPS
     //pMap->addLogVar("GPS Timestamp", &pGPSdata->timestamp, savePlot, 2);
     //pMap->addLogVar("GPS Time Since Startup", &pGPSdata->GPStimestamp, savePlot, 2);
-    //pMap->addLogVar("FS - GPS Time", &pGPSdata->dt_FS_GPS, savePlot, 2);
+    //pMap->addLogVar("FS - GPS Time", &pGPSdata->dt_GPS_FS, savePlot, 2);
 
     //pMap->addLogVar("GPS TTFF", &pGPSdata->ttff, savePlot, 2);
     //pMap->addLogVar("GPS Lat", &pGPSdata->posLLH[0], savePlot, 2);
@@ -524,15 +530,15 @@ void setPrintVariables()
     //pMap->addLogVar("GPS posECEF[0]", &pGPSdata->posECEF[0], savePlot, 2);
     //pMap->addLogVar("GPS posECEF[1]", &pGPSdata->posECEF[1], savePlot, 2);
     //pMap->addLogVar("GPS posECEF[2]", &pGPSdata->posECEF[2], savePlot, 2);
-    pMap->addLogVar("GPS posENU[0]", &pGPSdata->posENU[0], savePlot, 2);
-    pMap->addLogVar("GPS posENU[1]", &pGPSdata->posENU[1], savePlot, 2);
-    pMap->addLogVar("GPS posENU[2]", &pGPSdata->posENU[2], savePlot, 2);
+    //pMap->addLogVar("GPS posENU[0]", &pGPSdata->posENU[0], savePlot, 2);
+    //pMap->addLogVar("GPS posENU[1]", &pGPSdata->posENU[1], savePlot, 2);
+    //pMap->addLogVar("GPS posENU[2]", &pGPSdata->posENU[2], savePlot, 2);
     //pMap->addLogVar("GPS 3D Fix Bias", &pGPSdata->alt_3dFixBias, savePlot, 2);
     //pMap->addLogVar("GPS horizPosAcc", &pGPSdata->horizPosAcc, savePlot, 2);
     //pMap->addLogVar("GPS vertPosAcc", &pGPSdata->vertPosAcc, savePlot, 2);
-    pMap->addLogVar("GPS VN", &pGPSdata->velNED[0], savePlot, 2);
-    pMap->addLogVar("GPS VE", &pGPSdata->velNED[1], savePlot, 2);
-    pMap->addLogVar("GPS VD", &pGPSdata->velNED[2], savePlot, 2);
+    //pMap->addLogVar("GPS VN", &pGPSdata->velNED[0], savePlot, 2);
+    //pMap->addLogVar("GPS VE", &pGPSdata->velNED[1], savePlot, 2);
+    //pMap->addLogVar("GPS VD", &pGPSdata->velNED[2], savePlot, 2);
     //pMap->addLogVar("GPS speedAcc", &pGPSdata->speedAcc, savePlot, 2);
     //pMap->addLogVar("GPS Fix", &gpsFix, savePlot, 2);
     //pMap->addLogVar("GPS Fix Ok", &fixOk, savePlot, 2);
@@ -555,10 +561,10 @@ void setPrintVariables()
     pMap->addLogVar("Nav Pos N" , &pNavData->position[0], savePlot, 2);
     pMap->addLogVar("Nav Pos E" , &pNavData->position[1], savePlot, 2);
     pMap->addLogVar("Nav Alt", &pNavData->position[2], savePlot, 2);
-    pMap->addLogVar("Nav geoidCorrection", &pNavData->geoidCorrection, savePlot, 2);
+    //pMap->addLogVar("Nav geoidCorrection", &pNavData->geoidCorrection, savePlot, 2);
 
-    pMap->addLogVar("Nav vel N" , &pNavData->velNED[0], printSavePlot, 3);
-    pMap->addLogVar("Nav vel E" , &pNavData->velNED[1], printSavePlot, 3);
+    pMap->addLogVar("Nav vel N" , &pNavData->velNED[0], savePlot, 2);
+    pMap->addLogVar("Nav vel E" , &pNavData->velNED[1], savePlot, 2);
     pMap->addLogVar("Nav vel D" , &pNavData->velNED[2], savePlot, 2);
 
    //pMap->addLogVar("Nav velLL X" , &nav_velLL[0], savePlot, 2);
@@ -566,23 +572,32 @@ void setPrintVariables()
     //pMap->addLogVar("Nav velLL Z" , &nav_velLL[2], savePlot, 2);
     
     //pMap->addLogVar("navstate", &navState, savePlot, 2);
-    //pMap->addLogVar("INS Update Count", &InsUpdateCount, savePlot, 2);
-    //pMap->addLogVar("Baro Update Count", &BaroUpdateCount, savePlot, 2);
-    //pMap->addLogVar("GPS Update Count", &GpsUpdateCount, savePlot, 2);
+    //pMap->addLogVar("INS Update Count", &NavUpdateCounts[INS], savePlot, 2);
+    //pMap->addLogVar("Baro Update Count", &NavUpdateCounts[BaroUpdate], savePlot, 2);
+    //pMap->addLogVar("GPS Update Count", &NavUpdateCounts[GPSUpdate], savePlot, 2);
+    
+    //pMap->addLogVar("Nav Timestamp", &pNavData->timestamp, savePlot, 2);
+    //pMap->addLogVar("Nav IMU Timestamp", &pNavData->sensorTimestamp[INS], savePlot, 2);
+    //pMap->addLogVar("Nav Baro Timestamp", &pNavData->sensorTimestamp[BaroUpdate], savePlot, 2);
+    //pMap->addLogVar("Nav GPS Timestamp", &pNavData->sensorTimestamp[GPSUpdate], savePlot, 2);
+    
+    //pMap->addLogVar("Nav IMU dTimestamp", &pNavData->timestamp_diff[INS], savePlot, 2);
+    //pMap->addLogVar("Nav Baro dTimestamp", &pNavData->timestamp_diff[BaroUpdate], savePlot, 2);
+    //pMap->addLogVar("Nav GPS dTimestamp", &pNavData->timestamp_diff[GPSUpdate], savePlot, 2);
     
     //pMap->addLogVar("Nav dPitch", &pNavData->stateInputs.dTheta[1], savePlot, 2);
     
     pMap->addLogVar("Nav Roll" , &eulerAnglesDeg[0], printSavePlot, 3);
     pMap->addLogVar("Nav Pitch", &eulerAnglesDeg[1], printSavePlot, 3);
-    pMap->addLogVar("Nav Yaw"  , &eulerAnglesDeg[2], savePlot, 2);
+    //pMap->addLogVar("Nav Yaw"  , &eulerAnglesDeg[2], savePlot, 2);
     
-    pMap->addLogVar("Gyro Bias X" , &pNavData->gyroBias[0], savePlot, 2);
-    pMap->addLogVar("Gyro Bias Y" , &pNavData->gyroBias[1], savePlot, 2);
-    pMap->addLogVar("Gyro Bias Z" , &pNavData->gyroBias[2], savePlot, 2);
-    pMap->addLogVar("Accel Bias X" , &pNavData->accBias[0], savePlot, 2);
-    pMap->addLogVar("Accel Bias Y" , &pNavData->accBias[1], savePlot, 2);
-    pMap->addLogVar("Accel Bias Z" , &pNavData->accBias[2], savePlot, 2);
-    pMap->addLogVar("Gravity" , &pNavData->gravity, savePlot, 2);
+    //pMap->addLogVar("Gyro Bias X" , &pNavData->gyroBias[0], savePlot, 2);
+    //pMap->addLogVar("Gyro Bias Y" , &pNavData->gyroBias[1], savePlot, 2);
+    //pMap->addLogVar("Gyro Bias Z" , &pNavData->gyroBias[2], savePlot, 2);
+    //pMap->addLogVar("Accel Bias X" , &pNavData->accBias[0], savePlot, 2);
+    //pMap->addLogVar("Accel Bias Y" , &pNavData->accBias[1], savePlot, 2);
+    //pMap->addLogVar("Accel Bias Z" , &pNavData->accBias[2], savePlot, 2);
+    //pMap->addLogVar("Gravity" , &pNavData->gravity, savePlot, 2);
     
     //pMap->addLogVar("q[0]", &pNavData->q_B_NED[0], savePlot, 2);
     //pMap->addLogVar("q[1]", &pNavData->q_B_NED[1], savePlot, 2);
@@ -612,7 +627,7 @@ void setPrintVariables()
     
     pMap->addLogVar("N Error (m)", &pNavError->position[0], savePlot, 2);
     pMap->addLogVar("E Error (m)", &pNavError->position[1], savePlot, 2);
-    pMap->addLogVar("Alt Error (m)", &altitudeError, printSavePlot, 3);
+    pMap->addLogVar("Alt Error (m)", &altitudeError, savePlot, 2);
     
     //pMap->addLogVar("Acc Body X Error", &pNavError->accelBody[0], savePlot, 2);
     //pMap->addLogVar("Acc Body Y Error", &pNavError->accelBody[1], savePlot, 2);
@@ -623,7 +638,11 @@ void setPrintVariables()
     
     pMap->addLogVar("P[ROLL][ROLL]"    , &Cov[ROLL][ROLL], savePlot, 2);
     pMap->addLogVar("P[PITCH][PITCH]"    , &Cov[PITCH][PITCH], savePlot, 2);
-    pMap->addLogVar("P[YAW][YAW]"    , &Cov[YAW][YAW], savePlot, 2);
+    pMap->addLogVar("P[ROLL][PITCH]"    , &Cov[ROLL][PITCH], savePlot, 2);
+    pMap->addLogVar("P[PITCH][ROLL]"    , &Cov[PITCH][ROLL], savePlot, 2);
+    //pMap->addLogVar("P[YAW][YAW]"    , &Cov[YAW][YAW], savePlot, 2);
+    //pMap->addLogVar("P[VN][VN]"    , &Cov[VN][VN], savePlot, 2);
+    //pMap->addLogVar("P[VE][VE]"    , &Cov[VE][VE], savePlot, 2);
     pMap->addLogVar("P[VN][VN]"    , &Cov[VN][VN], savePlot, 2);
     pMap->addLogVar("P[VE][VE]"    , &Cov[VE][VE], savePlot, 2);
     pMap->addLogVar("P[VD][VD]"    , &Cov[VD][VD], savePlot, 2);
@@ -631,9 +650,11 @@ void setPrintVariables()
     //pMap->addLogVar("P[VD][GBIAS_X]"    , &Cov[VD][GBIAS_X], savePlot, 2);
     //pMap->addLogVar("P[VD][GBIAS_Y]"    , &Cov[VD][GBIAS_Y], savePlot, 2);
     //pMap->addLogVar("P[VD][ABIAS_Z]"    , &Cov[VD][ABIAS_Z], savePlot, 2);
-    pMap->addLogVar("P[N][N]"  , &Cov[N][N], savePlot, 2);
-    pMap->addLogVar("P[E][E]"  , &Cov[E][E], savePlot, 2);
+    //pMap->addLogVar("P[N][N]"  , &Cov[N][N], savePlot, 2);
+    //pMap->addLogVar("P[E][E]"  , &Cov[E][E], savePlot, 2);
     pMap->addLogVar("P[ALT][ALT]"  , &Cov[ALT][ALT], printSavePlot, 3);
+    pMap->addLogVar("P[VD][ALT]"    , &Cov[VD][ALT], savePlot, 2);
+    pMap->addLogVar("P[ALT][VD]"    , &Cov[ALT][VD], savePlot, 2);
     //pMap->addLogVar("P[ALT][GRAVITY]"  , &Cov[ALT][GRAVITY], printSavePlot, 3);
     //pMap->addLogVar("P[ALT][GBIAS_X]"  , &Cov[ALT][GBIAS_X], printSavePlot, 3);
     //pMap->addLogVar("P[ALT][GBIAS_Y]"  , &Cov[ALT][GBIAS_Y], printSavePlot, 3);
@@ -650,12 +671,33 @@ void setPrintVariables()
     //pMap->addLogVar("P[ROLL][GBIAS_X]"    , &Cov[ROLL][GBIAS_X], savePlot, 2);
     //pMap->addLogVar("P[ROLL][ALT]"    , &Cov[ROLL][ALT], savePlot, 2);
     //pMap->addLogVar("P[PITCH][ALT]"    , &Cov[PITCH][ALT], printSavePlot, 3);
-    //pMap->addLogVar("P[ROLL][VN]"    , &Cov[ROLL][VD], savePlot, 2);
-    //pMap->addLogVar("P[ROLL][VE]"    , &Cov[ROLL][VD], savePlot, 2);
-    pMap->addLogVar("P[ROLL][VD]"    , &Cov[ROLL][VD], savePlot, 2);
-    //pMap->addLogVar("P[PITCH][VN]"    , &Cov[PITCH][VD], savePlot, 2);
-    //pMap->addLogVar("P[PITCH][VE]"    , &Cov[PITCH][VD], savePlot, 2);
+    pMap->addLogVar("P[ROLL][N]"    , &Cov[ROLL][N], savePlot, 2);
+    pMap->addLogVar("P[N][ROLL]"    , &Cov[N][ROLL], savePlot, 2);
+    pMap->addLogVar("P[ROLL][E]"    , &Cov[ROLL][E], savePlot, 2);
+    pMap->addLogVar("P[E][ROLL]"    , &Cov[E][ROLL], savePlot, 2);
+    pMap->addLogVar("P[ROLL][ALT]"     , &Cov[ROLL][ALT], savePlot, 2);
+    pMap->addLogVar("P[ALT][ROLL]"     , &Cov[ALT][ROLL], savePlot, 2);
+    
+    pMap->addLogVar("P[PITCH][N]"    , &Cov[PITCH][N], savePlot, 2);
+    pMap->addLogVar("P[N][PITCH]"    , &Cov[N][PITCH], savePlot, 2);
+    pMap->addLogVar("P[PITCH][E]"    , &Cov[PITCH][E], savePlot, 2);
+    pMap->addLogVar("P[E][PITCH]"    , &Cov[E][PITCH], savePlot, 2);
+    pMap->addLogVar("P[PITCH][ALT]"    , &Cov[PITCH][ALT], savePlot, 2);
+    pMap->addLogVar("P[ALT][PITCH]"    , &Cov[ALT][PITCH], savePlot, 2);
+    
+    pMap->addLogVar("P[ROLL][VN]"    , &Cov[ROLL][VN], savePlot, 2);
+    pMap->addLogVar("P[VN][ROLL]"    , &Cov[VN][ROLL], savePlot, 2);
+    pMap->addLogVar("P[ROLL][VE]"    , &Cov[ROLL][VE], savePlot, 2);
+    pMap->addLogVar("P[VE][ROLL]"    , &Cov[VE][ROLL], savePlot, 2);
+    pMap->addLogVar("P[ROLL][VD]"     , &Cov[ROLL][VD], savePlot, 2);
+    pMap->addLogVar("P[VD][ROLL]"     , &Cov[VD][ROLL], savePlot, 2);
+    
+    pMap->addLogVar("P[PITCH][VN]"    , &Cov[PITCH][VN], savePlot, 2);
+    pMap->addLogVar("P[VN][PITCH]"    , &Cov[VN][PITCH], savePlot, 2);
+    pMap->addLogVar("P[PITCH][VE]"    , &Cov[PITCH][VE], savePlot, 2);
+    pMap->addLogVar("P[VE][PITCH]"    , &Cov[VE][PITCH], savePlot, 2);
     pMap->addLogVar("P[PITCH][VD]"    , &Cov[PITCH][VD], savePlot, 2);
+    pMap->addLogVar("P[VD][PITCH]"    , &Cov[VD][PITCH], savePlot, 2);
     //pMap->addLogVar("P[YAW][ALT]"    , &Cov[YAW][ALT], savePlot, 2);
     //pMap->addLogVar("P[GRAVITY][ALT]"    , &Cov[GRAVITY][ALT], savePlot, 2);
     //pMap->addLogVar("P[GRAVITY][VD]"    , &Cov[GRAVITY][VD], savePlot, 2);
@@ -739,7 +781,7 @@ void setPrintVariables()
     //pMap->addLogVar("Ctrl yawRateCmd", &yawRateCmd, savePlot, 2);
     //pMap->addLogVar("Ctrl VLLxCmd", &pControlData->VLLxCmd, savePlot, 2);
     //pMap->addLogVar("Ctrl VLLyCmd", &pControlData->VLLyCmd, savePlot, 2);
-    //pMap->addLogVar("Ctrl VLLzCmd", &pControlData->VLLzCmd, savePlot, 2);
+    //pMap->addLogVar("Ctrl VLLzCmd", &pControlData->VLLzCmd, printSavePlot, 3);
     //pMap->addLogVar("Ctrl hCmd", &pControlData->hCmd, savePlot, 2);
     //pMap->addLogVar("controlAltitude", &controlAltitude, savePlot, 2);
     //pMap->addLogVar("takeOff", &takeOff, printSavePlot, 3);
@@ -964,10 +1006,10 @@ void printData()
         display(pGPSdata->timestamp);
         display("\n");
         
-        display("GPStimestamp//dt_FS_GPS/TTFF: ");
+        display("GPStimestamp/dt_FS_GPS/TTFF: ");
         display(pGPSdata->GPStimestamp);
         display(" ");
-        display(pGPSdata->dt_FS_GPS);
+        display(pGPSdata->dt_GPS_FS);
         display(" ");
         display(pGPSdata->ttff);
         display("\n");
@@ -976,6 +1018,12 @@ void printData()
         display((int) pGPSdata->fifoReadCount);
         display(" ");
         display((int) pGPSdata->fifoWriteCount);
+        display("\n");
+        
+        display("GPS FIFO maxRead/maxWrite: ");
+        display((int) pGPSdata->fifoMaxReadLength);
+        display(" ");
+        display((int) pGPSdata->fifoMaxWriteLength);
         display("\n");
         
         display("GPS rcvdByte/rcvdMsg: ");

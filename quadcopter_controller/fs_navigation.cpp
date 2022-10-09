@@ -29,7 +29,6 @@ bool customPrint = false;
 // Sensor Errors
 SensorErrorType* accelError[3];
 SensorErrorType* gyroError[3];
-int calCounter;
 int maxCalCounter;
 
 // Complemintary Filter Parameters
@@ -122,7 +121,6 @@ void FsNavigation_setupNavigation(double *initialPosition, double initialHeading
     accelVar = 0.0;
     
     // Calibration
-    calCounter    = 0;
     maxCalCounter = 100;
 
     navSetup = true;
@@ -169,15 +167,15 @@ void FsNavigation_setupNavigation(double *initialPosition, double initialHeading
     H_GPS2D[GPS2D_VE][VE] = 1.0;
     
     // State Covariance (State Uncertainties)
-    P[ROLL][ROLL]   = 0.0;//errorToVariance(5.0*degree2radian);
-    P[PITCH][PITCH] = 0.0;//errorToVariance(5.0*degree2radian);
+    P[ROLL][ROLL]   = errorToVariance(5.0*degree2radian);
+    P[PITCH][PITCH] = errorToVariance(5.0*degree2radian);
     P[YAW][YAW]     = errorToVariance(180.0*degree2radian);
-    P[VN][VN]       = 0.0;
-    P[VE][VE]       = 0.0;
-    P[VD][VD]       = 0.0;
-    P[N][N]         = 0.0;
-    P[E][E]         = 0.0;
-    P[ALT][ALT]     = 0.0;
+    P[VN][VN]       = errorToVariance(1.0);
+    P[VE][VE]       = errorToVariance(1.0);
+    P[VD][VD]       = errorToVariance(1.0);
+    P[N][N]         = errorToVariance(10.0);
+    P[E][E]         = errorToVariance(10.0);
+    P[ALT][ALT]     = errorToVariance(10.0);
     P[GBIAS_X][GBIAS_X] = errorToVariance(0.02*degree2radian);
     P[GBIAS_Y][GBIAS_Y] = errorToVariance(0.02*degree2radian);
     P[GBIAS_Z][GBIAS_Z] = errorToVariance(0.02*degree2radian);
@@ -219,6 +217,8 @@ void FsNavigation_performNavigation( double &navDt )
     if (NavData.state != Calibration && NavData.state != INS)
     {
         applyCorrections();
+        NavData.updateCount[NavData.state]++;
+        NavData.timestamp_diff[NavData.state] = NavData.sensorTimestamp[NavData.state] - NavData.timestamp;
         NavData.state = INS;
     }
     
@@ -239,7 +239,10 @@ void FsNavigation_performNavigation( double &navDt )
         propogateVariance(navDt);
    
         NavData.timestamp = getTime();
-        NavData.InsUpdateCount++;
+        
+        NavData.updateCount[NavData.state]++;
+        NavData.sensorTimestamp[NavData.state] = nav_pIMUdata->timestamp;
+        NavData.timestamp_diff[NavData.state] = NavData.sensorTimestamp[NavData.state] - NavData.timestamp;
 
 #ifdef SIMULATION
         // Update Navigation Truth
@@ -288,7 +291,7 @@ void gyroUpdate( double &navDt)
     for (int i=0; i<3; i++)
     {
         if (dThetaMag > 0.0) { unitDir[i]  = NavData.stateInputs.dTheta[i] / dThetaMag; }
-        else                     { unitDir[i] = 0.0; }
+        else                 { unitDir[i] = 0.0; }
     }
     
     // Compute change in quaternion
@@ -397,7 +400,7 @@ void propogateVariance( double &navDt )
     double sec2p = secp*secp;
     double RH_h3 = (RE + NavData.position[2])*(RE + NavData.position[2])*(RE + NavData.position[2]);
     double RH_h4 = RH_h3*(RE + NavData.position[2]);
-    
+
     // Roll
     PHI[ROLL][ROLL]    = 1.0 + cr*tp*NavData.stateInputs.dTheta[Y] - sr*tp*NavData.stateInputs.dTheta[Z];
     PHI[ROLL][PITCH]   = sr*sec2p*NavData.stateInputs.dTheta[Y] + cr*sec2p*NavData.stateInputs.dTheta[Z];
@@ -489,22 +492,17 @@ void applyCorrections()
     if (NavData.state == BaroUpdate)
     {
         filterUpdate(baroResidual, *R_BARO, *H_BARO, *K_BARO, NBAROSTATES);
-        NavData.BaroUpdateCount++;
     }
     else if (NavData.state == GPSUpdate)
     {
         filterUpdate(gpsResidual, *R_GPS, *H_GPS, *K_GPS, NGPSSTATES);
-        NavData.GpsUpdateCount++;
     }
     else if (NavData.state == GPSUpdate2D)
     {
         filterUpdate(gpsResidual2D, *R_GPS2D, *H_GPS2D, *K_GPS2D, N2DGPSSTATES);
-        NavData.GpsUpdateCount++;
     }
     else if (NavData.state == GroundAlign)
-    {
-        NavData.GroundAlignCount++;
-    }
+    { }
     
     NavData.velNED[0] += stateError[VN];
     NavData.velNED[1] += stateError[VE];
@@ -642,6 +640,7 @@ void FsNavigation_performGPSUpdate(GpsType* gpsData)
         }
         FsGPS_resetPositionValid();
         FsGPS_resetVelocityValid();
+        NavData.sensorTimestamp[NavData.state] = gpsData->timestamp;
     }
 }
 
@@ -659,6 +658,7 @@ void FsNavigation_performBarometerUpdate(barometerType* baroData)
     baroResidual[BARO_ALT]     = baroData->altitude + baroRefAltitude - NavData.position[2];
 
     NavData.state = BaroUpdate;
+    NavData.sensorTimestamp[NavData.state] = baroData->timestamp;
 }
 
 void FsNavigation_groundAlign()
@@ -672,6 +672,7 @@ void FsNavigation_groundAlign()
     }
 
     NavData.state = GroundAlign;
+    NavData.sensorTimestamp[NavData.state] = getTime();
 }
 
 void FsNavigation_calibrateIMU()
@@ -712,10 +713,11 @@ void FsNavigation_calibrateIMU()
         if (tempAcc < accelError[i]->min) { accelError[i]->min =  tempAcc; }
     }
     
-    calCounter++;
+    NavData.updateCount[NavData.state]++;
+    NavData.sensorTimestamp[NavData.state] = getTime();
     
     // Compute statistics
-    if (calCounter >= maxCalCounter)
+    if (NavData.updateCount[NavData.state] >= maxCalCounter)
     {
         for (int i=0; i<3; i++)
         {

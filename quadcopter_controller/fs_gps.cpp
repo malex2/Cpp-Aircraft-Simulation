@@ -37,13 +37,18 @@ void FsGPS_setupGPS(int baudRate, bool fs_allow2DFix)
 #ifdef GPS
     allow2DFix = fs_allow2DFix;
     gpsFIFO.begin(baudRate);
-    //ubx_msg.write_nmea_off_long();
+    
+    // Configure Messsages
     ubx_msg.write_nmea_off();
     ubx_msg.write_ubx_off();
     ubx_msg.write_ubx_on();
-    ubx_msg.get_nav_config();
+    
+    // Set dynmaic mode
     ubx_msg.set_nav_config();
     ubx_msg.get_nav_config();
+    
+    // Poll needed almanac data on startup
+    ubx_msg.init_aid_request();
     
     d_posECEF[0] = 0.0;
     d_posECEF[1] = 0.0;
@@ -66,6 +71,9 @@ void FsGPS_performGPS()
     
     GpsData.fifoReadCount  = gpsFIFO.read_count();
     GpsData.fifoWriteCount = gpsFIFO.write_count();
+
+    GpsData.fifoMaxReadLength  = gpsFIFO.get_max_read_buffer_length();
+    GpsData.fifoMaxWriteLength = gpsFIFO.get_max_write_buffer_length();
     
     int rcvd = ubx_msg.data_available();
     if (rcvd > 0)
@@ -73,8 +81,15 @@ void FsGPS_performGPS()
         GpsData.rcvdByteCount += rcvd;
         GpsData.rcvdMsgCount += ubx_msg.read(&GpsData);
         
-        if ((GpsData.gpsFix == FIX2D && allow2DFix) || GpsData.gpsFix == FIX3D) { GpsData.gpsGood = true; }
-        else { GpsData.gpsGood = false; }
+        if (GpsData.fixOk == 1 &&
+            ((GpsData.gpsFix == FIX2D && allow2DFix) || GpsData.gpsFix == FIX3D))
+        {
+            GpsData.gpsGood = true;
+        }
+        else
+        {
+            GpsData.gpsGood = false;
+        }
         
         if (!GpsData.gpsGood)
         {
@@ -125,7 +140,7 @@ void FsGPS_performGPS()
             GpsData.posENU[2] += GpsData.alt_3dFixBias;
         }
         GpsData.timestamp = getTime();
-        GpsData.dt_FS_GPS = GpsData.timestamp - GpsData.GPStimestamp;
+        GpsData.dt_GPS_FS = GpsData.GPStimestamp - GpsData.timestamp;
     }
 #endif
 }
@@ -134,6 +149,13 @@ void FsGPS_performSerialIO()
 {
 #ifdef GPS
     gpsFIFO.update_fifo();
+#endif
+}
+
+void FsGPS_requestAidningInfo()
+{
+#ifdef GPS
+    ubx_msg.request_aid_data();
 #endif
 }
 

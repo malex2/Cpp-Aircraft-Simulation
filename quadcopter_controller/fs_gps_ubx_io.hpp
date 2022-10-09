@@ -23,8 +23,12 @@ public:
     void write_nmea_off_long();
     void write_ubx_off();
     void write_ubx_on();
+    
     void set_nav_config();
     void get_nav_config();
+    
+    void init_aid_request();
+    void request_aid_data();
     
     int data_available();
     int read(GpsType* gpsData = NULL);
@@ -80,14 +84,24 @@ private:
     MSG_PACKET input_msg;
     MSG_PACKET output_msg;
     
-    UBX_MSG_TYPES::UBX_MSG_NAV_POSLLH    posLLH;
-    UBX_MSG_TYPES::UBX_MSG_NAV_VELNED    velNED;
-    UBX_MSG_TYPES::UBX_MSG_NAV_STATUS    navStatus;
-    UBX_MSG_TYPES::UBX_MSG_NAV_DOP       navDOP;
-    UBX_MSG_TYPES::UBX_MSG_NAV_SOL       navSol;
-    UBX_MSG_TYPES::UBX_MSG_CFG_MSG_SHORT configMsgShort;
-    UBX_MSG_TYPES::UBX_MSG_CFG_MSG_LONG  configMsgLong;
-    UBX_MSG_TYPES::UBX_MSG_CFG_NAV5      configNav5;
+    UBX_MSG_TYPES::UBX_MSG_NAV_POSLLH      posLLH;
+    UBX_MSG_TYPES::UBX_MSG_NAV_VELNED      velNED;
+    UBX_MSG_TYPES::UBX_MSG_NAV_STATUS      navStatus;
+    UBX_MSG_TYPES::UBX_MSG_NAV_DOP         navDOP;
+    UBX_MSG_TYPES::UBX_MSG_NAV_SOL         navSol;
+    UBX_MSG_TYPES::UBX_MSG_CFG_MSG_SHORT   configMsgShort;
+    UBX_MSG_TYPES::UBX_MSG_CFG_MSG_LONG    configMsgLong;
+    UBX_MSG_TYPES::UBX_MSG_CFG_NAV5        configNav5;
+    UBX_MSG_TYPES:: UBX_MSG_ACK            ack;
+    UBX_MSG_TYPES::UBX_MSG_ACK             nak;
+    UBX_MSG_TYPES::UBX_MSG_AID_INI         aidInit;
+    UBX_MSG_TYPES::UBX_MSG_AID_ALM_POLL_SV almanacPollSv;
+    UBX_MSG_TYPES::UBX_MSG_AID_ALM_INVALID almanacInvalid;
+    UBX_MSG_TYPES::UBX_MSG_AID_ALM         almanac;
+    UBX_MSG_TYPES::UBX_MSG_AID_EPH_POLL_SV ephemerisPollSv;
+    UBX_MSG_TYPES::UBX_MSG_AID_EPH_INVALID ephemerisInvalid;
+    UBX_MSG_TYPES::UBX_MSG_AID_EPH         ephemeris;
+    UBX_MSG_TYPES::UBX_MSG_AID_HUI         gpsHealth;
     
     byte gpsbyte;
     
