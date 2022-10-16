@@ -118,6 +118,8 @@ void readIMU()
     }
     
     // Convert to Units
+    accelSumSqr = 0.0;
+    gyroSumSqr  = 0.0;
     for (int i=0; i<3; i++)
     {
 #ifdef SIMULATION
@@ -147,14 +149,9 @@ void readIMU()
     if ((gyroSumSqr > highRate)  || (accelSumSqr > highAccel))
     {
         IMUdata.highDynamics = true;
+        
     }
-    else
-    {
-        IMUdata.highDynamics = false;
-    }
-    
-    accelSumSqr = 0.0;
-    gyroSumSqr  = 0.0;
+    else { IMUdata.highDynamics = false; }
 }
 
 void updateDelta( double &imuDt )

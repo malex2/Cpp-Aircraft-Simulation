@@ -23,6 +23,8 @@ AtmosphereModel::AtmosphereModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("Body Gravity X", &bodyGravity[0], savePlot, 2);
     //pMap->addLogVar("Body Gravity Y", &bodyGravity[1], savePlot, 2);
     //pMap->addLogVar("Body Gravity Z", &bodyGravity[2], savePlot, 2);
+    //pMap->addLogVar("gravity_roll", &gravity_roll_deg, savePlot, 2);
+    //pMap->addLogVar("gravity_pitch", &gravity_pitch_deg, savePlot, 2);
     //pMap->addLogVar("Grav", &gravity, savePlot, 2);
     //pMap->addLogVar("Wx  ", &bodyForce[0], savePlot, 2);
     //pMap->addLogVar("Wy  ", &bodyForce[1], savePlot, 2);
@@ -116,6 +118,9 @@ AtmosphereModel::AtmosphereModel(ModelMap *pMapInit, bool debugFlagIn)
     DTDH[THERMOSPHERE2]        = -4.5e-3;
     GRADIENT[THERMOSPHERE2]    = CONSTANT;
     
+    gravity_roll  = 0.0;
+    gravity_pitch = 0.0;
+    
     debugFlag = debugFlagIn;
     
 }
@@ -157,8 +162,14 @@ void AtmosphereModel::updateGravity(void)
     pRotate->NEDToBody(bodyGravity, nedGravity);
     
     nedForce[2] = mass*gravity;
-    
     pRotate->NEDToBody(bodyForce, nedForce);
+    
+    gravity_roll  = atan2(bodyGravity[1], bodyGravity[2]);
+    gravity_pitch = -asin(bodyGravity[0]/gravity);
+    
+    // print variables
+    gravity_roll_deg  = gravity_roll / util.deg2rad;
+    gravity_pitch_deg = gravity_pitch/ util.deg2rad;
 }
 
 void AtmosphereModel::updateAir(void)

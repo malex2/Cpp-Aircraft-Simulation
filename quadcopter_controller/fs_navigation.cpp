@@ -56,6 +56,12 @@ double R_GROUND[NGROUNDSTATES][NGROUNDSTATES];
 double H_GROUND[NGROUNDSTATES][NSTATES];
 double K_GROUND[NSTATES][NGROUNDSTATES];
 
+// Accelerometer Correction
+double R_ACCEL[NACCELSTATES][NACCELSTATES];
+double H_ACCEL[NACCELSTATES][NSTATES];
+double K_ACCEL[NSTATES][NACCELSTATES];
+double accelResidual[NACCELSTATES];
+
 // GPS Correction
 double R_GPS[NGPSSTATES][NGPSSTATES];
 double H_GPS[NGPSSTATES][NSTATES];
@@ -138,6 +144,10 @@ void FsNavigation_setupNavigation(double *initialPosition, double initialHeading
             if (i == j) { diagOnes[i][j] = 1.0; }
             else        { diagOnes[i][j] = 0.0; }
             
+            if (i<NACCELSTATES && j<NACCELSTATES) { R_ACCEL[i][j] = 0.0; }
+            if (i<NACCELSTATES)                   { H_ACCEL[i][j] = 0.0; }
+            if (j<NACCELSTATES)                   { K_ACCEL[i][j] = 0.0; }
+            
             if (i<NGROUNDSTATES && j<NGROUNDSTATES) { R_GROUND[i][j] = 0.0; }
             if (i<NGROUNDSTATES)                    { H_GROUND[i][j] = 0.0; }
             if (j<NGROUNDSTATES)                    { K_GROUND[i][j] = 0.0; }
@@ -152,8 +162,9 @@ void FsNavigation_setupNavigation(double *initialPosition, double initialHeading
         }
     }
     
-    H_BARO[BARO_ALT][ALT] = 1.0;
-    
+    H_ACCEL[ACCEL_ROLL][ROLL]   = 1.0;
+    H_ACCEL[ACCEL_PITCH][PITCH] = 1.0;
+
     H_GPS[GPS_N][N]     = 1.0;
     H_GPS[GPS_E][E]     = 1.0;
     H_GPS[GPS_ALT][ALT] = 1.0;
@@ -165,6 +176,8 @@ void FsNavigation_setupNavigation(double *initialPosition, double initialHeading
     H_GPS2D[GPS2D_E][E]   = 1.0;
     H_GPS2D[GPS2D_VN][VN] = 1.0;
     H_GPS2D[GPS2D_VE][VE] = 1.0;
+    
+    H_BARO[BARO_ALT][ALT] = 1.0;
     
     // State Covariance (State Uncertainties)
     P[ROLL][ROLL]   = errorToVariance(5.0*degree2radian);
@@ -229,6 +242,8 @@ void FsNavigation_performNavigation( double &navDt )
         
         updateGravity();
         
+        updateInputs(navDt);
+        
         // Update Attitude
         performARHS(navDt);
         
@@ -261,8 +276,34 @@ void updateGravity()
     NavData.gravity = GMe/(hCenter*hCenter);
 }
 
-void performARHS( double &navDt )
+void updateInputs( double &navDt )
 {
+    // Gravity
+    double gravityNED[3];
+    
+    gravityNED[0] = 0.0;
+    gravityNED[1] = 0.0;
+    gravityNED[2] = NavData.gravity;
+    
+    FsNavigation_NEDToBody(NavData.gravityBody, gravityNED);
+    
+    // Inputs
+    for (int i=0; i<3; i++)
+    {
+        // correct for gravity and bias
+        NavData.stateInputs.dVelocity[i] = nav_pIMUdata->dVelocity[i] - NavData.accBias[i]*navDt + NavData.gravityBody[i]*navDt;
+        NavData.stateInputs.dTheta[i]    = nav_pIMUdata->dTheta[i] - NavData.gyroBias[i]*navDt;
+        
+        //NavData.accelBody[i] = nav_pIMUdata->accel[i] - NavData.accBias[i] + NavData.gravityBody[i];
+        //NavData.bodyRates[i] = nav_pIMUdata->gyro[i] - NavData.gyroBias[i]; //NavData.stateInputs.dTheta[i]/navDt;
+        NavData.accelBody[i] = NavData.stateInputs.dVelocity[i]/navDt;
+        NavData.bodyRates[i] = NavData.stateInputs.dTheta[i]/navDt;
+    }
+    
+    NavData.accel_mag = sqrt(NavData.accelBody[0]*NavData.accelBody[0] + NavData.accelBody[1]*NavData.accelBody[1] + NavData.accelBody[2]*NavData.accelBody[2]);
+}
+void performARHS( double &navDt )
+{    
     // Update quaternion using gyroscope
     gyroUpdate(navDt);
 }
@@ -278,10 +319,6 @@ void gyroUpdate( double &navDt)
     // Store quaternion
     for (int i=0; i<4; i++)
     { qOld[i] = NavData.q_B_NED[i]; }
-    
-    // Apply Calibration to dTheta
-    for (int i=0; i<3; i++)
-    NavData.stateInputs.dTheta[i] = nav_pIMUdata->dTheta[i] - NavData.gyroBias[i]*navDt;
 
     // Angle change magnitude
     dThetaMag = sqrt( NavData.stateInputs.dTheta[0]*NavData.stateInputs.dTheta[0] +
@@ -309,49 +346,13 @@ void gyroUpdate( double &navDt)
 
 void performINS( double &navDt )
 {
-    union insArraysGroup1 {
-        double bodyRates[3];
-        double gravityNED[3];
-        double dVelocity[3];
-        double dPosition[3];
-    };
-    union insArraysGroup2 {
-        double gravityBody[3];
-        double dVelocityNED[3];
-    };
-    
-    insArraysGroup1 a1;
-    insArraysGroup2 a2;
+    double w_x_vel[3];
     
     // Euler Angles
     updateEulerAngles();
     
-    // Body Rates
-    for (int i=0; i<3; i++)
-    {
-        a1.bodyRates[i] = nav_pIMUdata->gyro[i] - NavData.gyroBias[i];
-    }
-    
-    // Gravity
-    a1.gravityNED[0] = 0.0;
-    a1.gravityNED[1] = 0.0;
-    a1.gravityNED[2] = NavData.gravity;
-    
-    FsNavigation_NEDToBody(a2.gravityBody, a1.gravityNED);
-    
-    // Delta Velocity
-    for (int i=0; i<3; i++)
-    {
-        // correct for gravity and bias
-        NavData.stateInputs.dVelocity[i] = nav_pIMUdata->dVelocity[i] - NavData.accBias[i]*navDt + a2.gravityBody[i]*navDt;
-        NavData.accelBody[i] = nav_pIMUdata->accel[i] - NavData.accBias[i] + a2.gravityBody[i];//NavData.stateInputs.dVelocity[i]/navDt;
-        //NavData.bodyRates[i] = nav_pIMUdata->gyro[i] - NavData.gyroBias[i]; //NavData.stateInputs.dTheta[i]/navDt;
-        NavData.bodyRates[i] = NavData.stateInputs.dTheta[i]/navDt;
-    }
-    
     // Body Velocity
     //accBody = (F - bodyRates x m*velBody) / mass
-    double w_x_vel[3];
     crossProduct(w_x_vel, NavData.bodyRates, NavData.velBody);
     for (int i=0; i<3; i++)
     {
@@ -360,19 +361,12 @@ void performINS( double &navDt )
     }
     
     // NED Velocity
-    FsNavigation_bodyToNED(a2.dVelocityNED, NavData.stateInputs.dVelocity);
     FsNavigation_bodyToNED(NavData.velNED, NavData.velBody);
     
-    //Position
-    for (int i=0; i<3; i++)
-    {
-        a1.dPosition[i] =  NavData.velNED[i]*navDt;// + 0.5*a2.dVelocityNED[i]*navDt;
-    }
-    
     // N, E, Alt
-    NavData.position[0] = NavData.position[0] + a1.dPosition[0];///(NavData.position[2] + RE);
-    NavData.position[1] = NavData.position[1] + a1.dPosition[1];///( (NavData.position[2] + RE)*cos(NavData.position[0]) );
-    NavData.position[2] = NavData.position[2] - a1.dPosition[2];
+    NavData.position[0] = NavData.position[0] + NavData.velNED[0]*navDt;
+    NavData.position[1] = NavData.position[1] + NavData.velNED[1]*navDt;
+    NavData.position[2] = NavData.position[2] - NavData.velNED[2]*navDt;
     
     // height_above_ellipsoid = MSL + geoidHeight
     NavData.altitude_msl = NavData.position[2] - NavData.geoidCorrection;
@@ -501,6 +495,10 @@ void applyCorrections()
     {
         filterUpdate(gpsResidual2D, *R_GPS2D, *H_GPS2D, *K_GPS2D, N2DGPSSTATES);
     }
+    else if (NavData.state == AccelUpdate)
+    {
+        filterUpdate(accelResidual, *R_ACCEL, *H_ACCEL, *K_ACCEL, NACCELSTATES);
+    }
     else if (NavData.state == GroundAlign)
     { }
     
@@ -583,6 +581,49 @@ void filterUpdate(double* residual, double* R, double* H, double* K, int nMeas)
     }
 }
 
+void FsNavigation_performAccelerometerUpdate()
+{
+    if ( (NavData.state == Calibration) || (!navSetup) ) { return; }
+    
+    if(NavData.state != INS)
+    {
+        NavData.skippedUpdateCount[AccelUpdate]++;
+        return;
+    }
+    
+    static int stable_count = 0;
+    double accelBodyUnit[3];
+    
+    for (int i=0; i<3; i++)
+    {
+        accelBodyUnit[i] = nav_pIMUdata->accel[i] - NavData.accBias[i];
+    }
+    unitVector(accelBodyUnit, 3);
+    
+    NavData.accel_roll  = -atan2(accelBodyUnit[1], -accelBodyUnit[2]);
+    NavData.accel_pitch =  atan2(accelBodyUnit[0] ,sqrt(accelBodyUnit[1]*accelBodyUnit[1] + accelBodyUnit[2]*accelBodyUnit[2]));
+    
+    if (NavData.accel_mag < 0.2 && !nav_pIMUdata->highDynamics)
+    {
+        stable_count++;
+        if (stable_count > 10)
+        {
+            R_ACCEL[ACCEL_ROLL][ACCEL_ROLL]   = errorToVariance(3.0 * degree2radian);
+            R_ACCEL[ACCEL_PITCH][ACCEL_PITCH] = errorToVariance(3.0 * degree2radian);
+            
+            accelResidual[ACCEL_ROLL]  = NavData.accel_roll  - NavData.eulerAngles[0];
+            accelResidual[ACCEL_PITCH] = NavData.accel_pitch - NavData.eulerAngles[1];
+            
+            NavData.state = AccelUpdate;
+            NavData.sensorTimestamp[NavData.state] = getTime();
+        }
+    }
+    else
+    {
+        stable_count = 0;
+    }
+}
+
 void FsNavigation_performGPSUpdate(GpsType* gpsData)
 {
     if ( (NavData.state == Calibration) || (!navSetup) ) { return; }
@@ -598,7 +639,9 @@ void FsNavigation_performGPSUpdate(GpsType* gpsData)
     {
         if(NavData.state != INS)
         {
-            //display("FsNavigation_performGPSPVTUpdate: WARNING. Not in INS state.\n");
+            if (gpsData->gpsFix == FIX2D) { NavData.skippedUpdateCount[GPSUpdate2D]++; }
+            else { NavData.skippedUpdateCount[GPSUpdate]++; }
+
             return;
         }
         
@@ -650,7 +693,7 @@ void FsNavigation_performBarometerUpdate(barometerType* baroData)
     
     if(NavData.state != INS)
     {
-        display("FsNavigation_performBarometerUpdate: WARNING. Not in INS state.\n");
+        NavData.skippedUpdateCount[BaroUpdate]++;
         return;
     }
     
@@ -667,7 +710,7 @@ void FsNavigation_groundAlign()
     
     if(NavData.state != INS)
     {
-        display("FsNavigation_groundAlign: WARNING. Not in INS state.\n");
+        NavData.skippedUpdateCount[GroundAlign]++;
         return;
     }
 
@@ -915,6 +958,12 @@ void updateTruth()
         truthNavData.imuTimestamp = pDyn->getTimestamp();
     }
     
+    if (pAtmo)
+    {
+        truthNavData.accel_roll  = pAtmo->getGravityRoll();
+        truthNavData.accel_pitch = pAtmo->getGravityPitch();
+    }
+    
     for (int i=0; i<3; i++)
     {
         NavError.position[i]    = NavData.position[i]     - truthNavData.position[i];
@@ -929,6 +978,9 @@ void updateTruth()
         else if (NavError.eulerAngles[i] < -180.0) { NavError.eulerAngles[i] += 360.0; }
     }
     NavError.q_B_NED[3] = truthNavData.q_B_NED[3] - NavData.q_B_NED[3];
+    
+    NavError.accel_roll  = (truthNavData.accel_roll  - NavData.accel_roll ) * radian2degree;
+    NavError.accel_pitch = (truthNavData.accel_pitch - NavData.accel_pitch) * radian2degree;
     
     NavError.imuTimestamp = (NavData.imuTimestamp - truthNavData.imuTimestamp)*1000.0;
 }

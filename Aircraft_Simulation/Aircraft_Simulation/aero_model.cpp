@@ -31,6 +31,10 @@ AeroModelBase::AeroModelBase(ModelMap *pMapInit, bool debugFlagIn)
     pGnd    = NULL;
     pMap    = pMapInit;
     
+    //pMap->addLogVar("Aero Body Force X", &bodyForce[0], savePlot, 2);
+    //pMap->addLogVar("Aero Body Force Y", &bodyForce[1], savePlot, 2);
+    //pMap->addLogVar("Aero Body Force Z", &bodyForce[2], savePlot, 2);
+    
     //pMap->addLogVar("alpha", &alphaPrint, savePlot, 2);
     //pMap->addLogVar("beta", &betaPrint, savePlot, 2);
     //pMap->addLogVar("Lift  ", &aeroForce[2], savePlot, 2);

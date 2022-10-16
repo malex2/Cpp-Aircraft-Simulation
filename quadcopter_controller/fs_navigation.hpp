@@ -16,9 +16,10 @@
 #define FILTERTEST
 
 // Types
-enum NavState {Calibration, INS, GPSUpdate, GPSUpdate2D, BaroUpdate, GroundAlign, NNAVSTATES};
+enum NavState {Calibration, INS, AccelUpdate, GPSUpdate, GPSUpdate2D, BaroUpdate, GroundAlign, NNAVSTATES};
 enum StateType {ROLL, PITCH, YAW, VN, VE, VD, N, E, ALT, GBIAS_X, GBIAS_Y, GBIAS_Z, ABIAS_X, ABIAS_Y, ABIAS_Z, GRAVITY, NSTATES};
 enum VECTORTYPE {X, Y, Z};
+enum AccelUpdateType {ACCEL_ROLL, ACCEL_PITCH, NACCELSTATES};
 enum GroundMeasurementType {GROUND_VN, GROUND_VE, GROUND_VD, GROUND_YAW, NGROUNDSTATES};
 enum GPSMeasurementType {GPS_N, GPS_E, GPS_ALT, GPS_VN, GPS_VE, GPS_VD, NGPSSTATES};
 enum GPS2DMeasurementType {GPS2D_N, GPS2D_E, GPS2D_VN, GPS2D_VE, N2DGPSSTATES};
@@ -63,19 +64,26 @@ struct NavType {
     double gravity;
     double velBody[3];
     double accelBody[3];
+    double gravityBody[3];
     double bodyRates[3];
     StateInputType stateInputs;
     
-    NavState state;
-    double timestamp;
-    double imuTimestamp;
+    double accel_pitch;
+    double accel_roll;
+    double accel_mag;
+    
+    NavState     state;
+    double       timestamp;
+    double       imuTimestamp;
     unsigned int InsUpdateCount;
     unsigned int BaroUpdateCount;
     unsigned int GpsUpdateCount;
     unsigned int GroundAlignCount;
     unsigned int updateCount[NNAVSTATES];
+    unsigned int skippedUpdateCount[NNAVSTATES];
     double       sensorTimestamp[NNAVSTATES];
     double       timestamp_diff[NNAVSTATES];
+    
     NavType()
     {
         state = Calibration;
@@ -87,6 +95,11 @@ struct NavType {
         InsUpdateCount  = 0;
         BaroUpdateCount = 0;
         GpsUpdateCount  = 0;
+        
+        accel_pitch = 0.0;
+        accel_roll  = 0.0;
+        accel_mag   = 0.0;
+        
         for (int i=0; i<3; i++)
         {
             position[i]    = 0.0;
@@ -116,7 +129,9 @@ void FsNavigation_setupNavigation(double *initialPosition, double initialHeading
 void FsNavigation_performNavigation( double &navDt );
 
 void updateGravity();
+void updateInputs(double &navDt);
 void performARHS(double &navDt);
+void pitchRollAccelerometer();
 void gyroUpdate(double &navDt);
 void performINS( double &navDt );
 void propogateVariance( double &navDt );
@@ -124,6 +139,7 @@ void applyCorrections();
 
 // Filter Updates
 void filterUpdate(double* residual, double* R, double* H, double* K, int nMeas);
+void FsNavigation_performAccelerometerUpdate();
 void FsNavigation_performGPSUpdate(GpsType* gpsData);
 void FsNavigation_performBarometerUpdate(barometerType* baroData);
 void FsNavigation_groundAlign();

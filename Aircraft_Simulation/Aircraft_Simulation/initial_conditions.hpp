@@ -22,9 +22,9 @@
 //#define RealTime
 
 // Time
-const double runTime_init          = 60.0*10.0;
+const double runTime_init          = 400.0;
 const double printInterval_init    = 5.0;
-const double saveInterval_init     = 1.0;
+const double saveInterval_init     = 0.1;
 const double dynamicsInterval_init = 1.0/800.0;
 const double clock_dt              = 1.0/800.0;//1.0/19200.0; // time interval when not in real time mode
 
@@ -39,7 +39,7 @@ const int second_init = 00;
 const bool saveOutput  = true;
 const bool printOutput = true;
 const bool plotOutput  = false;
-const std::string savefile = "output_moving_Qt.csv";
+const std::string savefile = "output_full2.csv";
 const std::string gps_file = "/Users/alexandermclean/Documents/Cpp-Aircraft-Simulation/gps_nav_messages_Adeline4.txt";
 //const std::string gps_file = "/Users/alexandermclean/Documents/Cpp-Aircraft-Simulation/gps_messages.txt";
 const bool readGPSFile = false;

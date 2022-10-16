@@ -273,7 +273,7 @@ void IMUModelBase::accelerometerModel(void)
     if (onlyGravity) { util.setArray(accIMU, gravityIMU, 3); }
         
     // Acceleration in g's
-    util.vgain(accIMU, 1/refGravity, 3);
+    util.vgain(accIMU, 1.0/refGravity, 3);
     
     // Add Error
     //util.vAdd(accError, accBias, randomNoiseModel(accNoiseMax), 3);

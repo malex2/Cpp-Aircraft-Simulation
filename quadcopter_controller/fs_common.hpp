@@ -13,15 +13,15 @@
 #include <math.h>
 
 // MACROS
-//#define SIMULATION
-//#define IMU
+#define SIMULATION
+#define IMU
 #define GPS
-//#define BAROMETER
-//#define PWM
-//#define CONTROLS
-//#define GROUND_DETECTION
-//#define NAVIGATION
-#define PRINT
+#define BAROMETER
+#define PWM
+#define CONTROLS
+#define GROUND_DETECTION
+#define NAVIGATION
+//#define PRINT
 //#define UBX_PRINT
 
 #ifdef SIMULATION
@@ -97,16 +97,9 @@ enum channelType {THROTTLE_CHANNEL, ROLL_CHANNEL, PITCH_CHANNEL, YAW_CHANNEL, nC
 #define T3PIN  10
 #define T4PIN  11
 
-// TEENSY
-#ifdef SIMULATION
-    #define TEENSY_4_CLOCK_SPEED 1.0/clock_dt
-#else
-    #define TEENSY_4_CLOCK_SPEED 600e6
-#endif
-
 // High Dynamics
 #define highRate  5.0*degree2radian
-#define highAccel 30.0
+#define highAccel 12.0
 
 // GPS Pins
 #define GPSRXPIN 2 // Rcv GPS msgs, connect to GPS TX

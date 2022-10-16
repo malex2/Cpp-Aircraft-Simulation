@@ -52,15 +52,16 @@ public:
     layerInfoType layerInfo;
     
     // Getters
-    double* getVelWindBody(void) { return velWindBody; }
-    double* getVelWindNED(void)  { return velWindNED; }
-    double  getGravity(void)     { return gravity; }
-    double* getGravityNED(void)  { return nedGravity; }
-    double* getGravityBody(void) { return bodyGravity; }
-    double* getAir(void)         { return air; }
-    double  getRe(void)          { return Re;  }
-    double  getMach(void)        { return Mach; }
-    
+    double* getVelWindBody(void)  { return velWindBody; }
+    double* getVelWindNED(void)   { return velWindNED; }
+    double  getGravity(void)      { return gravity; }
+    double* getGravityNED(void)   { return nedGravity; }
+    double* getGravityBody(void)  { return bodyGravity; }
+    double* getAir(void)          { return air; }
+    double  getRe(void)           { return Re;  }
+    double  getMach(void)         { return Mach; }
+    double  getGravityRoll(void)  { return gravity_roll; }
+    double  getGravityPitch(void) { return gravity_pitch; }
 private:
     class DynamicsModel *pDyn;
     class RotateFrame   *pRotate;
@@ -101,14 +102,19 @@ private:
     // Atmospheric References
     const double gravitySL = 9.81;
     const double spaceTempInShadow = 170.0;
-    const double spaceTempInSun = 393.0;
-    const double spaceTempDistant = 3.0;
+    const double spaceTempInSun    = 393.0;
+    const double spaceTempDistant  = 3.0;
     
     // print variables
     double gravity;
     double layer;
     double pressureMB;
     double tempC;
+    double gravity_roll;
+    double gravity_pitch;
+    
+    double gravity_roll_deg;
+    double gravity_pitch_deg;
 };
 
 #endif /* Atmosphere_hpp */

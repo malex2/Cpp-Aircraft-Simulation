@@ -79,6 +79,7 @@ bool useGPS;
 bool useTruthNav;
 double initialPosition[3];
 double initialHeading;
+bool useAccelPitchRoll;
 NavType* pNavData = 0;
 #ifdef SIMULATION
     NavType* pNavError = 0;
@@ -94,12 +95,15 @@ ControlMode controlMode;
     double gyro_dps[3];
     double dTheta_deg[3];
     double eulerAnglesDeg[3];
+    double nav_accel_pitch;
+    double nav_accel_roll;
     double nav_velLL[3];
     double nav_velLL_error[3];
     double fsTime;
     double countDelta50hz;
     double navState = 0.0;
     double NavUpdateCounts[NNAVSTATES];
+    double NavSkippedUpdates[NNAVSTATES];
     double gpsGood = 0.0;
     double gpsFix = 0.0;
     double fixOk  = 0.0;
@@ -177,6 +181,7 @@ void initialize(void)
     initialPosition[1] = 0.0; // East     (m)
     initialPosition[2] = 0.0; // Altitude (m)
     initialHeading     = 0.0;
+    useAccelPitchRoll  = true;
     useTruthNav        = false;
     
     // GPS
@@ -185,7 +190,7 @@ void initialize(void)
     useGPS        = true;
     
     // Control Settings
-    controlMode = VelocityControl; //NoControl, ThrottleControl, AttitudeControl, VelocityControl
+    controlMode = AttitudeControl; //NoControl, ThrottleControl, AttitudeControl, VelocityControl
     
     // Timing Settings
     routineDelays[hz1]   = 1.0;
@@ -252,6 +257,9 @@ bool mainFlightSoftware(void)
         
         // Calibrate Navigation
         FsNavigation_calibrateIMU();
+        
+        // Acceleromter update
+        if (useAccelPitchRoll) { FsNavigation_performAccelerometerUpdate(); }
         
         // Ground Detection
         FsControls_setControlsData(pIMUdata, pNavData);
@@ -338,7 +346,11 @@ bool mainFlightSoftware(void)
     navState          = static_cast<double> (pNavData->state);
     
     for (int i = 0; i < NNAVSTATES; i++)
-    { NavUpdateCounts[i] = pNavData->updateCount[i]; }
+    {
+        NavUpdateCounts[i] = pNavData->updateCount[i];
+        NavSkippedUpdates[i] = pNavData->skippedUpdateCount[i];
+    }
+    
     baroState         = static_cast<double> (pBaroData->state);
     gpsGood           = static_cast<double> (pGPSdata->gpsGood);
     gpsFix            = static_cast<double> (pGPSdata->gpsFix);
@@ -346,6 +358,9 @@ bool mainFlightSoftware(void)
     numSV             = static_cast<double> (pGPSdata->numSV);
     gps_rcvdByteCount = static_cast<double> (pGPSdata->rcvdByteCount);
     gps_rcvdMsgCount  = static_cast<double> (pGPSdata->rcvdMsgCount);
+    
+    nav_accel_pitch = pNavData->accel_pitch * radian2degree;
+    nav_accel_roll  = pNavData->accel_roll  * radian2degree;
     
     for (int i=0; i<3; i++)
     {
@@ -575,17 +590,30 @@ void setPrintVariables()
     //pMap->addLogVar("INS Update Count", &NavUpdateCounts[INS], savePlot, 2);
     //pMap->addLogVar("Baro Update Count", &NavUpdateCounts[BaroUpdate], savePlot, 2);
     //pMap->addLogVar("GPS Update Count", &NavUpdateCounts[GPSUpdate], savePlot, 2);
+    //pMap->addLogVar("Accel Update Count", &NavUpdateCounts[AccelUpdate], savePlot, 2);
+    
+    //pMap->addLogVar("Baro Skipped Update Count", &NavSkippedUpdates[BaroUpdate], savePlot, 2);
+    //pMap->addLogVar("GPS Skipped Update Count", &NavSkippedUpdates[GPSUpdate], savePlot, 2);
+    //pMap->addLogVar("Accel Skipped Update Count", &NavSkippedUpdates[AccelUpdate], savePlot, 2);
     
     //pMap->addLogVar("Nav Timestamp", &pNavData->timestamp, savePlot, 2);
     //pMap->addLogVar("Nav IMU Timestamp", &pNavData->sensorTimestamp[INS], savePlot, 2);
     //pMap->addLogVar("Nav Baro Timestamp", &pNavData->sensorTimestamp[BaroUpdate], savePlot, 2);
     //pMap->addLogVar("Nav GPS Timestamp", &pNavData->sensorTimestamp[GPSUpdate], savePlot, 2);
+    //pMap->addLogVar("Nav Accel Timestamp", &pNavData->sensorTimestamp[AccelUpdate], savePlot, 2);
     
     //pMap->addLogVar("Nav IMU dTimestamp", &pNavData->timestamp_diff[INS], savePlot, 2);
     //pMap->addLogVar("Nav Baro dTimestamp", &pNavData->timestamp_diff[BaroUpdate], savePlot, 2);
     //pMap->addLogVar("Nav GPS dTimestamp", &pNavData->timestamp_diff[GPSUpdate], savePlot, 2);
+    //pMap->addLogVar("Nav Accel dTimestamp", &pNavData->timestamp_diff[AccelUpdate], savePlot, 2);
     
     //pMap->addLogVar("Nav dPitch", &pNavData->stateInputs.dTheta[1], savePlot, 2);
+    //pMap->addLogVar("Nav Accel Mag" , &pNavData->accel_mag, savePlot, 2);
+    //pMap->addLogVar("Nav Error Accel Roll" , &pNavError->accel_roll, savePlot, 2);
+    //pMap->addLogVar("Nav Error Accel Pitch" , &pNavError->accel_pitch, savePlot, 2);
+
+    pMap->addLogVar("Nav Accel Roll" , &nav_accel_roll, printSavePlot, 3);
+    pMap->addLogVar("Nav Accel Pitch" , &nav_accel_pitch, printSavePlot, 3);
     
     pMap->addLogVar("Nav Roll" , &eulerAnglesDeg[0], printSavePlot, 3);
     pMap->addLogVar("Nav Pitch", &eulerAnglesDeg[1], printSavePlot, 3);
@@ -638,13 +666,13 @@ void setPrintVariables()
     
     pMap->addLogVar("P[ROLL][ROLL]"    , &Cov[ROLL][ROLL], savePlot, 2);
     pMap->addLogVar("P[PITCH][PITCH]"    , &Cov[PITCH][PITCH], savePlot, 2);
-    pMap->addLogVar("P[ROLL][PITCH]"    , &Cov[ROLL][PITCH], savePlot, 2);
-    pMap->addLogVar("P[PITCH][ROLL]"    , &Cov[PITCH][ROLL], savePlot, 2);
-    //pMap->addLogVar("P[YAW][YAW]"    , &Cov[YAW][YAW], savePlot, 2);
-    //pMap->addLogVar("P[VN][VN]"    , &Cov[VN][VN], savePlot, 2);
-    //pMap->addLogVar("P[VE][VE]"    , &Cov[VE][VE], savePlot, 2);
+    //pMap->addLogVar("P[ROLL][PITCH]"    , &Cov[ROLL][PITCH], savePlot, 2);
+    //pMap->addLogVar("P[PITCH][ROLL]"    , &Cov[PITCH][ROLL], savePlot, 2);
+    pMap->addLogVar("P[YAW][YAW]"    , &Cov[YAW][YAW], savePlot, 2);
     pMap->addLogVar("P[VN][VN]"    , &Cov[VN][VN], savePlot, 2);
     pMap->addLogVar("P[VE][VE]"    , &Cov[VE][VE], savePlot, 2);
+    //pMap->addLogVar("P[VN][VN]"    , &Cov[VN][VN], savePlot, 2);
+    //pMap->addLogVar("P[VE][VE]"    , &Cov[VE][VE], savePlot, 2);
     pMap->addLogVar("P[VD][VD]"    , &Cov[VD][VD], savePlot, 2);
     //pMap->addLogVar("P[VD][GRAVITY]"    , &Cov[VD][GRAVITY], savePlot, 2);
     //pMap->addLogVar("P[VD][GBIAS_X]"    , &Cov[VD][GBIAS_X], savePlot, 2);
@@ -653,8 +681,8 @@ void setPrintVariables()
     //pMap->addLogVar("P[N][N]"  , &Cov[N][N], savePlot, 2);
     //pMap->addLogVar("P[E][E]"  , &Cov[E][E], savePlot, 2);
     pMap->addLogVar("P[ALT][ALT]"  , &Cov[ALT][ALT], printSavePlot, 3);
-    pMap->addLogVar("P[VD][ALT]"    , &Cov[VD][ALT], savePlot, 2);
-    pMap->addLogVar("P[ALT][VD]"    , &Cov[ALT][VD], savePlot, 2);
+    //pMap->addLogVar("P[VD][ALT]"    , &Cov[VD][ALT], savePlot, 2);
+    //pMap->addLogVar("P[ALT][VD]"    , &Cov[ALT][VD], savePlot, 2);
     //pMap->addLogVar("P[ALT][GRAVITY]"  , &Cov[ALT][GRAVITY], printSavePlot, 3);
     //pMap->addLogVar("P[ALT][GBIAS_X]"  , &Cov[ALT][GBIAS_X], printSavePlot, 3);
     //pMap->addLogVar("P[ALT][GBIAS_Y]"  , &Cov[ALT][GBIAS_Y], printSavePlot, 3);
@@ -671,43 +699,44 @@ void setPrintVariables()
     //pMap->addLogVar("P[ROLL][GBIAS_X]"    , &Cov[ROLL][GBIAS_X], savePlot, 2);
     //pMap->addLogVar("P[ROLL][ALT]"    , &Cov[ROLL][ALT], savePlot, 2);
     //pMap->addLogVar("P[PITCH][ALT]"    , &Cov[PITCH][ALT], printSavePlot, 3);
-    pMap->addLogVar("P[ROLL][N]"    , &Cov[ROLL][N], savePlot, 2);
-    pMap->addLogVar("P[N][ROLL]"    , &Cov[N][ROLL], savePlot, 2);
-    pMap->addLogVar("P[ROLL][E]"    , &Cov[ROLL][E], savePlot, 2);
-    pMap->addLogVar("P[E][ROLL]"    , &Cov[E][ROLL], savePlot, 2);
-    pMap->addLogVar("P[ROLL][ALT]"     , &Cov[ROLL][ALT], savePlot, 2);
-    pMap->addLogVar("P[ALT][ROLL]"     , &Cov[ALT][ROLL], savePlot, 2);
+   // pMap->addLogVar("P[ROLL][N]"    , &Cov[ROLL][N], savePlot, 2);
+   // pMap->addLogVar("P[N][ROLL]"    , &Cov[N][ROLL], savePlot, 2);
+    //pMap->addLogVar("P[ROLL][E]"    , &Cov[ROLL][E], savePlot, 2);
+    //pMap->addLogVar("P[E][ROLL]"    , &Cov[E][ROLL], savePlot, 2);
+    //pMap->addLogVar("P[ROLL][ALT]"     , &Cov[ROLL][ALT], savePlot, 2);
+    //pMap->addLogVar("P[ALT][ROLL]"     , &Cov[ALT][ROLL], savePlot, 2);
     
-    pMap->addLogVar("P[PITCH][N]"    , &Cov[PITCH][N], savePlot, 2);
-    pMap->addLogVar("P[N][PITCH]"    , &Cov[N][PITCH], savePlot, 2);
-    pMap->addLogVar("P[PITCH][E]"    , &Cov[PITCH][E], savePlot, 2);
-    pMap->addLogVar("P[E][PITCH]"    , &Cov[E][PITCH], savePlot, 2);
-    pMap->addLogVar("P[PITCH][ALT]"    , &Cov[PITCH][ALT], savePlot, 2);
-    pMap->addLogVar("P[ALT][PITCH]"    , &Cov[ALT][PITCH], savePlot, 2);
+    //pMap->addLogVar("P[PITCH][N]"    , &Cov[PITCH][N], savePlot, 2);
+    //pMap->addLogVar("P[N][PITCH]"    , &Cov[N][PITCH], savePlot, 2);
+    //pMap->addLogVar("P[PITCH][E]"    , &Cov[PITCH][E], savePlot, 2);
+    //pMap->addLogVar("P[E][PITCH]"    , &Cov[E][PITCH], savePlot, 2);
+    //pMap->addLogVar("P[PITCH][ALT]"    , &Cov[PITCH][ALT], savePlot, 2);
+    //pMap->addLogVar("P[ALT][PITCH]"    , &Cov[ALT][PITCH], savePlot, 2);
     
-    pMap->addLogVar("P[ROLL][VN]"    , &Cov[ROLL][VN], savePlot, 2);
-    pMap->addLogVar("P[VN][ROLL]"    , &Cov[VN][ROLL], savePlot, 2);
-    pMap->addLogVar("P[ROLL][VE]"    , &Cov[ROLL][VE], savePlot, 2);
-    pMap->addLogVar("P[VE][ROLL]"    , &Cov[VE][ROLL], savePlot, 2);
-    pMap->addLogVar("P[ROLL][VD]"     , &Cov[ROLL][VD], savePlot, 2);
-    pMap->addLogVar("P[VD][ROLL]"     , &Cov[VD][ROLL], savePlot, 2);
+    //pMap->addLogVar("P[ROLL][VN]"    , &Cov[ROLL][VN], savePlot, 2);
+    //pMap->addLogVar("P[VN][ROLL]"    , &Cov[VN][ROLL], savePlot, 2);
+    //pMap->addLogVar("P[ROLL][VE]"    , &Cov[ROLL][VE], savePlot, 2);
+    //pMap->addLogVar("P[VE][ROLL]"    , &Cov[VE][ROLL], savePlot, 2);
+    //pMap->addLogVar("P[ROLL][VD]"     , &Cov[ROLL][VD], savePlot, 2);
+    //pMap->addLogVar("P[VD][ROLL]"     , &Cov[VD][ROLL], savePlot, 2);
     
-    pMap->addLogVar("P[PITCH][VN]"    , &Cov[PITCH][VN], savePlot, 2);
-    pMap->addLogVar("P[VN][PITCH]"    , &Cov[VN][PITCH], savePlot, 2);
-    pMap->addLogVar("P[PITCH][VE]"    , &Cov[PITCH][VE], savePlot, 2);
-    pMap->addLogVar("P[VE][PITCH]"    , &Cov[VE][PITCH], savePlot, 2);
-    pMap->addLogVar("P[PITCH][VD]"    , &Cov[PITCH][VD], savePlot, 2);
-    pMap->addLogVar("P[VD][PITCH]"    , &Cov[VD][PITCH], savePlot, 2);
+    //pMap->addLogVar("P[PITCH][VN]"    , &Cov[PITCH][VN], savePlot, 2);
+    //pMap->addLogVar("P[VN][PITCH]"    , &Cov[VN][PITCH], savePlot, 2);
+    //pMap->addLogVar("P[PITCH][VE]"    , &Cov[PITCH][VE], savePlot, 2);
+    //pMap->addLogVar("P[VE][PITCH]"    , &Cov[VE][PITCH], savePlot, 2);
+    //pMap->addLogVar("P[PITCH][VD]"    , &Cov[PITCH][VD], savePlot, 2);
+    //pMap->addLogVar("P[VD][PITCH]"    , &Cov[VD][PITCH], savePlot, 2);
     //pMap->addLogVar("P[YAW][ALT]"    , &Cov[YAW][ALT], savePlot, 2);
     //pMap->addLogVar("P[GRAVITY][ALT]"    , &Cov[GRAVITY][ALT], savePlot, 2);
     //pMap->addLogVar("P[GRAVITY][VD]"    , &Cov[GRAVITY][VD], savePlot, 2);
     
-    //pMap->addLogVar("Roll Stdev"    , &navStd[ROLL][ROLL], savePlot, 2);
+    pMap->addLogVar("Roll Stdev"    , &navStd[ROLL][ROLL], savePlot, 2);
     //pMap->addLogVar("Roll 3 Stdev"  , &nav3Std[ROLL][ROLL], savePlot, 2);
-    //pMap->addLogVar("Pitch Stdev"   , &navStd[PITCH][PITCH], savePlot, 2);
+    pMap->addLogVar("Pitch Stdev"   , &navStd[PITCH][PITCH], savePlot, 2);
     //pMap->addLogVar("Pitch Stdev Due to Alt"   , &navStd[PITCH][ALT], savePlot, 2);
     //pMap->addLogVar("Pitch Stdev Due to VD"   , &navStd[PITCH][VD], savePlot, 2);
     //pMap->addLogVar("Pitch 3 Stdev" , &nav3Std[PITCH][PITCH], savePlot, 2);
+    pMap->addLogVar("Yaw Stdev"   , &navStd[YAW][YAW], savePlot, 2);
     //pMap->addLogVar("VN Stdev"    , &navStd[VN][VN], savePlot, 2);
     //pMap->addLogVar("VE Stdev"    , &navStd[VE][VE], savePlot, 2);
     //pMap->addLogVar("VD Stdev"    , &navStd[VD][VD], savePlot, 2);
