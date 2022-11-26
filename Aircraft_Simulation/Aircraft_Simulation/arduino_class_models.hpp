@@ -11,6 +11,7 @@
 
 #include <stdio.h>
 #include <iostream>
+#include <fstream>
 #include "model_mapping.hpp"
 #include "barometer_model.hpp"
 
@@ -182,10 +183,29 @@ private:
     bool print_serial;
 };
 
+class ArduinoEEPROM {
+public:
+    ArduinoEEPROM();
+    ~ArduinoEEPROM();
+    
+    byte read(unsigned int address);
+    void write(unsigned int address, byte val);
+    
+private:
+    unsigned int size;
+    bool new_file;
+    std::__1::streamoff file_length;
+    std::string filename;
+    std::fstream memoryfile;
+    
+    void reset_eeprom();
+};
+
 void pinMode(int pin, pinMode mode);
 
 #define HardwareSerial SoftwareSerial
 extern SimulationWire Wire;
 extern SoftwareSerial Serial1;
+extern ArduinoEEPROM  EEPROM;
 
 #endif /* arduino_class_models_hpp */

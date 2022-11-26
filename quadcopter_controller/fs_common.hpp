@@ -21,7 +21,7 @@
 #define CONTROLS
 #define GROUND_DETECTION
 #define NAVIGATION
-//#define PRINT
+#define PRINT
 //#define UBX_PRINT
 
 #ifdef SIMULATION
@@ -33,9 +33,10 @@
     #include <fstream>
     typedef std::string String;
 #else
+    #include "arduino.h"
+    #include <EEPROM.h>
     #include "Wire.h"
     #include <SoftwareSerial.h>
-    #include "arduino.h"
     #ifdef max
         #undef max
         #undef min
@@ -293,8 +294,16 @@ double getTime();
     void delay(int ms_delay);
 #endif
 
+// Memory
+void write_eeprom(unsigned int address, byte val);
+void write_eeprom(unsigned int address, byte* val, unsigned int size);
+
+void read_eeprom(unsigned int address, byte* val);
+void read_eeprom(unsigned int address, byte* val, unsigned int size);
+
 // Math Support
 double errorToVariance(double maxError);
+double varianceToError(double variance);
 void crossProduct(double *cross, double *a, double *b);
 
 // Printing

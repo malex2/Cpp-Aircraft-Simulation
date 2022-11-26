@@ -24,12 +24,19 @@ Time::Time(ModelMap *pMapInit, bool debugFlagIn)
     startTime = 0.0;
     curTime   = 0.0;
 #endif
+    systemtime       = startTime;
     lastPrintTime    = startTime;
     lastSaveTime     = startTime;
     lastDynamicTime  = startTime;
     lastClockDt      = startTime;
     
+    timeSinceLastDynamics = 0.0;
+    timeSinceLastPrint    = 0.0;
+    timeSinceLastSave     = 0.0;
+    timeSinceLastClockDt  = 0.0;
+    
     // Update time constants
+    curTime          = systemtime;
     runTime          = runTime_init;
     printInterval    = printInterval_init;
     saveInterval     = saveInterval_init;
@@ -42,6 +49,7 @@ Time::Time(ModelMap *pMapInit, bool debugFlagIn)
     dynamics = true;
     
     counter = 0;
+    clockCounter = 0;
     
     debugFlag = debugFlagIn;
 }

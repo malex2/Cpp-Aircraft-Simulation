@@ -52,10 +52,10 @@ public:
 
     
 private:
-    
     // Classes
     class RotateFrame         *pRotate;
     class AtmosphereModel     *pAtmo;
+    class GroundModelBase     *pGround;
     class Time                *pTime;
     
     // Functions
@@ -63,6 +63,7 @@ private:
     void updatePosition();
     void updateAttitude();
     void updateStates();
+    double getEllipsoidHeight();
     
     // Variables
     double forceECI[3];

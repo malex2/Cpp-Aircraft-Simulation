@@ -195,12 +195,12 @@ private:
     
     static const int HorizAccLength = 3;
     double HorizAccTimes[HorizAccLength]  = {0.0, 5.0, 9.0};
-    double HorizAccValues[HorizAccLength] = {10.0, 10.0, 3.0};
+    double HorizAccValues[HorizAccLength] = {10.0, 10.0, 1.0};
     LookupTable<double> HorizAccLookup;
     
     static const int VertAccLength = 3;
     double VertAccTimes[VertAccLength]  = {0.0, 5.0, 9.0};
-    double VertAccValues[VertAccLength] = {10.0, 10.0, 3.0};
+    double VertAccValues[VertAccLength] = {10.0, 10.0, 1.0};
     LookupTable<double> VertAccLookup;
     
     static const int VelAccLength = 3;

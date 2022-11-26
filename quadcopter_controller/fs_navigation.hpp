@@ -160,6 +160,7 @@ double*  FsNavigation_getBaroKalmanGain();
 double*  FsNavigation_getBaroResidual();
 double*  FsNavigation_getGPSMeasVariance();
 double*  FsNavigation_getGPSResidual();
+double*  FsNavigation_getAccelMeasVariance();
 
 // Setters
 void FsNavigation_setIMUdata(IMUtype* pIMUdataIn);

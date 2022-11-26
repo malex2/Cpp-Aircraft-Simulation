@@ -178,7 +178,7 @@ void bmp180::updateTemperature()
     
     // Solve for a
     realSolution = util.solveQuadratic(1.0, md-temperature, mc-temperature*md, solnReal, solnImag);
-    if (!realSolution) { std::cout << "Warning - bmp180::updateTemperaute, imaginary solition" << std::endl; }
+    if (!realSolution) { std::cout << "Warning - bmp180::updateTemperaute, imaginary solution" << std::endl; }
     
     if (solnReal[0] > 0) { a = solnReal[0]; }
     else { a = solnReal[1]; }

@@ -78,7 +78,7 @@ PwmIn::PwmIn()
     Pins[YAW_CHANNEL]      = YAWPIN;      // CH6
     
     // Initialize Ranges
-    /*
+    
     // Velocity Control
     minValues[THROTTLE_CHANNEL] = -MAXVELOCITY;
     minValues[ROLL_CHANNEL]     = -MAXVELOCITY;
@@ -89,9 +89,9 @@ PwmIn::PwmIn()
     maxValues[ROLL_CHANNEL]     = MAXVELOCITY;
     maxValues[PITCH_CHANNEL]    = MAXVELOCITY;
     maxValues[YAW_CHANNEL]      = MAXYAWRATE;
-    */
     
-     //Attitude Contorl
+    /*
+     //Attitude Control
      minValues[THROTTLE_CHANNEL] = -MAXVELOCITY;
      minValues[ROLL_CHANNEL]     = -MAXROLL;
      minValues[PITCH_CHANNEL]    = -MAXPITCH;
@@ -101,8 +101,7 @@ PwmIn::PwmIn()
      maxValues[ROLL_CHANNEL]     = MAXROLL;
      maxValues[PITCH_CHANNEL]    = MAXPITCH;
      maxValues[YAW_CHANNEL]      = MAXYAWRATE;
-     
-    
+    */
     /*
      //(Legacy) Attitude Control
     minValues[THROTTLE_CHANNEL] = 0.0;
@@ -125,8 +124,8 @@ PwmIn::PwmIn()
     foundChannel = false;
     
     // Table To Radians
-    for (int iCh = ROLL_CHANNEL; iCh != nChannels; iCh++)
-    //for (int iCh = YAW_CHANNEL; iCh != nChannels; iCh++)
+    //for (int iCh = ROLL_CHANNEL; iCh != nChannels; iCh++)
+    for (int iCh = YAW_CHANNEL; iCh != nChannels; iCh++)
     {
         // Attitude Control
         for (int col = 0; col < lengthTable; col++)

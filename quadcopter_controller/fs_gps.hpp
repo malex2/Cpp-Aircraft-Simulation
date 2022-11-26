@@ -10,12 +10,48 @@
 #define fs_gps_hpp
 
 #include "fs_common.hpp"
+#include "fs_gps_ubx_message_types.h"
 
 enum GPS_FIX_TYPE {NO_FIX, DEAD_RECKON, FIX2D, FIX3D, GPS_DEAD_RECKON, TIME_ONLY};
 
 #ifdef SIMULATION
     enum GPS_MSG {GGA, GLL, GSA, GSV, RMC, VTG, NAVSTAT, NAVDOP, POSLLH, VELNED, NMESSAGES};
 #endif
+
+struct GpsAidType {
+    UBX_MSG_TYPES::UBX_MSG_AID_INI aidInit;
+    UBX_MSG_TYPES::UBX_MSG_AID_ALM almanac[UBX_MSG_TYPES::NUM_SV];
+    UBX_MSG_TYPES::UBX_MSG_AID_EPH ephemeris[UBX_MSG_TYPES::NUM_SV];
+    UBX_MSG_TYPES::UBX_MSG_AID_HUI gpsHealth;
+    static const int max_sv_alm = 20;
+    static const int max_sv_eph = 12;
+    unsigned int     n_sv_alm;
+    unsigned int     n_sv_eph;
+    bool             health_rcvd;
+    bool             aid_rcvd;
+    bool             alm_rcvd;
+    bool             eph_rcvd;
+    unsigned int     sv_list_alm[max_sv_alm];
+    unsigned int     sv_list_eph[max_sv_eph];
+    unsigned int     week_num;
+    double           tow_hr;
+    bool             aid_ready;
+    bool             aid_saved;
+    
+    GpsAidType() {
+        n_sv_alm   = 0;
+        n_sv_eph   = 0;
+        aid_rcvd   = false;
+        alm_rcvd   = false;
+        eph_rcvd   = false;
+        week_num   = 0;
+        tow_hr     = 0.0;
+        aid_ready  = false;
+        aid_saved  = false;
+        memset(sv_list_alm, 0, sizeof(sv_list_alm));
+        memset(sv_list_eph, 0, sizeof(sv_list_eph));
+    }
+};
 
 struct GpsType {
     int input_msg_id;
@@ -120,12 +156,14 @@ struct GpsType {
     }
 };
 
-void LLHtoECEF(double* ECEF, double* LLH);
 void FsGPS_setupGPS(int baudRate, bool fs_allow2DFix);
 void FsGPS_performGPS();
 void FsGPS_performSerialIO();
 
 void FsGPS_requestAidningInfo();
+
+void update_gps_data();
+void LLHtoECEF(double* ECEF, double* LLH);
 
 // Getters
 bool FsGPS_GPSgood();

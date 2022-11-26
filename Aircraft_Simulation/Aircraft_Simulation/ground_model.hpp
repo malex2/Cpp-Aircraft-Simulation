@@ -42,9 +42,13 @@ public:
 private:
     class DynamicsModel   *pDyn;
     class RotateFrame     *pRotate;
+    class GroundModelBase *pGround;
     
     // Internal Functions
-    void sumExternalForces(void);
+    void   groundToBody(double* vBody, double* vGround);
+    void   bodyToGround(double* vGround, double* vBody);
+    void   bodyToGround(SpeedType<double> * vGround, SpeedType<double> * vBody);
+    void   sumExternalForces(void);
     double determineFriction(double maxFriction, double externalForce, double velocity, double muDynamic);
     
     // States relative to CG in Body frame
@@ -53,10 +57,14 @@ private:
     
     // States relative to CG in Local Level frame
     DistanceType<double> posLL[3];
+    DistanceType<double> posRelNED[3];
     SpeedType<double>    velLL[3];
     
     // Height of object above ground
+    DistanceType<double> posNED[3];
     DistanceType<double> altGround;
+    double               groundElevation;
+    double               hMSL_init;
     
     // Dynamics constants
     double k;           // spring constant
@@ -71,7 +79,7 @@ private:
     double bodyForceExt[3];
     double LLForceExt[3];
     
-    bool onGround;
+    bool   onGround;
     double percLoad; // percentage of total load this contact point holds
 };
 
@@ -95,18 +103,10 @@ public:
     
     // Getters
     virtual bool isOnGround(void) { return util.any(onGround, nContactPoints); }
-protected:
-    /*
-    const double cgz = 0.09; // Height of center of gravity above ground when aircraft is on ground (0.3 ft)
-    const double Lg1 = 0.1; // Length of front landing gear
-    const double Lg2 = 0.06; // Length of rear landing gear
-    const double L1 = 0.06; // Distance of front landing gear from CG
-    const double L2 = 0.29; // Distance of rear landing gear from CG
-    const double LL = 0.05; // Distance of left landing gear from CG
-    const double LR = 0.05; // Distance of right landing gear from CG
-    const double thetag = asin((Lg1-Lg2)/(L1+L2))*rad2deg; // Pitch of aircraft on flat ground = 6.56 deg
-    */
     
+    double getGroundElevation(double north, double east);
+    void   getGroundAngles(double north, double east, double* ground_euler);
+protected:
     class DynamicsModel *pDyn;
     class RotateFrame   *pRotate;
     class Time          *pTime;
@@ -119,35 +119,65 @@ protected:
     bool onGround[maxContactPoints];
     
     double onGroundPrint;
+    double groundHeight;
+    double groundEuler[3];
+    
     // Functions
-    void setLoadPercentage(void);
+    void setLoadPercentage();
     
-    // Left Front Landing Gear
-    const double k1L    = 10000;
-    const double zeta1L = 1;
-    const double mux1L_static = 0.08; // 0.02-0.08
-    const double mux1L_dyn    = 0.04;
-    const double muy1L_static = 0.5;
-    const double muy1L_dyn    = 0.3;
-    const double pos1L[3]     = {0.06, -0.05, 0.1};
+    // Ground Grid (Above MSL)
+    static const int N_NORTH_GRID_POINTS = 11;
+    static const int N_EAST_GRID_POINTS  = 11;
+    const double NORTH_ELEVATION_POINTS[N_NORTH_GRID_POINTS] = {-100.0, -80.0, -60.0, -40.0, -20.0, 0.0, 20.0, 40.0, 60.0, 80.0, 100.0};
+    const double EAST_ELEVATION_POINTS[N_EAST_GRID_POINTS]   = {-100.0, -80.0, -60.0, -40.0, -20.0, 0.0, 20.0, 40.0, 60.0, 80.0, 100.0};
     
-    // Right Front Landing Gear
-    const double k1R    = 10000;
-    const double zeta1R = 1;
-    const double mux1R_static = 0.08;
-    const double mux1R_dyn    = 0.04;
-    const double muy1R_static = 0.5;
-    const double muy1R_dyn    = 0.3;
-    const double pos1R[3]     = {0.06, 0.05, 0.1};
+    const double GRID_ELEVATION[N_NORTH_GRID_POINTS][N_EAST_GRID_POINTS] = {
+//East:-100.0, -80.0, -60.0, -40.0, -20.0, 0.0  , 20.0 , 40.0 , 60.0 , 80.0 , 100.0     North
+    { -25.0  , -25.0, -25.0, -25.0, -25.0, -25.0, -25.0, -25.0, -25.0, -25.0, -25.0}, // -100.0
+    { -20.0  , -20.0, -20.0, -20.0, -20.0, -20.0, -20.0, -20.0, -20.0, -20.0, -20.0}, // -80.0
+    { -15.0  , -15.0, -15.0, -15.0, -15.0, -15.0, -15.0, -15.0, -15.0, -15.0, -15.0}, // -60.0
+    { -10.0  , -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0}, // -40.0
+    { -5.0   , -5.0 , -5.0 , -5.0 , -5.0 , -5.0 , -5.0 , -5.0 , -5.0 , -5.0 , -5.0 }, // -20.0
+    { 0.0    , 0.0  , 0.0  , 0.0  , 0.0  , 0.0  , 0.0  , 0.0  , 0.0  , 0.0  , 0.0  }, // 0.0
+    { 5.0    , 5.0  , 5.0  , 5.0  , 5.0  , 5.0  , 5.0  , 5.0  , 5.0  , 5.0  , 5.0  }, // 20.0
+    { 10.0   , 10.0 , 10.0 , 10.0 , 10.0 , 10.0 , 10.0 , 10.0 , 10.0 , 10.0 , 10.0 }, // 40.0
+    { 15.0   , 15.0 , 15.0 , 15.0 , 15.0 , 15.0 , 15.0 , 15.0 , 15.0 , 15.0 , 15.0 }, // 60.0
+    { 20.0   , 20.0 , 20.0 , 20.0 , 20.0 , 20.0 , 20.0 , 20.0 , 20.0 , 20.0 , 20.0 }, // 80.0
+    { 25.0   , 25.0 , 25.0 , 25.0 , 25.0 , 25.0 , 25.0 , 25.0 , 25.0 , 25.0 , 25.0 }  // 100.0
+    };
     
-    // Rear Landing Gear
-    const double k2     = 10000;
-    const double zeta2  = 1;
-    const double mux2_static = 0.08;
-    const double mux2_dyn    = 0.08;
-    const double muy2_static = 0.5;
-    const double muy2_dyn    = 1.08;
-    const double pos2[3]     = {-0.29, 0, 0.06};
+    /*
+    const double GRID_ELEVATION[N_NORTH_GRID_POINTS][N_EAST_GRID_POINTS] = {
+        //East:-100.0, -80.0, -60.0, -40.0, -20.0, 0.0  , 20.0 , 40.0 , 60.0 , 80.0 , 100.0     North
+        { -25.0  , -25.0, -25.0, -25.0, -25.0, -25.0, -25.0, -25.0, -25.0, -25.0, -25.0}, // -100.0
+        { -20.0  , -20.0, -20.0, -20.0, -20.0, -20.0, -20.0, -20.0, -20.0, -20.0, -20.0}, // -80.0
+        { -15.0  , -15.0, -15.0, -15.0, -15.0, -15.0, -15.0, -15.0, -15.0, -15.0, -15.0}, // -60.0
+        { -10.0  , -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0}, // -40.0
+        { -5.0   , -5.0 , -5.0 , -5.0 , -1.0 , -1.0 , -1.0 , -5.0 , -5.0 , -5.0 , -5.0 }, // -20.0
+        { 0.0    , 0.0  , 0.0  , 0.0  , 0.0  , 0.0  , 0.0  , 0.0  , 0.0  , 0.0  , 0.0  }, // 0.0
+        { 5.0    , 5.0  , 5.0  , 5.0  , 1.0  , 1.0  , 1.0  , 5.0  , 5.0  , 5.0  , 5.0  }, // 20.0
+        { 10.0   , 10.0 , 10.0 , 10.0 , 10.0 , 10.0 , 10.0 , 10.0 , 10.0 , 10.0 , 10.0 }, // 40.0
+        { 15.0   , 15.0 , 15.0 , 15.0 , 15.0 , 15.0 , 15.0 , 15.0 , 15.0 , 15.0 , 15.0 }, // 60.0
+        { 20.0   , 20.0 , 20.0 , 20.0 , 20.0 , 20.0 , 20.0 , 20.0 , 20.0 , 20.0 , 20.0 }, // 80.0
+        { 25.0   , 25.0 , 25.0 , 25.0 , 25.0 , 25.0 , 25.0 , 25.0 , 25.0 , 25.0 , 25.0 }  // 100.0
+    };
+    */
+    /*
+    const double GRID_ELEVATION[N_NORTH_GRID_POINTS][N_EAST_GRID_POINTS] = {
+        //East:-100.0, -80.0, -60.0, -40.0, -20.0, 0.0  , 20.0 , 40.0 , 60.0 , 80.0 , 100.0     North
+        { -25.0  , -25.0, -25.0, -25.0, -25.0, -25.0, -25.0, -25.0, -25.0, -25.0, -25.0}, // -100.0
+        { -20.0  , -20.0, -20.0, -20.0, -20.0, -20.0, -20.0, -20.0, -20.0, -20.0, -20.0}, // -80.0
+        { -15.0  , -15.0, -15.0, -15.0, -15.0, -15.0, -15.0, -15.0, -15.0, -15.0, -15.0}, // -60.0
+        { -10.0  , -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0, -10.0}, // -40.0
+        { -5.0   , -5.0 , -5.0 , -5.0 , 0.0 , 0.0 , 0.0 , -5.0 , -5.0 , -5.0 , -5.0 }, // -20.0
+        { 0.0    , 0.0  , 0.0  , 0.0  , 0.0  , 0.0  , 0.0  , 0.0  , 0.0  , 0.0  , 0.0  }, // 0.0
+        { 5.0    , 5.0  , 5.0  , 5.0  , 0.0  , 0.0  , 0.0  , 5.0  , 5.0  , 5.0  , 5.0  }, // 20.0
+        { 10.0   , 10.0 , 10.0 , 10.0 , 10.0 , 10.0 , 10.0 , 10.0 , 10.0 , 10.0 , 10.0 }, // 40.0
+        { 15.0   , 15.0 , 15.0 , 15.0 , 15.0 , 15.0 , 15.0 , 15.0 , 15.0 , 15.0 , 15.0 }, // 60.0
+        { 20.0   , 20.0 , 20.0 , 20.0 , 20.0 , 20.0 , 20.0 , 20.0 , 20.0 , 20.0 , 20.0 }, // 80.0
+        { 25.0   , 25.0 , 25.0 , 25.0 , 25.0 , 25.0 , 25.0 , 25.0 , 25.0 , 25.0 , 25.0 }  // 100.0
+    };
+  */
 };
 
 // **********************************************************************
@@ -214,40 +244,40 @@ public:
     QuadcopterGroundModel(void);
 private:
     // Left Front Landing Gear
-    const double k1    = 10000;
+    const double k1    = 1000;
     const double zeta1 = 1;
-    const double mux1_static = 0.08; // 0.02-0.08
-    const double mux1_dyn    = 0.04;
-    const double muy1_static = 0.08;
-    const double muy1_dyn    = 0.04;
-    const double pos1[3]     = {0.1, -0.1, 0.6};
+    const double mux1_static = 0.32; // 0.02-0.08
+    const double mux1_dyn    = 0.16;
+    const double muy1_static = 0.32;
+    const double muy1_dyn    = 0.16;
+    const double pos1[3]     = {0.1, -0.1, 0.1};
     
     // Right Front Landing Gear
-    const double k2    = 10000;
+    const double k2    = 1000;
     const double zeta2 = 1;
-    const double mux2_static = 0.08;
-    const double mux2_dyn    = 0.04;
-    const double muy2_static = 0.08;
-    const double muy2_dyn    = 0.04;
-    const double pos2[3]     = {0.1, 0.1, 0.6};
+    const double mux2_static = 0.32;
+    const double mux2_dyn    = 0.16;
+    const double muy2_static = 0.32;
+    const double muy2_dyn    = 0.16;
+    const double pos2[3]     = {0.1, 0.1, 0.1};
     
     // Right Rear Landing Gear
-    const double k3     = 10000;
+    const double k3     = 1000;
     const double zeta3  = 1;
-    const double mux3_static = 0.08;
-    const double mux3_dyn    = 0.04;
-    const double muy3_static = 0.08;
-    const double muy3_dyn    = 0.04;
-    const double pos3[3]     = {-0.1, 0.1, 0.6};
+    const double mux3_static = 0.32;
+    const double mux3_dyn    = 0.16;
+    const double muy3_static = 0.32;
+    const double muy3_dyn    = 0.16;
+    const double pos3[3]     = {-0.1, 0.1, 0.1};
     
     // Left Rear Landing Gear
-    const double k4     = 10000;
+    const double k4     = 1000;
     const double zeta4  = 1;
-    const double mux4_static = 0.08;
-    const double mux4_dyn    = 0.04;
-    const double muy4_static = 0.08;
-    const double muy4_dyn    = 0.04;
-    const double pos4[3]     = {-0.1, -0.1, 0.6};
+    const double mux4_static = 0.32;
+    const double mux4_dyn    = 0.16;
+    const double muy4_static = 0.32;
+    const double muy4_dyn    = 0.16;
+    const double pos4[3]     = {-0.1, -0.1, 0.1};
 };
 
 #endif /* GroundModel_hpp */

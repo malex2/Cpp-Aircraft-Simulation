@@ -493,7 +493,7 @@ void GPSNeo6m::readInputMessages()
 
     if (pUBX)
     {
-        int rcvd = pUBX->read(gpsData);
+        int rcvd = pUBX->read();
         receiveCount += rcvd;
         receiveTime = pTime->getSimTime();
     }
@@ -501,23 +501,42 @@ void GPSNeo6m::readInputMessages()
 
 void GPSNeo6m::decodeInputMessages()
 {
-    if (!readGPSFile)
+    if (pUBX == NULL || readGPSFile) { return; }
+    
+    if (pUBX->get_n_rcvd(UBX_MSG_TYPES::CFG, UBX_MSG_TYPES::CFG_MSG) > 0)
     {
-        if (pOutputMessages[NAV_STATUS]->updateRate != gpsData->msgRates[NAVSTAT])
+        byte msgClass;
+        byte msgID;
+        int  rate;
+        
+        if (pUBX->get_configMsgShort().data.msgClass!=0 && pUBX->get_configMsgShort().data.msgID!=0)
         {
-            pOutputMessages[NAV_STATUS]->updateRate = gpsData->msgRates[NAVSTAT];
+            msgClass = pUBX->get_configMsgShort().data.msgClass;
+            msgID    = pUBX->get_configMsgShort().data.msgID;
+            rate     = (int) pUBX->get_configMsgShort().data.rate;
         }
-        if (pOutputMessages[NAV_DOP]->updateRate != gpsData->msgRates[NAVDOP])
+        else
         {
-            pOutputMessages[NAV_DOP]->updateRate = gpsData->msgRates[NAVDOP];
+            msgClass = pUBX->get_configMsgLong().data.msgClass;
+            msgID    = pUBX->get_configMsgLong().data.msgID;
+            rate     = (int) pUBX->get_configMsgLong().data.rateTgt2; // UART port
         }
-        if (pOutputMessages[NAV_POSLLH]->updateRate != gpsData->msgRates[POSLLH])
+        
+        if (msgClass == (byte) UBX_NAV && msgID == (byte) UBX_NAV_STATUS)
         {
-            pOutputMessages[NAV_POSLLH]->updateRate = gpsData->msgRates[POSLLH];
+            pOutputMessages[NAV_STATUS]->updateRate = rate;
         }
-        if (pOutputMessages[NAV_VELNED]->updateRate != gpsData->msgRates[VELNED])
+        else if (msgClass == (byte) UBX_NAV && msgID == (byte) UBX_NAV_DOP)
         {
-            pOutputMessages[NAV_VELNED]->updateRate = gpsData->msgRates[VELNED];
+            pOutputMessages[NAV_DOP]->updateRate = rate;
+        }
+        else if (msgClass == (byte) UBX_NAV && msgID == (byte) UBX_NAV_POSLLH)
+        {
+            pOutputMessages[NAV_POSLLH]->updateRate = rate;
+        }
+        else if (msgClass == (byte) UBX_NAV && msgID == (byte) UBX_NAV_VELNED)
+        {
+            pOutputMessages[NAV_VELNED]->updateRate  = rate;
         }
     }
 }

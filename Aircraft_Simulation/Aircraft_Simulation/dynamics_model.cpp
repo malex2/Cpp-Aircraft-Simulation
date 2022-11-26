@@ -10,6 +10,7 @@
 #include "model_mapping.hpp"
 #include "rotate_frame.hpp"
 #include "atmosphere_model.hpp"
+#include "ground_model.hpp"
 #include "time.hpp"
 
 #include "dynamics_model.hpp"
@@ -18,6 +19,7 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
 {
     pRotate = NULL;
     pAtmo   = NULL;
+    pGround = NULL;
     pTime   = NULL;
     
     pMap = pMapInit;
@@ -33,10 +35,10 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     
     //pMap->addLogVar("N (m)", &posNED[0], savePlot, 2);
     //pMap->addLogVar("E (m)", &posNED[1], savePlot, 2);
-    //pMap->addLogVar("D (m)", &posNED[2], savePlot, 2);
+    pMap->addLogVar("D (m)", &posNED[2], printSavePlot, 2);
     pMap->addLogVar("gndAlt", &hGround, printSavePlot, 3);
     
-    pMap->addLogVar("speed", &velMag, savePlot, 2);
+    //pMap->addLogVar("speed", &velMag, savePlot, 2);
     
     
     //pMap->addLogVar("velECEF X", &velECEF[0], savePlot, 2);
@@ -69,7 +71,7 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     
     pMap->addLogVar("Roll ", &eulerAnglesDeg[0], savePlot, 2);
     pMap->addLogVar("Pitch", &eulerAnglesDeg[1], savePlot, 2);
-    //pMap->addLogVar("Yaw  ", &eulerAnglesDeg[2], savePlot, 2);
+    pMap->addLogVar("Yaw  ", &eulerAnglesDeg[2], savePlot, 2);
     
     //pMap->addLogVar("q_B_NED[0]", &q_B_NED[0], savePlot, 2);
     //pMap->addLogVar("q_B_NED[1]", &q_B_NED[1], savePlot, 2);
@@ -159,15 +161,16 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
 
 void DynamicsModel::initialize(void)
 {
-    pRotate = (RotateFrame*) pMap->getModel("RotateFrame");
+    pRotate = (RotateFrame*)     pMap->getModel("RotateFrame");
     pAtmo   = (AtmosphereModel*) pMap->getModel("AtmosphereModel");
-    pTime   = (Time*) pMap->getModel("Time");
+    pGround = (GroundModelBase*) pMap->getModel("GroundModel");
+    pTime   = (Time*)            pMap->getModel("Time");
 
     // Initialize Position
     util.setArray(posLLH, posLLH_init, 3);
     posLLH[0] *= util.deg2rad;
     posLLH[1] *= util.deg2rad;
-    posLLH[2] *= util.ft2m;
+    posLLH[2] = posLLH[2]*util.ft2m + pGround->getGroundElevation(0.0, 0.0) - getEllipsoidHeight();
     
     util.LLHtoECEF(posECEF_init, posLLH);
     util.setArray(posECEF, posECEF_init, 3);
@@ -182,6 +185,9 @@ void DynamicsModel::initialize(void)
     // Initialize Attitude
     util.setArray(eulerAngles, eulerAngles_init, 3);
     util.vgain(eulerAngles, util.deg2rad, 3);
+    pGround->getGroundAngles(0.0, 0.0, eulerAngles);
+    eulerAngles[0] += eulerAngles_init[0]*util.deg2rad;
+    eulerAngles[1] += eulerAngles_init[0]*util.deg2rad;
     util.eulerToQuaternion(q_B_NED, eulerAngles);
     
     util.setArray(bodyRates, bodyRates_init, 3);
@@ -320,8 +326,8 @@ void DynamicsModel::updateStates()
     
     // Height references
     hCenter = posLLH[2] + EARTHCONSTANTS::RE;
-    hGround = posLLH[2] - groundElevation;
-    hMSL    = posLLH[2] + 32.0;
+    hMSL    = posLLH[2] + getEllipsoidHeight();
+    hGround = hMSL - pGround->getGroundElevation(posNED[0], posNED[1]);
     
     // Body states
     pRotate->ECIToBody(velBody, velECI);
@@ -343,4 +349,10 @@ void DynamicsModel::updateStates()
         bodyRatesDeg[i] = bodyRates[i] / util.deg2rad;
         eulerAnglesDeg[i] = eulerAngles[i] / util.deg2rad;
     }
+}
+
+double DynamicsModel::getEllipsoidHeight()
+{
+    // hMSL = hae + ellipsoid_height
+    return 32.0;
 }

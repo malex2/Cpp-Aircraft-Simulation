@@ -15,6 +15,8 @@ namespace UBX_MSG_TYPES {
     static const int UNKNOWN_MSG_ID    = -1;
     static const int UNKNOWN_MSG_CLASS = -1;
     static const int ALM_WEEK_INVALID  = 0;
+    static const int EPH_HOW_INVALID   = 0;
+    static const int NUM_SV            = 32;
     
     // Navigation Dynamic Modes
     enum DynamicPlatformModel {Portable=0, Stationary=2, Pedestrian, Automotive, Sea, Airbone_1g, Airbone_2g, Airbone_4g};
@@ -30,8 +32,9 @@ namespace UBX_MSG_TYPES {
     
     static const byte UBX_MSG_CLASS[NUBXCLASSES] = {UBX_NAV, UBX_RXM, UBX_INF, UBX_ACK, UBX_CFG, UBX_MON, UBX_AID, UBX_TIM};
     static const int N_UBX_MSG_ID[NUBXCLASSES]   = {NNAVMESSAGES, 0, 0, NACKMESSAGES, NCFGMESSAGES, 0, NAIDMESSAGES, 0};
+    static const int NUBXIDS = 6;
     
-    static const byte UBX_MSG_ID[NUBXCLASSES][6] = {
+    static const byte UBX_MSG_ID[NUBXCLASSES][NUBXIDS] = {
         {UBX_NAV_STATUS, UBX_NAV_DOP , UBX_NAV_POSLLH, UBX_NAV_VELNED, UBX_NAV_SOL , 0x00       }, // NAV
         {0x00          , 0x00        , 0x00          , 0x00          , 0x00        , 0x00       }, // RXM
         {0x00          , 0x00        , 0x00          , 0x00          , 0x00        , 0x00       }, // INF

@@ -8,6 +8,8 @@
 
 #include "fs_navigation.hpp"
 #include "fs_imu.hpp"
+#include "fs_controls.hpp"
+
 #ifdef SIMULATION
     #include "dynamics_model.hpp"
     #include "atmosphere_model.hpp"
@@ -189,12 +191,12 @@ void FsNavigation_setupNavigation(double *initialPosition, double initialHeading
     P[N][N]         = errorToVariance(10.0);
     P[E][E]         = errorToVariance(10.0);
     P[ALT][ALT]     = errorToVariance(10.0);
-    P[GBIAS_X][GBIAS_X] = errorToVariance(0.02*degree2radian);
-    P[GBIAS_Y][GBIAS_Y] = errorToVariance(0.02*degree2radian);
-    P[GBIAS_Z][GBIAS_Z] = errorToVariance(0.02*degree2radian);
-    P[ABIAS_X][ABIAS_X] = 0.0;//errorToVariance(0.005*Gravity);
-    P[ABIAS_Y][ABIAS_Y] = 0.0;//errorToVariance(0.005*Gravity);
-    P[ABIAS_Z][ABIAS_Z] = 0.0;//errorToVariance(0.02*Gravity);
+    P[GBIAS_X][GBIAS_X] = errorToVariance(0.0*degree2radian);
+    P[GBIAS_Y][GBIAS_Y] = errorToVariance(0.0*degree2radian);
+    P[GBIAS_Z][GBIAS_Z] = errorToVariance(0.0*degree2radian);
+    P[ABIAS_X][ABIAS_X] = errorToVariance(0.05*Gravity);
+    P[ABIAS_Y][ABIAS_Y] = errorToVariance(0.05*Gravity);
+    P[ABIAS_Z][ABIAS_Z] = errorToVariance(0.08*Gravity);
     P[GRAVITY][GRAVITY] = 0.0;//errorToVariance(0.1);
 
 #ifdef FILTERTEST
@@ -583,44 +585,88 @@ void filterUpdate(double* residual, double* R, double* H, double* K, int nMeas)
 
 void FsNavigation_performAccelerometerUpdate()
 {
-    if ( (NavData.state == Calibration) || (!navSetup) ) { return; }
+    if (!navSetup) { return; }
     
-    if(NavData.state != INS)
+    if(NavData.state != Calibration && NavData.state != INS)
     {
         NavData.skippedUpdateCount[AccelUpdate]++;
         return;
     }
     
     static int stable_count = 0;
-    double accelBodyUnit[3];
+    double accBias_error[3];
+    double M, M2, Myz, Myz2, M2Myz;
+    double accel[3];
+    double droll_dbias[3];
+    double dpitch_dbias[3];
+    double roll_error;
+    double pitch_error;
+    double accel_error;
     
     for (int i=0; i<3; i++)
     {
-        accelBodyUnit[i] = nav_pIMUdata->accel[i] - NavData.accBias[i];
+        accel[i] = nav_pIMUdata->accel[i] - NavData.accBias[i];
     }
-    unitVector(accelBodyUnit, 3);
     
-    NavData.accel_roll  = -atan2(accelBodyUnit[1], -accelBodyUnit[2]);
-    NavData.accel_pitch =  atan2(accelBodyUnit[0] ,sqrt(accelBodyUnit[1]*accelBodyUnit[1] + accelBodyUnit[2]*accelBodyUnit[2]));
+    Myz   = sqrt(accel[1]*accel[1] + accel[2]*accel[2]);
+    M     = sqrt(accel[0]*accel[0] + accel[1]*accel[1] + accel[2]*accel[2]);
+    M2    = M*M; Myz2  = Myz*Myz; M2Myz = M2*Myz;
     
-    if (NavData.accel_mag < 0.2 && !nav_pIMUdata->highDynamics)
+    NavData.accel_roll  = -atan2(accel[1], -accel[2]);
+    NavData.accel_pitch = atan2(accel[0], Myz);
+    
+    // What is the effect of acceleration bias uncertainty on pitch and roll?
+    // Linearization point is at current accleration
+    // Change in acceleration is zero, change in bias is uncertainty
+    droll_dbias[0] = 0.0;
+    droll_dbias[1] = -accel[2]/(Myz2);
+    droll_dbias[2] = accel[1]/(Myz);
+    
+    dpitch_dbias[0] = -Myz/(M2);
+    dpitch_dbias[1] = accel[0]*accel[1]/(M2Myz);
+    dpitch_dbias[2] = accel[0]*accel[2]/(M2Myz);
+
+    accBias_error[0] = 3.0*sqrt(accelCov[0][0]) + 3.0*sqrt(P[ABIAS_X][ABIAS_X]);
+    accBias_error[1] = 3.0*sqrt(accelCov[1][1]) + 3.0*sqrt(P[ABIAS_Y][ABIAS_Y]);
+    accBias_error[2] = 3.0*sqrt(accelCov[2][2]) + 3.0*sqrt(P[ABIAS_Z][ABIAS_Z]);
+    
+    accel_error = sqrt(accBias_error[0]*accBias_error[0] + accBias_error[1]*accBias_error[1] + accBias_error[2]*accBias_error[2]);
+    roll_error  = droll_dbias[0]*accBias_error[0]  + droll_dbias[1]*accBias_error[1]  + droll_dbias[2]*accBias_error[2];
+    pitch_error = dpitch_dbias[0]*accBias_error[0] + dpitch_dbias[1]*accBias_error[1] + dpitch_dbias[2]*accBias_error[2];
+
+    //std::cout << roll_error * radian2degree << " " << pitch_error * radian2degree << std::endl;
+    
+    R_ACCEL[ACCEL_ROLL][ACCEL_ROLL]   = errorToVariance(roll_error);
+    R_ACCEL[ACCEL_PITCH][ACCEL_PITCH] = errorToVariance(pitch_error);
+    
+    if ( ((FsControls_onGround() && NavData.accel_mag < accel_error) || NavData.accel_mag < 0.2)
+        && !nav_pIMUdata->highDynamics )
     {
         stable_count++;
-        if (stable_count > 10)
+        if (stable_count > 10 && NavData.state != Calibration)
         {
-            R_ACCEL[ACCEL_ROLL][ACCEL_ROLL]   = errorToVariance(3.0 * degree2radian);
-            R_ACCEL[ACCEL_PITCH][ACCEL_PITCH] = errorToVariance(3.0 * degree2radian);
-            
             accelResidual[ACCEL_ROLL]  = NavData.accel_roll  - NavData.eulerAngles[0];
             accelResidual[ACCEL_PITCH] = NavData.accel_pitch - NavData.eulerAngles[1];
             
-            NavData.state = AccelUpdate;
+            //NavData.state = AccelUpdate;
             NavData.sensorTimestamp[NavData.state] = getTime();
         }
     }
     else
     {
         stable_count = 0;
+    }
+    
+    if (NavData.state == Calibration)
+    {
+        if (fabs(NavData.accel_roll) < fabs(roll_error))
+        {
+            //NavData.accel_roll = 0.0;
+        }
+        if (fabs(NavData.accel_pitch) < fabs(pitch_error))
+        {
+            //NavData.accel_pitch = 0.0;
+        }
     }
 }
 
@@ -725,17 +771,36 @@ void FsNavigation_calibrateIMU()
     if (imuCalibrated) { return; }
     double tempAcc;
     double tempGyro;
+    static double gravity_body[3];
+    static double g_error_est[3];
+    double roll_error, pitch_error;
+    double sr, cr, sp, cp;
     
     if (firstTime)
     {
         for (int i=0; i<3; i++)
         {
-            gyroError[i] = new SensorErrorType;
+            gyroError[i]  = new SensorErrorType;
             accelError[i] = new SensorErrorType;
         }
         firstTime = false;
+
+        sr = sin(NavData.accel_roll);
+        cr = cos(NavData.accel_roll);
+        sp = sin(NavData.accel_pitch);
+        cp = cos(NavData.accel_pitch);
+        
+        gravity_body[0] = -sp * Gravity;
+        gravity_body[1] = cp*sr * Gravity;
+        gravity_body[2] = cp*cr * Gravity;
+        
+        roll_error  = varianceToError(R_ACCEL[ACCEL_ROLL][ACCEL_ROLL]);
+        pitch_error = varianceToError(R_ACCEL[ACCEL_PITCH][ACCEL_PITCH]);
+        g_error_est[0] = Gravity*(-cp*pitch_error);
+        g_error_est[1] = Gravity*(-sp*sr*pitch_error + cp*cr*roll_error);
+        g_error_est[2] = Gravity*(-sp*cr*pitch_error - cp*sr*roll_error);
     }
-   
+    
     // Get Sum
     for (int i=0; i<3; i++)
     {
@@ -747,8 +812,7 @@ void FsNavigation_calibrateIMU()
         if (nav_pIMUdata->gyro[i] < gyroError[i]->min) { gyroError[i]->min =  tempGyro; }
         
         // Accelerometer
-        if (i==2) { tempAcc = nav_pIMUdata->accel[i] + NavData.gravity; }
-        else { tempAcc = nav_pIMUdata->accel[i]; }
+        tempAcc = nav_pIMUdata->accel[i] + gravity_body[i];
         
         accelError[i]->sum    += tempAcc;
         accelError[i]->sumSqr += tempAcc * tempAcc;
@@ -756,11 +820,11 @@ void FsNavigation_calibrateIMU()
         if (tempAcc < accelError[i]->min) { accelError[i]->min =  tempAcc; }
     }
     
-    NavData.updateCount[NavData.state]++;
-    NavData.sensorTimestamp[NavData.state] = getTime();
+    NavData.updateCount[Calibration]++;
+    NavData.sensorTimestamp[Calibration] = getTime();
     
     // Compute statistics
-    if (NavData.updateCount[NavData.state] >= maxCalCounter)
+    if (NavData.updateCount[Calibration] >= maxCalCounter)
     {
         for (int i=0; i<3; i++)
         {
@@ -776,7 +840,7 @@ void FsNavigation_calibrateIMU()
             NavData.accBias[i]  = accelError[i]->mean;
         }
 
-        double gyroQuatizationVariance = errorToVariance(nav_pIMUdata->gyroQuantizationError_dps*degree2radian);
+        double gyroQuatizationVariance =  errorToVariance(nav_pIMUdata->gyroQuantizationError_dps*degree2radian);
         double accelQuatizationVariance = errorToVariance(nav_pIMUdata->accelQuantizationError_g*Gravity);
         
         gyroCov[0][0]  = gyroError[0]->variance + gyroQuatizationVariance;
@@ -798,6 +862,17 @@ void FsNavigation_calibrateIMU()
             delete gyroError[i];
             delete accelError[i];
         }
+        
+        NavData.eulerAngles[0] = NavData.accel_roll;
+        NavData.eulerAngles[1] = NavData.accel_pitch;
+        updateQuaternions();
+      
+        P[ROLL][ROLL]   = R_ACCEL[ACCEL_ROLL][ACCEL_ROLL];
+        P[PITCH][PITCH] = R_ACCEL[ACCEL_PITCH][ACCEL_PITCH];
+        
+        P[ABIAS_X][ABIAS_X] = errorToVariance(g_error_est[0]);
+        P[ABIAS_Y][ABIAS_Y] = errorToVariance(g_error_est[1]);
+        P[ABIAS_Z][ABIAS_Z] = errorToVariance(g_error_est[2]);
         
         imuCalibrated = true;
         
@@ -870,6 +945,10 @@ double* FsNavigation_getGPSMeasVariance()
 double* FsNavigation_getGPSResidual()
 {
     return gpsResidual;
+}
+double* FsNavigation_getAccelMeasVariance()
+{
+    return *R_ACCEL;
 }
 
 #ifdef SIMULATION
@@ -1049,13 +1128,13 @@ inline void updateQuaternions()
     double sp2;
     double sy2;
     
-    cr2 = cos(NavData.eulerAngles[0]/2);
-    cp2 = cos(NavData.eulerAngles[1]/2);
-    cy2 = cos(NavData.eulerAngles[2]/2);
+    cr2 = cos(NavData.eulerAngles[0]/2.0);
+    cp2 = cos(NavData.eulerAngles[1]/2.0);
+    cy2 = cos(NavData.eulerAngles[2]/2.0);
         
-    sr2 = sin(NavData.eulerAngles[0]/2);
-    sp2 = sin(NavData.eulerAngles[1]/2);
-    sy2 = sin(NavData.eulerAngles[2]/2);
+    sr2 = sin(NavData.eulerAngles[0]/2.0);
+    sp2 = sin(NavData.eulerAngles[1]/2.0);
+    sy2 = sin(NavData.eulerAngles[2]/2.0);
         
     NavData.q_B_NED[0] = cr2*cp2*cy2 + sr2*sp2*sy2;
     NavData.q_B_NED[1] = sr2*cp2*cy2 - cr2*sp2*sy2;
@@ -1074,7 +1153,7 @@ inline void unitVector(double* vector, int n)
         mag += vector[i]*vector[i];
     }
     mag = sqrt(mag);
-    if (mag == 0) return;
+    if (mag == 0.0) return;
     
     // Unit vector
     for (int i = 0; i < n; i++)
@@ -1153,12 +1232,12 @@ void math_mmult(double* result, double* A, int nrows1, int ncols1, double* B, in
             // zero sum
             *(result+i*ncols2+j) = 0;
             
-            for(int k=0;k<ncols1;k++)
+            for(int k = 0; k < ncols1; k++)
             {
                 Arow = i; Acol = k; Brow = k; Bcol = j;
-                Aik = *(A+Arow*ncols1+Acol); // A[i][k]
-                Bkj = *(B+Brow*ncols2+Bcol); // B[k][j]
-                *(result+i*ncols2+j) += Aik*Bkj;      //C[i][j] = A[i][k]*B[k][j]
+                Aik = *(A+Arow*ncols1+Acol);     // A[i][k]
+                Bkj = *(B+Brow*ncols2+Bcol);     // B[k][j]
+                *(result+i*ncols2+j) += Aik*Bkj; //C[i][j] = A[i][k]*B[k][j]
             }
         }
     }

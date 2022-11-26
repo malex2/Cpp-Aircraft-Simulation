@@ -615,6 +615,68 @@ void SoftwareSerial::display_tx_buffer()
     std::cout << std::dec << std::endl;
 }
 
+ArduinoEEPROM::ArduinoEEPROM()
+{
+    size = 1080;
+    new_file = false;
+    
+    if (!std::ifstream(eeprom_file))
+    {
+        std::ofstream temp(eeprom_file);
+        temp.close();
+        new_file = true;
+    }
+    memoryfile.open(eeprom_file, std::ios::in | std::ios::out);
+    
+    memoryfile.seekg(0, std::ios::end);
+    file_length = memoryfile.tellg();
+    memoryfile.clear();
+    memoryfile.seekg(0, std::ios::beg);
+    
+    reset_eeprom();
+}
+
+ArduinoEEPROM::~ArduinoEEPROM()
+{
+    if (memoryfile.is_open())
+    {
+        memoryfile.close();
+    }
+}
+
+byte ArduinoEEPROM::read(unsigned int address)
+{
+    byte val = 0;
+    
+    if (memoryfile.fail()) { return val; }
+    
+    memoryfile.seekg(address);
+    memoryfile >> val;
+    
+    return val;
+}
+
+void ArduinoEEPROM::write(unsigned int address, byte val)
+{
+    if (memoryfile.fail()) { return; }
+    
+    memoryfile.seekp(address);
+    memoryfile << val;
+    memoryfile.flush();
+}
+
+void ArduinoEEPROM::reset_eeprom()
+{
+    if (memoryfile.fail() || (!new_file && file_length == size)) { return; }
+
+    byte val = 48;
+    for (int i = 0; i < size; i++)
+    {
+        memoryfile << val;
+    }
+    memoryfile.flush();
+}
+
 void pinMode(int pin, enum pinMode mode) { }
 
 SimulationWire Wire = SimulationWire();

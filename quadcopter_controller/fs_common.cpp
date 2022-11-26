@@ -192,6 +192,34 @@ double getTime()
 #endif
 }
 
+// Memory
+ArduinoEEPROM EEPROM;
+void write_eeprom(unsigned int address, byte val)
+{
+    EEPROM.write(address, val);
+}
+
+void write_eeprom(unsigned int address, byte* val, unsigned int size)
+{
+    for (unsigned int i = 0; i < size; i++)
+    {
+        write_eeprom(address+i, val[i]);
+    }
+}
+
+void read_eeprom(unsigned int address, byte* val)
+{
+    *val = EEPROM.read(address);
+}
+
+void read_eeprom(unsigned int address, byte* val, unsigned int size)
+{
+    for (unsigned int i = 0; i < size; i++)
+    {
+        read_eeprom(address+i, val+i);
+    }
+}
+
 #ifdef SIMULATION
 void delay(int ms_delay)
 {
@@ -207,10 +235,25 @@ double errorToVariance(double maxError)
     
     // max error is 3 standard deviations
     std = maxError / 3.0;
-    // variance is std^2
+    // variance = std^2
     variance = std*std;
     
     return variance;
+}
+
+double varianceToError(double variance)
+{
+    double std;
+    double error;
+    
+    //std = sqrt(variance)
+    std = sqrt(variance);
+    
+    // max error is 3 std
+    
+    error = 3.0*std;
+    
+    return error;
 }
 
 void crossProduct(double *cross, double *a, double *b)

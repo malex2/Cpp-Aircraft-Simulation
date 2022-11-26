@@ -73,6 +73,7 @@ IMUModelBase::IMUModelBase(ModelMap *pMapInit, bool debugFlagIn)
     util.initArray(gravityNED, 0.0, 3);
     util.initArray(gravityBody, 0.0, 3);
     util.initArray(gravityIMU, 0.0, 3);
+    util.initArray(unitGravityBody, 0.0, 3);
     util.initArray(accIMUnoGravity, 0.0, 3);
     util.initArray(accIMU, 0.0, 3);
     
@@ -128,6 +129,15 @@ IMUModelBase::IMUModelBase(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("dVelocity Dyn z", &dVelocity_dyn[2], savePlot, 2);
     //pMap->addLogVar("IntSumTime", &sumTime, printSavePlot, 3);
     
+    pMap->addLogVar("accel_roll", &accel_roll, savePlot, 2);
+    pMap->addLogVar("accel_pitch", &accel_pitch, savePlot, 2);
+    
+    //pMap->addLogVar("lin_accel_roll", &lin_accel_roll, savePlot, 2);
+    //pMap->addLogVar("lin_accel_pitch", &lin_accel_pitch, savePlot, 2);
+    
+    //pMap->addLogVar("lin_accel_roll_error", &lin_accel_roll_error, savePlot, 2);
+    //pMap->addLogVar("lin_accel_pitch_error", &lin_accel_pitch_error, savePlot, 2);
+    
     //pMap->addLogVar("IMU mag x (uT)", &magInUnits[0], savePlot, 2);
     //pMap->addLogVar("IMU mag y (uT)", &magInUnits[1], savePlot, 2);
     //pMap->addLogVar("IMU mag z (uT)", &magInUnits[2], savePlot, 2);
@@ -179,6 +189,8 @@ bool IMUModelBase::update(void)
     gyroscopeModel();
     accelerometerModel();
     magnetometerModel();
+    
+    accelerometerAttitude();
     
     imuReady = true;
     
@@ -271,7 +283,7 @@ void IMUModelBase::accelerometerModel(void)
     util.vAdd(accIMU, accIMUnoGravity, gravityIMU, 3);
     
     if (onlyGravity) { util.setArray(accIMU, gravityIMU, 3); }
-        
+    
     // Acceleration in g's
     util.vgain(accIMU, 1.0/refGravity, 3);
     
@@ -347,6 +359,119 @@ void IMUModelBase::magnetometerModel(void)
     // Raw Magnetic Field
     util.setArray(magSensor, magInUnits, 3);
     util.vgain(magSensor, LSBg, 3);
+}
+
+void IMUModelBase::accelerometerAttitude()
+{
+    double accel[3];
+    double Myz;
+    
+    util.setArray(accel, gravityBody, 3);
+    util.vgain(accel, -1.0, 3); // Relative to free-fall
+    util.setArray(unitGravityBody, accel, 3);
+    util.unitVector(unitGravityBody, 3);
+    
+    Myz = sqrt(accel[1]*accel[1] + accel[2]*accel[2]);
+    accel_roll = -atan2(accel[1], -accel[2]) / util.deg2rad;
+    accel_pitch = atan2(accel[0], Myz) / util.deg2rad;
+    
+    //accel_roll = -atan2(unitGravityBody[1], -unitGravityBody[2]) / util.deg2rad;
+    //accel_pitch = atan2(unitGravityBody[0] ,sqrt(unitGravityBody[1]*unitGravityBody[1] + unitGravityBody[2]*unitGravityBody[2])) / util.deg2rad;
+    
+    // Linear Model Around 0,0
+    // lin_accel_roll = -1.0*accel[1]/refGravity / util.deg2rad;
+    // lin_accel_pitch = accel[0]/refGravity / util.deg2rad;
+    double accel_with_bias[3];
+    double bias[3];
+    double M, M2;
+    double Myz2;
+    double M2Myz;
+    double a[3], b[3], x0[2], dx[2], du[6], A[2][6];
+    
+    bias[0] = accBias[0]*refGravity;
+    bias[1] = accBias[1]*refGravity;
+    bias[2] = accBias[2]*refGravity;
+    util.vAdd(accel_with_bias, accel, bias, 3);
+    
+    a[0] = bias[0];
+    a[1] = bias[1];
+    a[2] = bias[2] - gravity;
+    
+    b[0] = bias[0];
+    b[1] = bias[1];
+    b[2] = bias[2];
+
+    M     = sqrt((a[0]-b[0])*(a[0]-b[0])+ (a[1]-b[1])*(a[1]-b[1]) + (a[2]-b[2])*(a[2]-b[2]));
+    M2    = M*M;
+    Myz   = sqrt((a[1]-b[1])*(a[1]-b[1]) + (a[2]-b[2])*(a[2]-b[2]));
+    Myz2  = Myz*Myz;
+    M2Myz = M2*Myz;
+    
+    x0[0] = atan((a[1] - b[1])/(a[2] - b[2]));
+    x0[1] = atan((a[0] - b[0])/Myz);
+
+    du[0] = accel[0] - a[0];
+    du[1] = accel[1] - a[1];
+    du[2] = accel[2] - a[2];
+    du[3] = 0.0 - b[0];
+    du[4] = 0.0 - b[1];
+    du[5] = 0.0 - b[2];
+    
+    A[0][0] = 0.0;
+    A[0][1] = (a[2] - b[2])/Myz2;
+    A[0][2] = -(a[1] - b[1])/Myz2;
+    A[0][3] = -A[0][0];
+    A[0][4] = -A[0][1];
+    A[0][5] = -A[0][2];
+    
+    A[1][0] = Myz/M2;
+    A[1][1] = -((a[0] - b[0])*(a[1] - b[1]))/M2Myz;
+    A[1][2] = -((a[0] - b[0])*(a[2] - b[2]))/M2Myz;
+    A[1][3] = -A[1][0];
+    A[1][4] = -A[1][1];
+    A[1][5] = -A[1][2];
+    
+    util.mmult(dx, *A, du, 2, 6);
+    
+    lin_accel_roll  = (x0[0] + dx[0]) / util.deg2rad;
+    lin_accel_pitch = (x0[1] + dx[1]) / util.deg2rad;
+    
+    //std::cout << pTime->getSimTime() << ") [Roll, Pitch] = [" << accel_roll << " " << lin_accel_roll << "], ";
+    //std::cout << "[" << accel_pitch << " " << lin_accel_pitch << "]" << std::endl;
+    //util.print(du, 6, "du");
+    //util.print(*A, 2, 6, "A");
+
+    lin_accel_roll_error  = lin_accel_roll  - accel_roll;
+    lin_accel_pitch_error = lin_accel_pitch - accel_pitch;
+    
+    // Bias testing
+    double a0[3] = {0.0, 0.0, -gravity};
+    double b0[3] = {0.0, 0.0, 0.0};
+    double Myz0  = sqrt((a0[1]-b0[1])*(a0[1]-b0[1]) + (a0[2]-b0[2])*(a0[2]-b0[2]));
+    
+    double a1[3] = {0.0, 0.0, -gravity};
+    double b1[3] = {0.08*gravity, 0.0, 0.0};
+    double Myz1  = sqrt((a1[1]-b1[1])*(a1[1]-b1[1]) + (a1[2]-b1[2])*(a1[2]-b1[2]));
+    double x1[2];
+    
+    x0[0] = atan((a0[1] - b0[1])/(a0[2] - b0[2])) / util.deg2rad;
+    x0[1] = atan((a0[0] - b0[0])/Myz0) / util.deg2rad;
+    
+    x1[0] = atan((a1[1] - b1[1])/(a1[2] - b1[2])) / util.deg2rad;
+    x1[1] = atan((a1[0] - b1[0])/Myz1) / util.deg2rad;
+    
+    double diff[2];
+    double lin_diff[2];
+    double d[6];
+    diff[0] = x1[0] - x0[0];
+    diff[1] = x1[1] - x0[1];
+    for (int i = 0; i < 3; i++)
+    {
+        d[i] = a1[i] - a0[i];
+        d[i+3] = b1[i] - b0[i];
+    }
+    util.mmult(lin_diff, *A, d, 2, 6);
+    util.vgain(lin_diff, 1.0/util.deg2rad, 3);
 }
 
 QuadcopterIMUModel::QuadcopterIMUModel(ModelMap *pMapInit, bool debugFlagIn) : IMUModelBase(pMapInit, debugFlagIn)

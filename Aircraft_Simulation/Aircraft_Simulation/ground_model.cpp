@@ -23,6 +23,7 @@ ContactPoint::ContactPoint(ModelMap *pMapInit, double x, double y, double z, dou
 {
     pDyn    = NULL;
     pRotate = NULL;
+    pGround = NULL;
     
     pMap = pMapInit;
     debugFlag = debugFlagIn;
@@ -39,6 +40,7 @@ ContactPoint::ContactPoint(ModelMap *pMapInit, double x, double y, double z, dou
     
     // Height above ground
     altGround.convertUnit(meters);
+    hMSL_init = posLLH_init[2]*util.ft2m;
     
     // Spring constants
     k    = kIn;
@@ -56,14 +58,14 @@ ContactPoint::ContactPoint(ModelMap *pMapInit, double x, double y, double z, dou
 
 void ContactPoint::initialize(void)
 {
-    pDyn    = (DynamicsModel*) pMap->getModel("DynamicsModel");
-    pRotate = (RotateFrame*)   pMap->getModel("RotateFrame");
+    pDyn    = (DynamicsModel*)   pMap->getModel("DynamicsModel");
+    pRotate = (RotateFrame*)     pMap->getModel("RotateFrame");
+    pGround = (GroundModelBase*) pMap->getModel("GroundModel");
     
-    percLoad = 1;
+    percLoad = 1.0;
     
     // Damping
-    double m = pDyn->getMass();
-    b  = 2*zeta*sqrt(k*m);
+    b  = 2.0*zeta*sqrt(k*pDyn->getMass());
 }
 
 bool ContactPoint::update(void)
@@ -76,9 +78,15 @@ bool ContactPoint::update(void)
     AngleRateType<double> bodyRates[3];
     
     // Update position relative to ground
-    pRotate->bodyToLL(posLL, posRelCG);
+    //pRotate->bodyToLL(posLL, posRelCG);
+    pRotate->bodyToNED(posRelNED, posRelCG);
     
-    altGround.val = pDyn->gethGround() - posLL[2].m();
+    util.vAdd(posNED, posRelNED, pDyn->getPosNED(), 3);
+    posNED[2].val -= hMSL_init;
+    
+    groundElevation = pGround->getGroundElevation(posNED[0].m(), posNED[1].m());
+
+    altGround.val = -posNED[2].m() - groundElevation;
     
     // Update Local Level velocity
     util.setUnitClassArray(velRel, zero_init, metersPerSecond, 3);
@@ -88,7 +96,7 @@ bool ContactPoint::update(void)
     util.setUnitClassArray(cgVel_B, pDyn->getVelBody(), metersPerSecond, 3);
     util.vAdd(velBody, cgVel_B, velRel, 3);
     
-    pRotate->bodyToLL(velLL, velBody);
+    bodyToGround(velLL, velBody);
     
     if (altGround.val <= zeroTolerance ) { onGround = true; }
     else { onGround = false; }
@@ -118,8 +126,8 @@ bool ContactPoint::update(void)
     {
         util.setArray(LLForce, zero_init, 3);
     }
-    
-    pRotate->LLToBody(bodyForce, LLForce);
+    groundToBody(bodyForce, LLForce);
+    //pRotate->LLToBody(bodyForce, LLForce);
     
     // Update moments
     util.crossProduct(bodyMoment, posRelCG, bodyForce);
@@ -140,6 +148,54 @@ bool ContactPoint::update(void)
     if (iContactPoint == nContactPoints) { iContactPoint = 0; }
     
     return true;
+}
+
+void ContactPoint::groundToBody(double* vBody, double* vGround)
+{
+    double euler_NED2Ground[3] = {0.0, 0.0, 0.0};
+    double R_NED2Ground[3][3];
+    double R_Ground2NED[3][3];
+    double vNED[3];
+    
+    // Get rotation from ground frame to NED frame
+    pGround->getGroundAngles(posNED[0].val, posNED[1].val, euler_NED2Ground);
+    util.setupRotation(*R_NED2Ground, euler_NED2Ground);
+    util.mtran(*R_Ground2NED, *R_NED2Ground, 3, 3);
+    
+    // Rotate Ground -> NED, NED -> Body
+    util.mmult(vNED, *R_Ground2NED, vGround, 3, 3);
+    pRotate->NEDToBody(vBody, vNED);
+}
+
+void ContactPoint::bodyToGround(double* vGround, double* vBody)
+{
+    double euler_NED2Ground[3] = {0.0, 0.0, 0.0};
+    double R_NED2Ground[3][3];
+    double vNED[3];
+    
+    // Get rotation from NED frame to ground frame
+    pGround->getGroundAngles(posNED[0].val, posNED[1].val, euler_NED2Ground);
+    util.setupRotation(*R_NED2Ground, euler_NED2Ground);
+    
+    // Rotate Body -> NED, NED -> Ground
+    pRotate->bodyToNED(vNED, vBody);
+    util.mmult(vGround, *R_NED2Ground, vNED, 3, 3);
+}
+
+
+void ContactPoint::bodyToGround(SpeedType<double> * vGround, SpeedType<double> * vBody)
+{
+    double euler_NED2Ground[3] = {0.0, 0.0, 0.0};
+    double R_NED2Ground[3][3];
+    SpeedType<double> vNED[3];
+    
+    // Get rotation from NED frame to ground frame
+    pGround->getGroundAngles(posNED[0].val, posNED[1].val, euler_NED2Ground);
+    util.setupRotation(*R_NED2Ground, euler_NED2Ground);
+    
+    // Rotate Body -> NED, NED -> Ground
+    pRotate->bodyToNED(vNED, vBody);
+    util.mmult(vGround, *R_NED2Ground, vNED, 3, 3);
 }
 
 void ContactPoint::sumExternalForces(void)
@@ -163,8 +219,8 @@ void ContactPoint::sumExternalForces(void)
             }
         }
     }
-    
-    pRotate->bodyToLL(LLForceExt, bodyForceExt);
+    bodyToGround(LLForceExt, bodyForceExt);
+    //pRotate->bodyToLL(LLForceExt, bodyForceExt);
 }
 
 double ContactPoint::determineFriction(double maxFriction, double externalForce, double velocity, double muDynamic)
@@ -212,6 +268,7 @@ GroundModelBase::GroundModelBase(ModelMap *pMapInit, bool debugFlagIn)
     debugFlag = debugFlagIn;
     nContactPoints = 0;
     util.setArray(LLForce, zero_init, 3);
+    util.setArray(groundEuler, zero_init, 3);
     
     //pMap->addLogVar("gbxF ", &bodyForce[0], printSavePlot, 3);
     //pMap->addLogVar("gbyF ", &bodyForce[1], printSavePlot, 3);
@@ -225,7 +282,10 @@ GroundModelBase::GroundModelBase(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("gbyM ", &bodyMoment[1], savePlot, 2);
     //pMap->addLogVar("gbzM ", &bodyMoment[2], savePlot, 2);
     
-    //pMap->addLogVar("onGround ", &onGroundPrint, savePlot, 2);
+    pMap->addLogVar("Ground Roll", &groundEuler[0], savePlot, 2);
+    pMap->addLogVar("Ground Pitch", &groundEuler[1], savePlot, 2);
+    pMap->addLogVar("Ground Elevation ", &groundHeight, savePlot, 2);
+    pMap->addLogVar("onGround ", &onGroundPrint, savePlot, 2);
     
     for (int i=0; i<maxContactPoints; i++)
     {
@@ -327,7 +387,7 @@ bool GroundModelBase::update(void)
     {
         // Update contact points
         contactPoints[i]->update();
-        
+
         // Determine if on ground
         onGround[i] = contactPoints[i]->isOnGround();
         
@@ -348,8 +408,11 @@ bool GroundModelBase::update(void)
     if (debugFlag) util.print(eulerAngles, degrees, 3, "Euler Angles:");
 
     // Determine if on ground
+    static bool groundPrint = false;
     if( isOnGround() )
     {
+        if (!groundPrint) { std::cout << "On Ground." << std::endl; groundPrint = true; }
+        
         // Determine if in unrecoverable position
         if ( eulerAngles[0].deg() > maxGroundRoll || eulerAngles[0].deg() < minGroundRoll ||
             eulerAngles[1].deg() > maxGroundPitch || eulerAngles[1].deg() < minGroundPitch )
@@ -358,10 +421,71 @@ bool GroundModelBase::update(void)
             continueSim = false;
         }
     }
+    else { groundPrint = false; }
     
     onGroundPrint = (double) isOnGround();
     
+    groundHeight = getGroundElevation(pDyn->getPosNED()[0], pDyn->getPosNED()[1]);
+    getGroundAngles(pDyn->getPosNED()[0], pDyn->getPosNED()[1], groundEuler);
+    util.vgain(groundEuler, 1.0/util.deg2rad, 3);
+    
     return continueSim;
+}
+
+// Get elevation above MSL in meters
+double GroundModelBase::getGroundElevation(double north, double east)
+{
+    //NORTH_ELEVATION_POINTS[N_NORTH_GRID_POINTS];
+    //EAST_ELEVATION_POINTS[N_EAST_GRID_POINTS];
+    //GRID_ELEVATION[N_NORTH_GRID_POINTS][N_EAST_GRID_POINTS];
+    
+    // Interpolate east for north low and north high
+    double north_elevation[2];
+    double north_grid[2];
+    double ground_evation;
+    int    i_north[2] = {0, N_NORTH_GRID_POINTS};
+    int    i = 0;
+    
+    for (i = 0; i < N_NORTH_GRID_POINTS; i++)
+    {
+        if (north <= NORTH_ELEVATION_POINTS[i]) { break; }
+    }
+ 
+    i_north[0] = util.max(i_north[0], i-1);
+    i_north[1] = util.min(i_north[1], i);
+    north_grid[0] = NORTH_ELEVATION_POINTS[i_north[0]];
+    north_grid[1] = NORTH_ELEVATION_POINTS[i_north[1]];
+
+    north_elevation[0] = util.interpolate(EAST_ELEVATION_POINTS, &GRID_ELEVATION[i_north[0]][0], east, N_EAST_GRID_POINTS);
+    north_elevation[1] = util.interpolate(EAST_ELEVATION_POINTS, &GRID_ELEVATION[i_north[1]][0], east, N_EAST_GRID_POINTS);
+    ground_evation = util.interpolate(north_grid, north_elevation, north, 2);
+    
+    return ground_evation;
+}
+
+ void GroundModelBase::getGroundAngles(double north, double east, double* ground_euler)
+{
+    double dx = 0.1;
+    double dx_BLL[3] = {dx, 0.0, 0.0};
+    double dx_NED[3];
+    double euler[3] = {0.0, 0.0, 0.0};
+    double R_NED2BLL[3][3];
+    double R_BLL2NED[3][3];
+    double dh;
+    double heading = ground_euler[2];
+    for (int i = 0; i < 2; i++)
+    {
+        if      (i == 0) { euler[2] = heading - M_PI/2.0; }
+        else if (i == 1) { euler[2] = heading; }
+        
+        util.setupRotation(*R_NED2BLL, euler);
+        util.mtran(*R_BLL2NED, *R_NED2BLL, 3, 3);
+        util.mmult(dx_NED, *R_BLL2NED, dx_BLL, 3, 3);
+    
+        dh = getGroundElevation(north+dx_NED[0], east+dx_NED[1]) - getGroundElevation(north, east);
+    
+        ground_euler[i] = atan(dh/dx);
+    }
 }
 
 // **********************************************************************

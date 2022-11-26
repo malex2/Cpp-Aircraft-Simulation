@@ -24,7 +24,7 @@
 // Time
 const double runTime_init          = 400.0;
 const double printInterval_init    = 5.0;
-const double saveInterval_init     = 0.1;
+const double saveInterval_init     = 0.5;
 const double dynamicsInterval_init = 1.0/800.0;
 const double clock_dt              = 1.0/800.0;//1.0/19200.0; // time interval when not in real time mode
 
@@ -39,16 +39,17 @@ const int second_init = 00;
 const bool saveOutput  = true;
 const bool printOutput = true;
 const bool plotOutput  = false;
-const std::string savefile = "output_full2.csv";
-const std::string gps_file = "/Users/alexandermclean/Documents/Cpp-Aircraft-Simulation/gps_nav_messages_Adeline4.txt";
-//const std::string gps_file = "/Users/alexandermclean/Documents/Cpp-Aircraft-Simulation/gps_messages.txt";
-const bool readGPSFile = false;
+const std::string savefile    = "output_nobias.csv";
+const std::string gps_file    = "/Users/alexandermclean/Documents/Cpp-Aircraft-Simulation/gps_nav_messages_Adeline4.txt";
+const bool readGPSFile        = false;
+const std::string eeprom_file = "/Users/alexandermclean/Documents/Cpp-Aircraft-Simulation/eeprom.txt";
+
 
 // Initial States
 const double velNED_init[3]  = {0, 0, 0};
-const double posLLH_init[3] = {28.5997222, -81.3394444, 25+1.968}; // deg, deg, ft
-const double eulerAngles_init[3] = {0, 0.0, 45.0}; // {0, 6.507, 0};
-const double bodyRates_init[3]  = {0, 0, 0};
+const double posLLH_init[3] = {28.5997222, -81.3394444, 0.32808}; // deg, deg, ft above ground
+const double eulerAngles_init[3] = {0.0, 0.0, 0.0}; // relative to ground elevation
+const double bodyRates_init[3]   = {0, 0, 0};
 const double actuators_init[4]   = {0.0, 0.0, 0.0, 0.0}; //{de,da,dr,dT}
 const int inputMode_init = 0; // 0 - external, 1 - keyboard, 2 - table
 
@@ -77,7 +78,7 @@ const double inertia_init[3][3] = {
     {0.0       , 0.0   , 0.0264  }};
 
 // Reference Frames
-const double imuFrame_init[3] = {0, 0, 0};
+const double imuFrame_init[3] = {0.0, 0.0, 0.0};
 
 // Test Modes
 const bool testRotations = false; // Test rotation matrices given known vectors and rotations

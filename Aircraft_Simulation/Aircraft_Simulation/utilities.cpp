@@ -1632,6 +1632,7 @@ bool Utilities::isLittleEndian()
 template void Utilities::print(int*, int , std::string);
 template void Utilities::print(float*, int , std::string);
 template void Utilities::print(double*, int , std::string);
+template void Utilities::print(const double*, int , std::string);
 
 template void Utilities::print(int* , int);
 template void Utilities::print(float* , int);
@@ -1640,6 +1641,7 @@ template void Utilities::print(double* , int);
 template void Utilities::print(int* , int, const char*);
 template void Utilities::print(float* , int, const char*);
 template void Utilities::print(double* , int, const char*);
+template void Utilities::print(const double* , int, const char*);
 
 template void Utilities::print(DistanceType<int>* , int);
 template void Utilities::print(DistanceType<float>* , int);

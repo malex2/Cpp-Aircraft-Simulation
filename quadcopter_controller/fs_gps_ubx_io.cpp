@@ -16,6 +16,14 @@ UBX_MSG::UBX_MSG(FS_FIFO* gpsFIFO)
     this->gpsFIFO = gpsFIFO;
     gpsbyte = 0;
     clear_input_buffer();
+    
+    for(int i = 0; i < UBX_MSG_TYPES::NUBXCLASSES; i++)
+    {
+        for (int j = 0; j < UBX_MSG_TYPES::NUBXIDS; j++)
+        {
+            n_rcvd[i][j] = 0;
+        }
+    }
 }
 
 UBX_MSG::~UBX_MSG()
@@ -75,66 +83,6 @@ void UBX_MSG::write_nmea_off()
     output_msg.msg_class     = CFG;
     output_msg.msg_id        = CFG_MSG;
     output_msg.buffer_length = UBX_CFG_ON_OFF_SHORT_SIZE;
-    temp_msg[1]              = NMEA_VTG;
-    output_msg.set_buffer(temp_msg, output_msg.buffer_length);
-    write(&output_msg);
-}
-
-void UBX_MSG::write_nmea_off_long()
-{
-    byte temp_msg[UBX_CFG_ON_OFF_LONG_SIZE];
-    temp_msg[0] = NMEA;
-    temp_msg[2] = 0x00;
-    temp_msg[3] = 0x00;
-    temp_msg[4] = 0x00;
-    temp_msg[5] = 0x00;
-    temp_msg[6] = 0x00;
-    temp_msg[7] = 0x01;
-    
-    // Clear GGA
-    output_msg.msg_class     = CFG;
-    output_msg.msg_id        = CFG_MSG;
-    output_msg.buffer_length = UBX_CFG_ON_OFF_LONG_SIZE;
-    temp_msg[1]              = NMEA_GGA;
-    output_msg.set_buffer(temp_msg, output_msg.buffer_length);
-    write(&output_msg);
-    
-    // Clear GLL
-    output_msg.msg_class     = CFG;
-    output_msg.msg_id        = CFG_MSG;
-    output_msg.buffer_length = UBX_CFG_ON_OFF_LONG_SIZE;
-    temp_msg[1]              = NMEA_GLL;
-    output_msg.set_buffer(temp_msg, output_msg.buffer_length);
-    write(&output_msg);
-
-    // Clear GSA
-    output_msg.msg_class     = CFG;
-    output_msg.msg_id        = CFG_MSG;
-    output_msg.buffer_length = UBX_CFG_ON_OFF_LONG_SIZE;
-    temp_msg[1]              = NMEA_GSA;
-    output_msg.set_buffer(temp_msg, output_msg.buffer_length);
-    write(&output_msg);
-    
-    // Clear GSV
-    output_msg.msg_class     = CFG;
-    output_msg.msg_id        = CFG_MSG;
-    output_msg.buffer_length = UBX_CFG_ON_OFF_LONG_SIZE;
-    temp_msg[1]              = NMEA_GSV;
-    output_msg.set_buffer(temp_msg, output_msg.buffer_length);
-    write(&output_msg);
-    
-    // Clear RMC
-    output_msg.msg_class     = CFG;
-    output_msg.msg_id        = CFG_MSG;
-    output_msg.buffer_length = UBX_CFG_ON_OFF_LONG_SIZE;
-    temp_msg[1]              = NMEA_RMC;
-    output_msg.set_buffer(temp_msg, output_msg.buffer_length);
-    write(&output_msg);
-    
-    // Clear VTG
-    output_msg.msg_class     = CFG;
-    output_msg.msg_id        = CFG_MSG;
-    output_msg.buffer_length = UBX_CFG_ON_OFF_LONG_SIZE;
     temp_msg[1]              = NMEA_VTG;
     output_msg.set_buffer(temp_msg, output_msg.buffer_length);
     write(&output_msg);
@@ -283,7 +231,7 @@ int UBX_MSG::data_available()
     return (gpsFIFO->available());
 }
 
-int UBX_MSG::read(GpsType* gpsData)
+int UBX_MSG::read()
 {    
     int nRcvd = 0;
     while (gpsFIFO->available() > 0 || input_msg.state == COMPLETE)
@@ -377,9 +325,9 @@ int UBX_MSG::read(GpsType* gpsData)
                 break;
                 
             case COMPLETE :
-                if (decode(input_msg.msg_class, input_msg.msg_id, input_msg.buffer, input_msg.buffer_length) == 1)
+                if (decode(input_msg.msg_class, input_msg.msg_id, input_msg.buffer, input_msg.buffer_length))
                 {
-                    update_gps_data(input_msg.msg_class, input_msg.msg_id, gpsData);
+                    n_rcvd[input_msg.msg_class][input_msg.msg_id]++;
                     nRcvd++;
                 }
                 else
@@ -526,15 +474,17 @@ int UBX_MSG::decode(int msg_class, int msg_id, byte* buffer, unsigned short buff
     }
     else if (msg_class == AID && msg_id == AID_ALM)
     {
+        uint32_t svid = 0;
+        memcpy(&svid, buffer, sizeof(svid));
         if (buffer_length == sizeof(almanacInvalid.data))
         {
             memcpy(&almanacInvalid.data, buffer, buffer_length);
-            //memcpy(&almanac.data, buffer, buffer_length);
+            //memcpy(&almanac[svid-1].data, buffer, buffer_length);
             valid_decode = 1;
         }
-        else if (buffer_length == sizeof(almanac.data))
+        else if (buffer_length == sizeof(almanac[0].data))
         {
-            memcpy(&almanac.data, buffer, buffer_length);
+            memcpy(&almanac[svid-1].data, buffer, buffer_length);
             valid_decode = 1;
         }
     }
@@ -545,270 +495,25 @@ int UBX_MSG::decode(int msg_class, int msg_id, byte* buffer, unsigned short buff
         display(" ");
         display(sizeof(ephemerisInvalid.data));
         display(" ");
-        display(sizeof(ephemeris.data));
+        display(sizeof(ephemeris[0].data));
         display("\n");
+        
+        uint32_t svid = 0;
+        memcpy(&svid, buffer, sizeof(svid));
         
         if (buffer_length == sizeof(ephemerisInvalid.data))
         {
             //memcpy(&ephemerisInvalid.data, buffer, buffer_length);
-            memcpy(&ephemeris.data, buffer, buffer_length);
+            memcpy(&ephemeris[svid-1].data, buffer, buffer_length);
             valid_decode = 1;
         }
-        else if (buffer_length == sizeof(ephemeris.data))
+        else if (buffer_length == sizeof(ephemeris[0].data))
         {
-            memcpy(&ephemeris.data, buffer, buffer_length);
+            memcpy(&ephemeris[svid-1].data, buffer, buffer_length);
             valid_decode = 1;
         }
     }
     return valid_decode;
-}
-
-int UBX_MSG::update_gps_data(int msg_class, int msg_id, GpsType* gpsData)
-{
-    if (gpsData == NULL) { display("gpsData = NULL\n"); return 0; }
-    
-    gpsData->input_msg_id = msg_id;
-    
-    if (msg_class == NAV && msg_id == NAV_POSLLH)
-    {
-        gpsData->posLLH[0]   = posLLH.data.latitude * posLLH.scale.latitude;
-        gpsData->posLLH[1]   = posLLH.data.longitude * posLLH.scale.longitude;
-        gpsData->posLLH[2]   = posLLH.data.altitude_ellipsoid * posLLH.scale.altitude_ellipsoid;
-        gpsData->alt_msl     = posLLH.data.altitude_msl * posLLH.scale.altitude_msl;
-        gpsData->horizPosAcc = posLLH.data.horizontalAccuracy * posLLH.scale.horizontalAccuracy;
-        gpsData->vertPosAcc  = posLLH.data.verticalAccuracy * posLLH.scale.verticalAccuracy;
-        gpsData->positionValid = true;
-        return 1;
-    }
-    else if (msg_class == NAV && msg_id == NAV_VELNED)
-    {
-        gpsData->velNED[0] = velNED.data.velN * velNED.scale.velN;
-        gpsData->velNED[1] = velNED.data.velE * velNED.scale.velE;
-        gpsData->velNED[2] = velNED.data.velD * velNED.scale.velD;
-        gpsData->heading   = velNED.data.heading * velNED.scale.heading;
-        gpsData->speedAcc  = velNED.data.speedAccuracy * velNED.scale.speedAccuracy;
-        gpsData->hdgAcc    = velNED.data.headingAccuracy * velNED.scale.headingAccuracy;
-        gpsData->velocityValid = true;
-        return 1;
-    }
-    else if (msg_class == NAV && msg_id == NAV_STATUS)
-    {
-        gpsData->ttff         = navStatus.data.ttff * navStatus.scale.ttff;
-        gpsData->GPStimestamp = navStatus.data.msss * navStatus.scale.msss;
-        gpsData->gpsFix       = (GPS_FIX_TYPE) navStatus.data.gpsFix;
-        gpsData->fixOk        = (navStatus.data.flags >> GPSFixOk) & 1;
-        //int GPSFixOk = (navStatus.data.flags >> 0) & 1;
-        //int DiffSoln = (navStatus.data.flags >> 1) & 1;
-        //int WKNSET   = (navStatus.data.flags >> 2) & 1;
-        //int TOWSET   = (navStatus.data.flags >> 3) & 1;
-        //display(GPSFixOk); display(" "); display(DiffSoln); display(" "); display(WKNSET); display(" "); display(TOWSET); display("\n");
-        return 1;
-    }
-    else if (msg_class == NAV && msg_id == NAV_DOP)
-    {
-        gpsData->DOP.gDOP = navDOP.data.gDOP * navDOP.scale.gDOP;
-        gpsData->DOP.pDOP = navDOP.data.pDOP * navDOP.scale.pDOP;
-        gpsData->DOP.tDOP = navDOP.data.tDOP * navDOP.scale.tDOP;
-        gpsData->DOP.vDOP = navDOP.data.vDOP * navDOP.scale.vDOP;
-        gpsData->DOP.hDOP = navDOP.data.hDOP * navDOP.scale.hDOP;
-        gpsData->DOP.nDOP = navDOP.data.nDOP * navDOP.scale.nDOP;
-        gpsData->DOP.eDOP = navDOP.data.eDOP * navDOP.scale.eDOP;
-        return 1;
-    }
-    else if (msg_class == NAV && msg_id == NAV_SOL)
-    {
-        gpsData->numSV = (int) navSol.data.numSV;
-        return 1;
-    }
-    else if (msg_class == CFG && msg_id == CFG_NAV5)
-    {
-        display("NAV5 mask:\n");
-        display((int)(configNav5.data.mask >> NavConfig_dyn) & 1); display(" ");
-        display((int)(configNav5.data.mask >> NavConfig_minEl) & 1); display(" ");
-        display((int)(configNav5.data.mask >> NavConfig_fixMode) & 1); display(" ");
-        display((int)(configNav5.data.mask >> NavConfig_drLim) & 1); display(" ");
-        display((int)(configNav5.data.mask >> NavConfig_posMask) & 1); display(" ");
-        display((int)(configNav5.data.mask >> NavConfig_timeMask) & 1); display(" ");
-        display((int)(configNav5.data.mask >> NavConfig_staticHoldMeask) & 1); display(" ");
-        display((int)(configNav5.data.mask >> NavConfig_dgpsMask) & 1); display("\n");
-        
-        display("NAV5 data:\n");
-        display((int) configNav5.data.dynModel); display(" ");
-        display((int) configNav5.data.fixMode);  display(" ");
-        display(configNav5.data.fixedAlt                 * configNav5.scale.fixedAlt); display(" ");
-        display(configNav5.data.fixedAltVar              * configNav5.scale.fixedAltVar); display(" ");
-        display(configNav5.data.minElv                   * configNav5.scale.minElv); display(" ");
-        display(((int) configNav5.data.drLimit)          * configNav5.scale.drLimit); display(" ");
-        display(configNav5.data.pDop                     * configNav5.scale.pDop); display(" ");
-        display(configNav5.data.tDop                     * configNav5.scale.tDop); display(" ");
-        display(configNav5.data.pAcc                     * configNav5.scale.pAcc); display(" ");
-        display(configNav5.data.tAcc                     * configNav5.scale.tAcc); display(" ");
-        display(((int) configNav5.data.staticHoldThresh) * configNav5.scale.staticHoldThresh); display(" ");
-        display(((int) configNav5.data.dgpsTimeOut)      * configNav5.scale.dgpsTimeOut); display("\n");
-    }
-#ifdef SIMULATION
-    else if (msg_class == CFG && msg_id == CFG_MSG)
-    {
-        byte msgClass;
-        byte msgID;
-        int rate;
-        if (configMsgShort.data.msgClass!=0 && configMsgShort.data.msgID!=0)
-        {
-            msgClass = configMsgShort.data.msgClass;
-            msgID    = configMsgShort.data.msgID;
-            rate     = (int) configMsgShort.data.rate;
-        }
-        else
-        {
-            msgClass = configMsgLong.data.msgClass;
-            msgID    = configMsgLong.data.msgID;
-            rate     = (int) configMsgLong.data.rateTgt2; // UART port
-        }
-        
-        if (msgClass == (byte) NMEA && msgID == (byte) NMEA_GGA)
-        {
-            gpsData->msgRates[GGA] = rate;
-            return 1;
-        }
-        else if (msgClass == (byte) NMEA && msgID == (byte) NMEA_GLL)
-        {
-            gpsData->msgRates[GLL] = rate;
-            return 1;
-        }
-        else if (msgClass == (byte) NMEA && msgID == (byte) NMEA_GSA)
-        {
-            gpsData->msgRates[GSA] = rate;
-            return 1;
-        }
-        else if (msgClass == (byte) NMEA && msgID == (byte) NMEA_GSV)
-        {
-            gpsData->msgRates[GSV] = rate;
-            return 1;
-        }
-        else if (msgClass == (byte) NMEA && msgID == (byte) NMEA_RMC)
-        {
-            gpsData->msgRates[RMC] = rate;
-            return 1;
-        }
-        else if (msgClass == (byte) NMEA && msgID == (byte) NMEA_VTG)
-        {
-            gpsData->msgRates[VTG] = rate;
-            return 1;
-        }
-        else if (msgClass == (byte) UBX_NAV && msgID == (byte) UBX_NAV_STATUS)
-        {
-            gpsData->msgRates[NAVSTAT] = rate;
-            return 1;
-        }
-        else if (msgClass == (byte) UBX_NAV && msgID == (byte) UBX_NAV_DOP)
-        {
-            gpsData->msgRates[NAVDOP] = rate;
-            return 1;
-        }
-        else if (msgClass == (byte) UBX_NAV && msgID == (byte) UBX_NAV_POSLLH)
-        {
-            gpsData->msgRates[POSLLH] = rate;
-            return 1;
-        }
-        else if (msgClass == (byte) UBX_NAV && msgID == (byte) UBX_NAV_VELNED)
-        {
-            gpsData->msgRates[VELNED] = rate;
-            return 1;
-        }
-        return 0;
-    }
-#endif
-    else if (msg_class == ACK && msg_id == ACK_NAK)
-    {
-        display("Message not acknowledged! [classID, msgID] = [");
-        display(ack.data.clsID); display(", ");
-        display(ack.data.msgID); display("]\n");
-        return 1;
-    }
-    else if (msg_class == AID && msg_id == AID_INI)
-    {
-        int pos_valid           = (int) ((aidInit.data.flags >> INI_POS) & 1);
-        int time_valid          = (int) ((aidInit.data.flags >> INI_TIME) & 1);
-        int clock_drift_valid   = (int) ((aidInit.data.flags >> INI_clockD) & 1);
-        int use_time_pulse      = (int) ((aidInit.data.flags >> INI_tp) & 1);
-        int clock_freq_valid    = (int) ((aidInit.data.flags >> INI_clockF) & 1);
-        int pos_in_lla          = (int) ((aidInit.data.flags >> INI_lla) & 1);
-        int alt_invalid         = (int) ((aidInit.data.flags >> INI_altInv) & 1);
-        int mark_rcv_before_msg = (int) ((aidInit.data.flags >> INI_prevTm) & 1);
-        
-        display("AID_INI: \n");
-        display("\t[pos_valid, time_valid, alt_invalid] = [");
-        display(pos_valid); display(", ");
-        display(time_valid); display(", ");
-        display(alt_invalid); display("]\n");
-        
-        display("\t[clock_drift_valid, use_time_pulse, clock_freq_valid, mark_rcv_before_msg] = [");
-        display(clock_drift_valid); display(", ");
-        display(use_time_pulse); display(", ");
-        display(clock_freq_valid); display(", ");
-        display(mark_rcv_before_msg); display("]\n");
-        
-        if (pos_in_lla)
-        {
-            display("\tAID LLH = [");
-            display((double) aidInit.data.ecefXOrLat * aidInit.scale.Lat); display(",");
-            display((double) aidInit.data.ecefYOrLon * aidInit.scale.Lon); display(",");
-            display((double) aidInit.data.ecefZOrAlt * aidInit.scale.Alt); display("]\n");
-        }
-        else
-        {
-            display("\tAID ECEF = [");
-            display((double) aidInit.data.ecefXOrLat * aidInit.scale.ecefX); display(",");
-            display((double) aidInit.data.ecefYOrLon * aidInit.scale.ecefY); display(",");
-            display((double) aidInit.data.ecefZOrAlt * aidInit.scale.ecefZ); display("]\n");
-        }
-        display("\tPosAcc = "); display(aidInit.data.posAcc * aidInit.scale.posAcc); display("\n");
-
-        display("\t[Week Num, TOW, TOWns] = [");
-        display(aidInit.data.wn); display(", ");
-        display((double) aidInit.data.tow * aidInit.scale.tow); display(", ");
-        display(aidInit.data.towNs); display("]\n");
-       
-        display("\tTimeAcc = ");
-        display((double) aidInit.data.tAccMs * aidInit.scale.tAccMs);
-        display(" + ");
-        display(aidInit.data.tAccNs);
-        display(" ns\n");
-        
-        //uint16_t tmCfg            = 0;
-        //int32_t  clkDOrFreq       = 0;
-        //uint32_t clkDAccOrFreqAcc = 0;
-        
-        return 1;
-    }
-    else if (msg_class == AID && msg_id == AID_ALM)
-    {
-         if(almanac.data.week != ALM_WEEK_INVALID)
-         {
-             display("Received Almanac Data: ");
-             display(almanac.data.svid);
-             display("\n");
-         }
-        almanac.clear();
-        return 1;
-    }
-    else if (msg_class == AID && msg_id == AID_EPH)
-    {
-        if(ephemeris.data.how != 0)
-        {
-            display("Received Ephemeris Data: ");
-            display(ephemeris.data.svid);
-            display("\n");
-        }
-        ephemeris.clear();
-        return 1;
-    }
-    else if (msg_class == AID && msg_id == AID_HUI)
-    {
-        display("Received GPS Health Data\n");
-        return 1;
-    }
-    return 0;
 }
 
 void UBX_MSG::clear_input_buffer()

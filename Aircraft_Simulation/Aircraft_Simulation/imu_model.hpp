@@ -49,6 +49,7 @@ protected:
     void gyroscopeModel(void);
     void accelerometerModel(void);
     void magnetometerModel(void);
+    void accelerometerAttitude(void);
     
     // units to LSB
     double LSBdps; // degress per second to LSB
@@ -116,6 +117,7 @@ protected:
     double gravityNED[3];
     double gravityBody[3];
     double gravityIMU[3];
+    double unitGravityBody[3];
     double accIMUnoGravity[3];
     double accIMU[3];
     
@@ -132,6 +134,12 @@ protected:
     double resetPeriod;
     double preVelBody[3];
     double dVelocity_dyn[3];
+    double accel_roll;
+    double accel_pitch;
+    double lin_accel_roll;
+    double lin_accel_pitch;
+    double lin_accel_roll_error;
+    double lin_accel_pitch_error;
     
     // Print Variables
     double bodyRatesPrint[3];

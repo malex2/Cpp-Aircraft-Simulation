@@ -65,14 +65,6 @@ private:
     double printInterval;
     double saveInterval;
     const double dtPad = 1e-10;
-    /*
-    double timeofday;
-    int month;
-    int day;
-    int year;
-    double utc_time;
-    double gps_time;
-    */
     GPSTimeType* pGPSTime;
     
     // Getters
