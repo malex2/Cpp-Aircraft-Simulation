@@ -411,7 +411,7 @@ bool GroundModelBase::update(void)
     static bool groundPrint = false;
     if( isOnGround() )
     {
-        if (!groundPrint) { std::cout << "On Ground." << std::endl; groundPrint = true; }
+        if (!groundPrint) { std::cout << "On Ground. " << bodyForce[2]/mass_init << std::endl; groundPrint = true; }
         
         // Determine if in unrecoverable position
         if ( eulerAngles[0].deg() > maxGroundRoll || eulerAngles[0].deg() < minGroundRoll ||

@@ -174,7 +174,7 @@ void initialize(void)
     baudRate = 9600; // 9600, 38400, 115200
     
     // IMU Settings
-    accSensitivity  = accSensitivity_4g;
+    accSensitivity  = accSensitivity_16g;
     gyroSensitivity = gyroSensitivity_250dps;
     
     // Barometer Settings
@@ -280,7 +280,7 @@ bool mainFlightSoftware(void)
         FsNavigation_performNavigation( actualDelays[hz100] );
         
         // Perform Velocity and Attitude Control
-        FsControls_performControls();
+        FsControls_performControls( actualDelays[hz100] );
     }
     
     // 50 hz routine
@@ -606,11 +606,14 @@ void setPrintVariables()
     pMap->addLogVar("Nav velLL Y" , &nav_velLL[1], savePlot, 2);
     pMap->addLogVar("Nav velLL Z" , &nav_velLL[2], savePlot, 2);
     
+    //pMap->addLogVar("Nav dVelocity Z", &pNavData->stateInputs.dVelocity[2], savePlot, 2);
+    //pMap->addLogVar("Nav Acc Z", &pNavData->accelBody[2], savePlot, 2);
+
     //pMap->addLogVar("navstate", &navState, savePlot, 2);
     //pMap->addLogVar("INS Update Count", &NavUpdateCounts[INS], savePlot, 2);
     //pMap->addLogVar("Baro Update Count", &NavUpdateCounts[BaroUpdate], savePlot, 2);
     //pMap->addLogVar("GPS Update Count", &NavUpdateCounts[GPSUpdate], savePlot, 2);
-    //pMap->addLogVar("Accel Update Count", &NavUpdateCounts[AccelUpdate], savePlot, 2);
+    pMap->addLogVar("Accel Update Count", &NavUpdateCounts[AccelUpdate], savePlot, 2);
     
     //pMap->addLogVar("Baro Skipped Update Count", &NavSkippedUpdates[BaroUpdate], savePlot, 2);
     //pMap->addLogVar("GPS Skipped Update Count", &NavSkippedUpdates[GPSUpdate], savePlot, 2);
@@ -628,12 +631,12 @@ void setPrintVariables()
     //pMap->addLogVar("Nav Accel dTimestamp", &pNavData->timestamp_diff[AccelUpdate], savePlot, 2);
     
     //pMap->addLogVar("Nav dPitch", &pNavData->stateInputs.dTheta[1], savePlot, 2);
-    pMap->addLogVar("Nav Accel Mag" , &pNavData->accel_mag, savePlot, 2);
+    //pMap->addLogVar("Nav Accel Mag" , &pNavData->accel_mag, savePlot, 2);
     //pMap->addLogVar("Nav Error Accel Roll" , &pNavError->accel_roll, savePlot, 2);
     //pMap->addLogVar("Nav Error Accel Pitch" , &pNavError->accel_pitch, savePlot, 2);
 
-    pMap->addLogVar("Nav Accel Roll" , &nav_accel_roll, printSavePlot, 3);
-    pMap->addLogVar("Nav Accel Pitch" , &nav_accel_pitch, printSavePlot, 3);
+    //pMap->addLogVar("Nav Accel Roll" , &nav_accel_roll, printSavePlot, 3);
+    //pMap->addLogVar("Nav Accel Pitch" , &nav_accel_pitch, printSavePlot, 3);
     
     pMap->addLogVar("Nav Roll" , &eulerAnglesDeg[0], printSavePlot, 3);
     pMap->addLogVar("Nav Pitch", &eulerAnglesDeg[1], printSavePlot, 3);
@@ -669,12 +672,12 @@ void setPrintVariables()
     pMap->addLogVar("Vel E Error", &pNavError->velNED[1], savePlot, 2);
     pMap->addLogVar("Vel D Error", &pNavError->velNED[2], savePlot, 2);
     
-    pMap->addLogVar("velLL X Error" , &nav_velLL_error[0], savePlot, 2);
-    pMap->addLogVar("velLL Y Error" , &nav_velLL_error[1], savePlot, 2);
+    //pMap->addLogVar("velLL X Error" , &nav_velLL_error[0], savePlot, 2);
+    //pMap->addLogVar("velLL Y Error" , &nav_velLL_error[1], savePlot, 2);
     //pMap->addLogVar("velLL Z Error" , &nav_velLL_error[2], savePlot, 2);
     
-    pMap->addLogVar("N Error (m)", &pNavError->position[0], savePlot, 2);
-    pMap->addLogVar("E Error (m)", &pNavError->position[1], savePlot, 2);
+    //pMap->addLogVar("N Error (m)", &pNavError->position[0], savePlot, 2);
+    //pMap->addLogVar("E Error (m)", &pNavError->position[1], savePlot, 2);
     pMap->addLogVar("Alt Error (m)", &altitudeError, savePlot, 2);
     
     //pMap->addLogVar("Acc Body X Error", &pNavError->accelBody[0], savePlot, 2);
@@ -751,28 +754,27 @@ void setPrintVariables()
     //pMap->addLogVar("P[GRAVITY][ALT]"    , &Cov[GRAVITY][ALT], savePlot, 2);
     //pMap->addLogVar("P[GRAVITY][VD]"    , &Cov[GRAVITY][VD], savePlot, 2);
     
-    pMap->addLogVar("Roll Stdev"    , &navStd[ROLL][ROLL], savePlot, 2);
+    //pMap->addLogVar("Roll Stdev"    , &navStd[ROLL][ROLL], savePlot, 2);
     //pMap->addLogVar("Roll 3 Stdev"  , &nav3Std[ROLL][ROLL], savePlot, 2);
-    pMap->addLogVar("Pitch Stdev"   , &navStd[PITCH][PITCH], savePlot, 2);
+    //pMap->addLogVar("Pitch Stdev"   , &navStd[PITCH][PITCH], savePlot, 2);
     //pMap->addLogVar("Pitch Stdev Due to Alt"   , &navStd[PITCH][ALT], savePlot, 2);
     //pMap->addLogVar("Pitch Stdev Due to VD"   , &navStd[PITCH][VD], savePlot, 2);
     //pMap->addLogVar("Pitch 3 Stdev" , &nav3Std[PITCH][PITCH], savePlot, 2);
-    pMap->addLogVar("Yaw Stdev"   , &navStd[YAW][YAW], savePlot, 2);
+    //pMap->addLogVar("Yaw Stdev"   , &navStd[YAW][YAW], savePlot, 2);
     pMap->addLogVar("VN Stdev"    , &navStd[VN][VN], savePlot, 2);
     pMap->addLogVar("VE Stdev"    , &navStd[VE][VE], savePlot, 2);
     pMap->addLogVar("VD Stdev"    , &navStd[VD][VD], savePlot, 2);
     pMap->addLogVar("Accel Bias X Stdev"    , &navStd[ABIAS_X][ABIAS_X], savePlot, 2);
     pMap->addLogVar("Accel Bias Y Stdev"    , &navStd[ABIAS_Y][ABIAS_Y], savePlot, 2);
     pMap->addLogVar("Accel Bias Z Stdev"    , &navStd[ABIAS_Z][ABIAS_Z], savePlot, 2);
-    //pMap->addLogVar("Alt Stdev"    , &navStd[ALT][ALT], savePlot, 2);
+    pMap->addLogVar("Alt Stdev"    , &navStd[ALT][ALT], savePlot, 2);
     //pMap->addLogVar("covCorrection[PITCH][ALT]", &covarianceCorrection[PITCH][ALT], savePlot, 2);
     //pMap->addLogVar("covCorrection[ROLL][ALT]", &covarianceCorrection[ROLL][ALT], savePlot, 2);
     //pMap->addLogVar("covCorrection[VD][ALT]", &covarianceCorrection[VD][ALT], savePlot, 2);
     //pMap->addLogVar("covCorrection[ALT][ALT]", &covarianceCorrection[ALT][ALT], savePlot, 2);
     
-    pMap->addLogVar("Accel Roll Stdev" , &stdAccel[ACCEL_ROLL][ACCEL_ROLL], savePlot, 2);
-    pMap->addLogVar("Accel Pitch Stdev", &stdAccel[ACCEL_PITCH][ACCEL_PITCH], savePlot, 2);
-    
+    //pMap->addLogVar("Accel Roll Stdev" , &stdAccel[ACCEL_ROLL][ACCEL_ROLL], savePlot, 2);
+    //pMap->addLogVar("Accel Pitch Stdev", &stdAccel[ACCEL_PITCH][ACCEL_PITCH], savePlot, 2);
     
     //pMap->addLogVar("Q[Q0][Q0]"    , &PN[Q0][Q0], savePlot, 2);
     //pMap->addLogVar("Q[Q1][Q1]"    , &PN[Q1][Q1], savePlot, 2);
@@ -835,12 +837,15 @@ void setPrintVariables()
     
     pMap->addLogVar("Ctrl rollCmd", &rollCmd, savePlot, 2);
     pMap->addLogVar("Ctrl pitchCmd", &pitchCmd, savePlot, 2);
-    pMap->addLogVar("Ctrl yawRateCmd", &yawRateCmd, savePlot, 2);
+    pMap->addLogVar("Ctrl Vx int err", &pControlData->vx_int_error, savePlot, 2);
+    pMap->addLogVar("Ctrl Vy int err", &pControlData->vy_int_error, savePlot, 2);
+    pMap->addLogVar("Ctrl Vz int err", &pControlData->vz_int_error, savePlot, 2);
+    //pMap->addLogVar("Ctrl yawRateCmd", &yawRateCmd, savePlot, 2);
     pMap->addLogVar("Ctrl VLLxCmd", &pControlData->VLLxCmd, savePlot, 2);
     pMap->addLogVar("Ctrl VLLyCmd", &pControlData->VLLyCmd, savePlot, 2);
     pMap->addLogVar("Ctrl VLLzCmd", &pControlData->VLLzCmd, printSavePlot, 3);
-    //pMap->addLogVar("Ctrl hCmd", &pControlData->hCmd, savePlot, 2);
-    //pMap->addLogVar("controlAltitude", &controlAltitude, savePlot, 2);
+    pMap->addLogVar("Ctrl hCmd", &pControlData->hCmd, savePlot, 2);
+    pMap->addLogVar("controlAltitude", &controlAltitude, savePlot, 2);
     pMap->addLogVar("takeOff", &takeOff, printSavePlot, 3);
     pMap->addLogVar("crashLand", &crashLand, savePlot, 2);
     pMap->addLogVar("onGround", &onGround, savePlot, 2);

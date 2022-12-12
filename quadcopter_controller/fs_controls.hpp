@@ -18,6 +18,7 @@ struct ControlType {
     // Command Input
     int pwmCmd[nChannels];
     
+    // Commands
     double hCmd;
     double VLLxCmd;
     double VLLyCmd;
@@ -25,6 +26,11 @@ struct ControlType {
     double rollCmd;
     double pitchCmd;
     double yawRateCmd;
+    
+    // Errors
+    double vx_int_error;
+    double vy_int_error;
+    double vz_int_error;
     
     // roll/pitch/yaw/throttle motor commands
     double da;
@@ -67,6 +73,10 @@ struct ControlType {
         pitchCmd = 0.0;
         yawRateCmd = 0.0;
         
+        vx_int_error = 0.0;
+        vy_int_error = 0.0;
+        vz_int_error = 0.0;
+        
         da = 0.0;
         de = 0.0;
         dr = 0.0;
@@ -96,7 +106,7 @@ struct ControlType {
 // External Access
 void FsControls_setup();
 void FsControls_groundDetection();
-void FsControls_performControls();
+void FsControls_performControls(double &ctrlDt);
 
 // Setters
 void FsControls_setMode(ControlMode mode);
@@ -113,7 +123,7 @@ bool         FsControls_onGround();
 // Internal Access
 void discretizeCommands();
 int discretize(int desiredCommand, int command, int minCmd, int maxCmd, int deltaPwm);
-void performControls();
+void performControls(double &ctrlDt);
 void verticalModing();
 void setMotors();
 

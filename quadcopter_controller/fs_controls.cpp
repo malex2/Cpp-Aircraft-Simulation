@@ -43,8 +43,8 @@ double maxThrottle;
 double minRPM;
 double maxRPM;
 
-int altHoldLatchCounter;
-int groundCount;
+unsigned short altHoldLatchCounter;
+unsigned short groundCount;
 
 // Gains
 // Position Channels
@@ -53,18 +53,24 @@ double wn_h = 0.5 * hz2rps;
 double kp_h;
 
 // Velocity Channels
-double wn_vx = 0.3 * hz2rps;
-double wn_vy = 0.3 * hz2rps;
-double wn_vz = 5.0 * hz2rps;
+double wn_vx   = 0.1 * hz2rps;
+double zeta_vx = 2.0;
+double wn_vy   = 0.1 * hz2rps;
+double zeta_vy = 2.0;
+double wn_vz   = 5.0 * hz2rps;
+double zeta_vz = 1.0;
 
 double kp_vx;
+double ki_vx;
 double kp_vy;
+double ki_vy;
 double kp_vz;
+double ki_vz;
 
 // Attitude Channels
-double wn_roll    = 5.0 * hz2rps;
+double wn_roll    = 3.0 * hz2rps;
 double zeta_roll  = 2.0;
-double wn_pitch   = 5.0 * hz2rps;
+double wn_pitch   = 3.0 * hz2rps;
 double zeta_pitch = 2.0;
 double wn_yaw     = 20.0 * hz2rps;
 
@@ -107,9 +113,12 @@ void FsControls_setup()
     kp_h = -wn_h;
     
     // Velocity Channel Gains
-    kp_vx  = wn_vx/(KVX);
-    kp_vy  = wn_vy/(KVY);
+    ki_vx  = wn_vx/(KVX);
+    kp_vx  = 2.0*zeta_vx*wn_vx/(KVX);
+    ki_vy  = wn_vy/(KVY);
+    kp_vy  = 2.0*zeta_vy*wn_vy/(KVY);
     kp_vz  = wn_vz/(KVZ);
+    ki_vz  = 2.0*zeta_vz*wn_vz/(KVZ);
     
     // Attitude Channel Gains
     kp_roll  = wn_roll*wn_roll/(KROLL);
@@ -156,19 +165,16 @@ void FsControls_groundDetection()
         }
         
         // Detect off ground
-        if (position[2] > 1.5)
+        if (controlData.takeOff && position[2] > 1.5)
         {
             controlData.onGround = false;
         }
     }
-    
     // Check for ground contact
-    else if (position[2] < 1.5)
+    else if (accelZ < -2.0*Gravity)
     {
-        if (position[2] < 0.2) { groundCount++; }
-        else { groundCount = 0; }
-        
-        if (accelZ < -0.4*Gravity)// || groundCount > 10)
+        groundCount++;
+        if (groundCount > 1)
         {
             display("Fs_Constrols on ground. ");
             display("Accel: ");
@@ -176,7 +182,7 @@ void FsControls_groundDetection()
             display(" groundCount: ");
             display(groundCount);
             display("\n");
-
+            
             controlData.onGround = true;
             controlData.takeOff  = false;
         }
@@ -188,7 +194,7 @@ void FsControls_groundDetection()
 #endif
 }
 
-void FsControls_performControls()
+void FsControls_performControls(double &ctrlDt)
 {
 #ifdef CONTROLS
     // Not initialization for controls
@@ -200,7 +206,7 @@ void FsControls_performControls()
         return;
     }
     
-    performControls();
+    performControls(ctrlDt);
     
     setMotors();
     
@@ -208,7 +214,7 @@ void FsControls_performControls()
 #endif
 }
 
-void performControls()
+void performControls(double &ctrlDt)
 {
     // Discritize Commands to Limit Unintentional Change
     for (int iCh = THROTTLE_CHANNEL; iCh != nChannels; iCh++)
@@ -239,8 +245,8 @@ void performControls()
         controlData.yawRateCmd = mapToValue(controlData.pwmCmd[YAW_CHANNEL]     , (int) PWMMIN, (int) PWMMAX, (double) -MAXYAWRATE , (double) MAXYAWRATE);  // (rad/s)
         
         // Outer Velocity Loop to Generate Attitude Commands
-        controlData.rollCmd  = kp_vy*(controlData.VLLyCmd - velLL[1]);
-        controlData.pitchCmd = kp_vx*(controlData.VLLxCmd - velLL[0]);
+        controlData.rollCmd  = kp_vy*(controlData.VLLyCmd - velLL[1]) + ki_vy*controlData.vy_int_error;
+        controlData.pitchCmd = kp_vx*(controlData.VLLxCmd - velLL[0]) + ki_vx*controlData.vx_int_error;
         
         // Limit Commands
         controlData.rollCmd  = limit(controlData.rollCmd, (double) -MAXROLL, (double) MAXROLL);
@@ -280,13 +286,18 @@ void performControls()
             controlData.VLLzCmd  = limit(controlData.VLLzCmd, (double) -MAXVELOCITY, (double) MAXVELOCITY);
         }
         
-        controlData.dT = kp_vz*(controlData.VLLzCmd - velLL[2]) + dTo;
+        controlData.dT = kp_vz*(controlData.VLLzCmd - velLL[2])  + ki_vz*controlData.vz_int_error + dTo;
         controlData.da = kp_roll *(controlData.rollCmd    - eulerAngles[0]) - kd_roll*bodyRates[0];
         controlData.de = kp_pitch*(controlData.pitchCmd   - eulerAngles[1]) - kd_pitch*bodyRates[1];
         controlData.dr = kp_yaw  *(controlData.yawRateCmd - bodyRates[2]);
 
         // Increase throttle to allow attitude following
         minAttitudeThrottle();
+        
+        // Integral Errors
+        if (controlData.pitchCmd > -MAXPITCH && controlData.pitchCmd < MAXPITCH) { controlData.vx_int_error += (controlData.VLLxCmd - velLL[0])*ctrlDt; }
+        if (controlData.rollCmd > -MAXROLL && controlData.rollCmd < MAXROLL)     { controlData.vy_int_error += (controlData.VLLyCmd - velLL[1])*ctrlDt; }
+        if (controlData.dT > minThrottle && controlData.dT < maxThrottle)        { controlData.vz_int_error += (controlData.VLLzCmd - velLL[2])*ctrlDt; }
     }
     
     // Limit Commands
@@ -296,7 +307,7 @@ void performControls()
     controlData.deRaw = controlData.de;
     controlData.drRaw = controlData.dr;
     
-    // Prevent RPM's less than 0
+    // Prevent RPM's less than RPMMIN
     controlData.da = limit(controlData.da, -controlData.dT/3.0, controlData.dT/3.0);
     controlData.de = limit(controlData.de, -controlData.dT/3.0, controlData.dT/3.0);
     controlData.dr = limit(controlData.dr, -controlData.dT/3.0, controlData.dT/3.0);
@@ -402,7 +413,7 @@ void FsControls_setControlsData(IMUtype* pIMUdataIn, NavType* pNavDataIn)
         position[i]    = pNavDataIn->position[i];
     }
     FsNavigation_bodyToLL(velLL, pNavDataIn->velBody);
-    accelZ = pIMUdataIn->accel[2] - pNavDataIn->accBias[2] + pNavDataIn->gravity;
+    accelZ = pNavDataIn->accelBody[2];
 }
 
 ControlType* FsControls_getControlData()

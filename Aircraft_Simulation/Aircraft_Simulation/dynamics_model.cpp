@@ -96,9 +96,9 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("Body Force Y", &bodyForce[1], savePlot, 2);
     //pMap->addLogVar("Body Force Z", &bodyForce[2], savePlot, 2);
  
-    //pMap->addLogVar("Body Accel X", &accelBody[0], savePlot, 2);
-    //pMap->addLogVar("Body Accel Y", &accelBody[1], savePlot, 2);
-    //pMap->addLogVar("Body Accel Z", &accelBody[2], savePlot, 2);
+    pMap->addLogVar("Body Accel X", &accelBody[0], savePlot, 2);
+    pMap->addLogVar("Body Accel Y", &accelBody[1], savePlot, 2);
+    pMap->addLogVar("Body Accel Z", &accelBody[2], savePlot, 2);
     pMap->addLogVar("Accel Mag", &accelMag, savePlot, 2);
     
     //pMap->addLogVar("SumMX", &bodyMoment[0], savePlot, 2);
