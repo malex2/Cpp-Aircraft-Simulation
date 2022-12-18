@@ -367,7 +367,7 @@ void GPSModelBase::writeOutputMessages()
         // Send messages that are ready
         if (pGPSIO && pOutputMessages[i]->send)
         {
-            if (debugFlag) { std::cout << "Sending message " << i+1 << std::endl; }
+            if (debugFlag) { std::cout << pTime->getSimTime() << ") Sending message " << i << std::endl; }
             
             pGPSIO->write(pOutputMessages[i]->buffer, pOutputMessages[i]->buffer_length);
             pOutputMessages[i]->reset();
@@ -565,7 +565,6 @@ void GPSNeo6m::constructOutputMessages()
             gps_msg_file >> gpsbyte;
 
             if (look_for_next_msg && (byte) gpsbyte == UBX_HEADER_1)
-            //if ((byte) gpsbyte == UBX_HEADER_1)
             {
                 msg_count = 0;
                 file_info.check_for_sent_messages(pOutputMessages);
@@ -574,11 +573,6 @@ void GPSNeo6m::constructOutputMessages()
                 look_for_next_msg = false;
                 if (i_msg == -1) { done = true; gps_msg_file.seekg(ubx_msg_begin); break; }
                 else { pOutputMessages[i_msg]->buffer = new byte[100]; }
-            }
-            else if (!look_for_next_msg && (byte) gpsbyte == UBX_HEADER_1)
-            {
-                look_for_next_msg = true;
-                msg_count = 0;
             }
             else if (!look_for_next_msg)
             {
@@ -619,7 +613,7 @@ void GPSNeo6m::constructOutputMessages()
                     look_for_next_msg = true;
                     if (debugFlag)
                     {
-                        std::cout << std::dec << "pOutputMessages[" << i_msg << "] " << pOutputMessages[i_msg]->buffer_length << ": ";
+                        std::cout << pTime->getSimTime() << std::dec << ") pOutputMessages[" << i_msg << "] " << pOutputMessages[i_msg]->buffer_length << ": ";
                         for (int i=0; i < pOutputMessages[i_msg]->buffer_length; i++)
                         {
                             std::cout << std::hex << std::setfill('0') << std::setw(2) << (int) pOutputMessages[i_msg]->buffer[i];

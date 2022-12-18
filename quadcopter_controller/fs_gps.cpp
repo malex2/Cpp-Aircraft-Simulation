@@ -310,6 +310,13 @@ void update_gps_data()
                     display(ubx_msg.get_aidInit().data.tAccNs);
                     display(" ns\n");
                     
+                    if (pos_valid && time_valid && !AidData.aid_rcvd && GpsData.fixOk)
+                    {
+                        display("Aid Init Rcvd.\n");
+                        //memcpy(&AidData.aidInit, ubx_msg.get_aidInit_p(), sizeof(AidData.aidInit));
+                        AidData.aid_rcvd = true;
+                    }
+                    
                     //uint16_t tmCfg            = 0;
                     //int32_t  clkDOrFreq       = 0;
                     //uint32_t clkDAccOrFreqAcc = 0;
@@ -318,10 +325,13 @@ void update_gps_data()
                 {
                     for (int i_sv = 0; i_sv < UBX_MSG_TYPES::NUM_SV; i_sv++)
                     {
-                        if(ubx_msg.get_almanac()[i_sv].data.week != UBX_MSG_TYPES::ALM_WEEK_INVALID)
+                        if(ubx_msg.get_almanac()[i_sv].data.week != UBX_MSG_TYPES::ALM_WEEK_INVALID && !AidData.alm_rcvd[i_sv] && GpsData.fixOk)
                         {
                             AidData.sv_list_alm[AidData.n_sv_alm] = i_sv;
+                            //memcpy(&AidData.almanac[AidData.n_sv_alm], &ubx_msg.get_almanac()[i_sv].data, sizeof(AidData.almanac[AidData.n_sv_alm]));
+                            AidData.alm_rcvd[i_sv] = true;
                             AidData.n_sv_alm++;
+                            
                             display("Received Almanac Data: ");
                             display(ubx_msg.get_almanac()[i_sv].data.svid);
                             display("\n");
@@ -332,10 +342,13 @@ void update_gps_data()
                 {
                     for (int i_sv = 0; i_sv < UBX_MSG_TYPES::NUM_SV; i_sv++)
                     {
-                        if(ubx_msg.get_ephemeris()[i_sv].data.how != UBX_MSG_TYPES::EPH_HOW_INVALID)
+                        if(ubx_msg.get_ephemeris()[i_sv].data.how != UBX_MSG_TYPES::EPH_HOW_INVALID && !AidData.eph_rcvd[i_sv] && GpsData.fixOk)
                         {
                             AidData.sv_list_eph[AidData.n_sv_eph] = i_sv;
+                            //memcpy(&AidData.ephemeris[AidData.n_sv_eph], &ubx_msg.get_ephemeris()[i_sv].data, sizeof(AidData.ephemeris[AidData.n_sv_eph]));
+                            AidData.eph_rcvd[i_sv] = true;
                             AidData.n_sv_eph++;
+                            
                             display("Received Ephemeris Data: ");
                             display(ubx_msg.get_ephemeris()[i_sv].data.svid);
                             display("\n");
@@ -344,6 +357,12 @@ void update_gps_data()
                 }
                 else if (msg_class == UBX_MSG_TYPES::AID && msg_id == UBX_MSG_TYPES::AID_HUI)
                 {
+                    if (!AidData.health_rcvd && GpsData.fixOk)
+                    {
+                        //memcpy(&AidData.gpsHealth, ubx_msg.get_gpsHealth_p(), sizeof(AidData.gpsHealth));
+                        AidData.health_rcvd = true;
+                    }
+                    
                     display("Received GPS Health Data\n");
                 }
             }

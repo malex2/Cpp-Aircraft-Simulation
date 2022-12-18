@@ -156,10 +156,10 @@ void initialize(void)
 #ifdef PRINT
     printTiming        = false;
     printIMU           = false;
-    printCalibration   = true;
+    printCalibration   = false;
     printCalibratedIMU = false;
     printBarometer     = false;
-    printGPS           = false;
+    printGPS           = true;
     printGPS_DOP       = false;
     printNavInputs     = false;
     printAngles        = false;

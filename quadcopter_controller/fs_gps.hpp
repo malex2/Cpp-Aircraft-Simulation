@@ -29,8 +29,8 @@ struct GpsAidType {
     unsigned int     n_sv_eph;
     bool             health_rcvd;
     bool             aid_rcvd;
-    bool             alm_rcvd;
-    bool             eph_rcvd;
+    bool             alm_rcvd[UBX_MSG_TYPES::NUM_SV];
+    bool             eph_rcvd[UBX_MSG_TYPES::NUM_SV];
     unsigned int     sv_list_alm[max_sv_alm];
     unsigned int     sv_list_eph[max_sv_eph];
     unsigned int     week_num;
@@ -42,8 +42,8 @@ struct GpsAidType {
         n_sv_alm   = 0;
         n_sv_eph   = 0;
         aid_rcvd   = false;
-        alm_rcvd   = false;
-        eph_rcvd   = false;
+        memset(alm_rcvd, false, sizeof(alm_rcvd));
+        memset(eph_rcvd, false, sizeof(eph_rcvd));
         week_num   = 0;
         tow_hr     = 0.0;
         aid_ready  = false;

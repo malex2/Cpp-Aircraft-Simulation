@@ -14,13 +14,13 @@
 
 // MACROS
 #define SIMULATION
-#define IMU
+//#define IMU
 #define GPS
-#define BAROMETER
-#define PWM
-#define CONTROLS
-#define GROUND_DETECTION
-#define NAVIGATION
+//#define BAROMETER
+//#define PWM
+//#define CONTROLS
+//#define GROUND_DETECTION
+//#define NAVIGATION
 #define PRINT
 //#define UBX_PRINT
 

@@ -14,7 +14,7 @@
 
 class UBX_MSG {
 public:
-    UBX_MSG(FS_FIFO* gpsFIFO);
+    UBX_MSG(FS_FIFO* gpsFIFO, bool debug_input_in = false, bool debug_output_in = false);
     ~UBX_MSG();
     
     enum UBX_IO_STATE {READY, HEADER1, HEADER2, MSG_TYPE, MSG_LENGTH, UPDATE_MSG, CALC_CHECKSUM, COMPLETE, INVALID};
@@ -33,6 +33,8 @@ public:
     int read();
     
     unsigned long get_n_rcvd(int msg_class, int msg_id) { return n_rcvd[msg_class][msg_id]; }
+    bool get_nav5_request()      { bool temp = request_nav5; request_nav5 = false; return temp; }
+    bool get_aid_poll_request()  { bool temp = request_aid_poll; request_aid_poll = false; return temp; }
     
     UBX_MSG_TYPES::UBX_MSG_NAV_POSLLH      get_posLLH()           { return posLLH; }
     UBX_MSG_TYPES::UBX_MSG_NAV_VELNED      get_velNED()           { return velNED; }
@@ -45,13 +47,15 @@ public:
     UBX_MSG_TYPES:: UBX_MSG_ACK            get_ack()              { return ack; }
     UBX_MSG_TYPES::UBX_MSG_ACK             get_nak()              { return nak; }
     UBX_MSG_TYPES::UBX_MSG_AID_INI         get_aidInit()          { return aidInit; }
+    UBX_MSG_TYPES::UBX_MSG_AID_INI*        get_aidInit_p()        { return &aidInit; }
     UBX_MSG_TYPES::UBX_MSG_AID_ALM_POLL_SV get_almanacPollSv()    { return almanacPollSv; }
     UBX_MSG_TYPES::UBX_MSG_AID_ALM_INVALID get_almanacInvalid()   { return almanacInvalid; }
-    UBX_MSG_TYPES::UBX_MSG_AID_ALM *       get_almanac()         { return &almanac[0]; }
+    UBX_MSG_TYPES::UBX_MSG_AID_ALM *       get_almanac()          { return &almanac[0]; }
     UBX_MSG_TYPES::UBX_MSG_AID_EPH_POLL_SV get_ephemerisPollSv()  { return ephemerisPollSv; }
     UBX_MSG_TYPES::UBX_MSG_AID_EPH_INVALID get_ephemerisInvalid() { return ephemerisInvalid; }
-    UBX_MSG_TYPES::UBX_MSG_AID_EPH*        get_ephemeris()       { return &ephemeris[0]; }
+    UBX_MSG_TYPES::UBX_MSG_AID_EPH*        get_ephemeris()        { return &ephemeris[0]; }
     UBX_MSG_TYPES::UBX_MSG_AID_HUI         get_gpsHealth()        { return gpsHealth; }
+    UBX_MSG_TYPES::UBX_MSG_AID_HUI*        get_gpsHealth_p()      { return &gpsHealth; }
     
     // Data Types
     struct TWO_BYTE_DATA
@@ -68,7 +72,12 @@ public:
     
     struct MSG_PACKET
     {
-        MSG_PACKET(bool debug = false) { debug_print = debug; clear(); }
+        MSG_PACKET(bool debug = false) :  msg_class_id(debug), msg_length(debug), msg_checksum(debug)
+        {
+            debug_print = debug;
+            clear();
+        }
+        
         ~MSG_PACKET() { clear(); }
         
         TWO_BYTE_DATA  msg_class_id;
@@ -123,6 +132,9 @@ private:
     UBX_MSG_TYPES::UBX_MSG_AID_EPH_INVALID ephemerisInvalid;
     UBX_MSG_TYPES::UBX_MSG_AID_EPH         ephemeris[UBX_MSG_TYPES::NUM_SV];
     UBX_MSG_TYPES::UBX_MSG_AID_HUI         gpsHealth;
+    
+    bool request_nav5;
+    bool request_aid_poll;
     
     unsigned long n_rcvd[UBX_MSG_TYPES::NUBXCLASSES][UBX_MSG_TYPES::NUBXIDS];
     

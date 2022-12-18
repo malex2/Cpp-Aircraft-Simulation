@@ -11,7 +11,8 @@
 
 using namespace UBX_MSG_TYPES;
 
-UBX_MSG::UBX_MSG(FS_FIFO* gpsFIFO)
+UBX_MSG::UBX_MSG(FS_FIFO* gpsFIFO, bool debug_input_in, bool debug_output_in) : 
+input_msg(debug_input_in), output_msg(debug_output_in)
 {
     this->gpsFIFO = gpsFIFO;
     gpsbyte = 0;
@@ -24,6 +25,9 @@ UBX_MSG::UBX_MSG(FS_FIFO* gpsFIFO)
             n_rcvd[i][j] = 0;
         }
     }
+    
+    request_nav5 = false;
+    request_aid_poll = false;
 }
 
 UBX_MSG::~UBX_MSG()
@@ -232,7 +236,7 @@ int UBX_MSG::data_available()
 }
 
 int UBX_MSG::read()
-{    
+{
     int nRcvd = 0;
     while (gpsFIFO->available() > 0 || input_msg.state == COMPLETE)
     {
@@ -289,7 +293,14 @@ int UBX_MSG::read()
                 if (input_msg.msg_length.index == UBX_MSG_LENGTH_SIZE)
                 {
                     input_msg.determine_input_msg_length();
-                    input_msg.state = UPDATE_MSG;
+                    if (input_msg.buffer_length > 0)
+                    {
+                        input_msg.state = UPDATE_MSG;
+                    }
+                    else
+                    {
+                        input_msg.state = CALC_CHECKSUM;
+                    }
                 }
                 break;
                 
@@ -314,12 +325,13 @@ int UBX_MSG::read()
                     }
                     else
                     {
-                        display("UBX_MSG::read - [");
-                        display(input_msg.msg_class);
-                        display(" ");
-                        display(input_msg.msg_id);
-                        display("] Invalid Checksum\n");
-                        clear_input_buffer();
+                        byte ck_a;
+                        byte ck_b;
+                        input_msg.compute_checksum(ck_a, ck_b);
+                        display(getTime());
+                        display(") UBX_MSG::read, invalid checksum ");
+                        display(+ck_a, HEX); display(+ck_b, HEX); display(". ");
+                        input_msg.print();
                     }
                 }
                 break;
@@ -332,11 +344,15 @@ int UBX_MSG::read()
                 }
                 else
                 {
+                    display("UBX_MSG::read, invalid decode. ");
+                    input_msg.print();
+                    /*
                     display("UBX_MSG::read - [");
                     display(input_msg.msg_class);
                     display(" ");
                     display(input_msg.msg_id);
                     display("] Invalid Decode\n");
+                    */
                 }
                 clear_input_buffer();
                 break;
@@ -369,6 +385,7 @@ void UBX_MSG::write(MSG_PACKET* output_msg)
     // Checksum
     output_msg->calc_checksum();
     gpsFIFO->write(output_msg->msg_checksum.data, UBX_MSG_CHECKSUM_SIZE);
+    //gpsFIFO->display_write_buffer();
     
     // Clear message and buffer
     output_msg->clear();
@@ -434,7 +451,12 @@ int UBX_MSG::decode(int msg_class, int msg_id, byte* buffer, unsigned short buff
 #endif
     else if (msg_class == CFG && msg_id == CFG_NAV5)
     {
-        if (buffer_length == sizeof(configNav5.data))
+        if (buffer_length == 0)
+        {
+            request_nav5 = true;
+            valid_decode = 1;
+        }
+        else if (buffer_length == sizeof(configNav5.data))
         {
             memcpy(&configNav5.data, buffer, buffer_length);
             valid_decode = 1;
@@ -453,6 +475,14 @@ int UBX_MSG::decode(int msg_class, int msg_id, byte* buffer, unsigned short buff
         if (buffer_length == sizeof(nak.data))
         {
             memcpy(&nak.data, buffer, buffer_length);
+            valid_decode = 1;
+        }
+    }
+    else if (msg_class == AID && msg_id == AID_DATA)
+    {
+        if (buffer_length == 0)
+        {
+            request_aid_poll = true;
             valid_decode = 1;
         }
     }
@@ -478,8 +508,8 @@ int UBX_MSG::decode(int msg_class, int msg_id, byte* buffer, unsigned short buff
         memcpy(&svid, buffer, sizeof(svid));
         if (buffer_length == sizeof(almanacInvalid.data))
         {
-            memcpy(&almanacInvalid.data, buffer, buffer_length);
-            //memcpy(&almanac[svid-1].data, buffer, buffer_length);
+            //memcpy(&almanacInvalid.data, buffer, buffer_length);
+            memcpy(&almanac[svid-1].data, buffer, buffer_length);
             valid_decode = 1;
         }
         else if (buffer_length == sizeof(almanac[0].data))
@@ -754,10 +784,20 @@ void UBX_MSG::MSG_PACKET::set_buffer(void* input, int length)
 
 void UBX_MSG::MSG_PACKET::print()
 {
+    display("["); display(msg_class); display(" "); display(msg_id); display("], ");
+    display(buffer_length); display(" - ");
+    display(+UBX_HEADER_1, HEX);
+    display(+UBX_HEADER_2, HEX);
+    display(+msg_class_id.data[0], HEX);
+    display(+msg_class_id.data[1], HEX);
+    display(+msg_length.data[0], HEX);
+    display(+msg_length.data[1], HEX);
     for (int i = 0; i < buffer_length; i++)
     {
-        display(buffer[i], HEX);
+        display(+buffer[i], HEX);
     }
+    display(+msg_checksum.data[0], HEX);
+    display(+msg_checksum.data[1], HEX);
     display("\n");
 }
 
