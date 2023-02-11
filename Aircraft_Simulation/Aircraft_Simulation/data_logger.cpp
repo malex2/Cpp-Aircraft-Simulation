@@ -23,7 +23,7 @@ DataLogger::DataLogger(ModelMap *pMapInit, bool debugFlagIn, std::string filenam
     
         if ( outfile.fail() )
         {
-            std::cout << "Failed to open output file:" << savefile << "." << std::endl;
+            std::cout << "Failed to open output file:" << filename << "." << std::endl;
         }
     }
 }

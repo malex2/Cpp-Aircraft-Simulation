@@ -81,15 +81,36 @@ void FsGPS_performGPS()
 #ifdef GPS
     if (!gps_setup) { return; }
     
-    GpsData.fifoReadCount  = gpsFIFO.read_count();
-    GpsData.fifoWriteCount = gpsFIFO.write_count();
+    GpsData.fifoReadCount  = gpsFIFO.get_read_count();
+    GpsData.fifoWriteCount = gpsFIFO.get_write_count();
 
     GpsData.fifoMaxReadLength  = gpsFIFO.get_max_read_buffer_length();
     GpsData.fifoMaxWriteLength = gpsFIFO.get_max_write_buffer_length();
     
+    //display("[gpsFIFO] = ["); display(gpsFIFO.available()); display("]\n");
+    
+    if (gpsFIFO.get_read_fifo_overflow_count() > GpsData.fifoReadOverflowCount)
+    {
+        GpsData.fifoReadOverflowCount = gpsFIFO.get_read_fifo_overflow_count();
+        display("FsGPS - Read FIFO Overflow!!!\n");
+    }
+    
+    if (gpsFIFO.get_write_fifo_overflow_count() > GpsData.fifoWriteOverflowCount)
+    {
+        GpsData.fifoWriteOverflowCount = gpsFIFO.get_write_fifo_overflow_count();
+        display("FsGPS - Write FIFO Overflow!!!\n");
+    }
+    if (gpsFIFO.get_write_buffer_overflow_count() > GpsData.bufferWriteOverflowCount)
+    {
+        GpsData.bufferWriteOverflowCount = gpsFIFO.get_write_buffer_overflow_count();
+        display("FsGPS - Write Buffer Overflow!!!\n");
+    }
+    
     int rcvd = ubx_msg.data_available();
     if (rcvd > 0)
     {
+        //gpsFIFO.display_read_buffer();
+        
         GpsData.rcvdByteCount += rcvd;
         GpsData.rcvdMsgCount  += ubx_msg.read();
         update_gps_data();
@@ -313,6 +334,7 @@ void update_gps_data()
                     if (pos_valid && time_valid && !AidData.aid_rcvd && GpsData.fixOk)
                     {
                         display("Aid Init Rcvd.\n");
+                        ubx_msg.get_aidInit().print();
                         //memcpy(&AidData.aidInit, ubx_msg.get_aidInit_p(), sizeof(AidData.aidInit));
                         AidData.aid_rcvd = true;
                     }
@@ -335,6 +357,7 @@ void update_gps_data()
                             display("Received Almanac Data: ");
                             display(ubx_msg.get_almanac()[i_sv].data.svid);
                             display("\n");
+                            ubx_msg.get_almanac()[i_sv].print();
                         }
                     }
                 }
@@ -352,6 +375,7 @@ void update_gps_data()
                             display("Received Ephemeris Data: ");
                             display(ubx_msg.get_ephemeris()[i_sv].data.svid);
                             display("\n");
+                            ubx_msg.get_ephemeris()[i_sv].print();
                         }
                     }
                 }
@@ -361,9 +385,12 @@ void update_gps_data()
                     {
                         //memcpy(&AidData.gpsHealth, ubx_msg.get_gpsHealth_p(), sizeof(AidData.gpsHealth));
                         AidData.health_rcvd = true;
+                        
+                        display("Received GPS Health Data\n");
+                        ubx_msg.get_gpsHealth().print();
                     }
                     
-                    display("Received GPS Health Data\n");
+                    
                 }
             }
         }

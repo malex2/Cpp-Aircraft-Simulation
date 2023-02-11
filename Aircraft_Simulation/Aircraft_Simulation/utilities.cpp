@@ -1614,18 +1614,18 @@ void Utilities::dcmECEFtoNED(TempType* dcm, TempType* LLH)
     mmult(dcm, *dcm_ENUtoNED, 3, 3, *dcm_ECEFtoENU, 3, 3);
 }
 
-bool Utilities::isLittleEndian()
+bool Utilities::isBigEndian()
 {
     unsigned short a = 0x1234;
     if (*((unsigned char *)&a)==0x12)
     {
         //std::cout << "BIG_ENDIAN" << std::endl;
-        return false;
+        return true;
     }
     else
     {
         //std::cout << "LITTLE_ENDIAN" << std::endl;
-        return true;
+        return false;
     }
 }
 /* --------------------  Template Definitions -------------------- */

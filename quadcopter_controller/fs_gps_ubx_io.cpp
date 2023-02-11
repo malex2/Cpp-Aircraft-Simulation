@@ -16,7 +16,6 @@ input_msg(debug_input_in), output_msg(debug_output_in)
 {
     this->gpsFIFO = gpsFIFO;
     gpsbyte = 0;
-    clear_input_buffer();
     
     for(int i = 0; i < UBX_MSG_TYPES::NUBXCLASSES; i++)
     {
@@ -32,9 +31,7 @@ input_msg(debug_input_in), output_msg(debug_output_in)
 
 UBX_MSG::~UBX_MSG()
 {
-    gpsFIFO = 0;
-    clear_input_buffer();
-    output_msg.clear();
+    gpsFIFO = nullptr;
 }
 
 void UBX_MSG::write_nmea_off()
@@ -188,7 +185,7 @@ void UBX_MSG::write_ubx_on()
 
 void UBX_MSG::set_nav_config()
 {
-    memset(&configNav5, 0x00, sizeof(configNav5));
+    memset(&configNav5, 0, sizeof(configNav5));
     
     // Set dynamic model to airborne
     configNav5.data.dynModel = UBX_MSG_TYPES::Airbone_1g;
@@ -264,7 +261,7 @@ int UBX_MSG::read()
                 }
                 else
                 {
-                    clear_input_buffer();
+                    input_msg.clear();
                     display("UBX_MSG::read - Invalid Header\n");
                 }
                 break;
@@ -281,7 +278,7 @@ int UBX_MSG::read()
                     }
                     else
                     {
-                        clear_input_buffer();
+                        input_msg.clear();
                         display("UBX_MSG::read - Invalid Class ID\n");
                     }
                 }
@@ -295,6 +292,8 @@ int UBX_MSG::read()
                     input_msg.determine_input_msg_length();
                     if (input_msg.buffer_length > 0)
                     {
+                        input_msg.delete_buffer();
+                        input_msg.buffer = new byte[input_msg.buffer_length];
                         input_msg.state = UPDATE_MSG;
                     }
                     else
@@ -332,6 +331,7 @@ int UBX_MSG::read()
                         display(") UBX_MSG::read, invalid checksum ");
                         display(+ck_a, HEX); display(+ck_b, HEX); display(". ");
                         input_msg.print();
+                        input_msg.clear();
                     }
                 }
                 break;
@@ -354,7 +354,7 @@ int UBX_MSG::read()
                     display("] Invalid Decode\n");
                     */
                 }
-                clear_input_buffer();
+                input_msg.clear();
                 break;
                 
             default :
@@ -365,30 +365,34 @@ int UBX_MSG::read()
     return nRcvd;
 }
 
-void UBX_MSG::write(MSG_PACKET* output_msg)
+unsigned int UBX_MSG::write(MSG_PACKET* output_msg)
 {
+    unsigned int n_write = 0;
+    
     // UBX Header
-    gpsFIFO->write(UBX_HEADER_1);
-    gpsFIFO->write(UBX_HEADER_2);
+    n_write += gpsFIFO->write(UBX_HEADER_1);
+    n_write += gpsFIFO->write(UBX_HEADER_2);
     
     // Msg Class and ID
     output_msg->determine_output_msg_id();
-    gpsFIFO->write(output_msg->msg_class_id.data, UBX_MSG_CLASS_ID_SIZE);
+    n_write += gpsFIFO->write(output_msg->msg_class_id.data, UBX_MSG_CLASS_ID_SIZE);
 
     // Msg Length
     output_msg->determine_output_msg_length();
-    gpsFIFO->write(output_msg->msg_length.data, UBX_MSG_LENGTH_SIZE);
+    n_write += gpsFIFO->write(output_msg->msg_length.data, UBX_MSG_LENGTH_SIZE);
     
     // Write Message
-    gpsFIFO->write(output_msg->buffer, output_msg->buffer_length);
+    n_write += gpsFIFO->write(output_msg->buffer, output_msg->buffer_length);
     
     // Checksum
     output_msg->calc_checksum();
-    gpsFIFO->write(output_msg->msg_checksum.data, UBX_MSG_CHECKSUM_SIZE);
+    n_write += gpsFIFO->write(output_msg->msg_checksum.data, UBX_MSG_CHECKSUM_SIZE);
     //gpsFIFO->display_write_buffer();
     
     // Clear message and buffer
     output_msg->clear();
+    
+    return n_write;
 }
 
 int UBX_MSG::decode(int msg_class, int msg_id, byte* buffer, unsigned short buffer_length)
@@ -506,81 +510,58 @@ int UBX_MSG::decode(int msg_class, int msg_id, byte* buffer, unsigned short buff
     {
         uint32_t svid = 0;
         memcpy(&svid, buffer, sizeof(svid));
+        
+        //display("Decoding Almanac ");
+        //display(svid); display(" ");
+
         if (buffer_length == sizeof(almanacInvalid.data))
         {
             //memcpy(&almanacInvalid.data, buffer, buffer_length);
             memcpy(&almanac[svid-1].data, buffer, buffer_length);
+            //display("invalid: \n");
+            //almanac[svid-1].print();
             valid_decode = 1;
         }
         else if (buffer_length == sizeof(almanac[0].data))
         {
             memcpy(&almanac[svid-1].data, buffer, buffer_length);
+            //display("valid: \n");
+            //almanac[svid-1].print();
             valid_decode = 1;
         }
     }
     else if (msg_class == AID && msg_id == AID_EPH)
     {
-        display("Decoding Ephemeris: ");
-        display(buffer_length);
-        display(" ");
-        display(sizeof(ephemerisInvalid.data));
-        display(" ");
-        display(sizeof(ephemeris[0].data));
-        display("\n");
-        
         uint32_t svid = 0;
         memcpy(&svid, buffer, sizeof(svid));
+        
+        //display("Decoding Ephemeris ");
+        //display(svid); display(" ");
+        
+        //display(buffer_length);
+        //display(" ");
+        //display(sizeof(ephemerisInvalid.data));
+        //display(" ");
+        //display(sizeof(ephemeris[0].data));
+        //display("\n");
         
         if (buffer_length == sizeof(ephemerisInvalid.data))
         {
             //memcpy(&ephemerisInvalid.data, buffer, buffer_length);
             memcpy(&ephemeris[svid-1].data, buffer, buffer_length);
+            //display("invalid: \n");
+            //ephemeris[svid-1].print();
             valid_decode = 1;
         }
         else if (buffer_length == sizeof(ephemeris[0].data))
         {
             memcpy(&ephemeris[svid-1].data, buffer, buffer_length);
+            //display("valid: \n");
+            //ephemeris[svid-1].print();
             valid_decode = 1;
         }
     }
     return valid_decode;
-}
-
-void UBX_MSG::clear_input_buffer()
-{
-    input_msg.clear();
-}
-
-// TWO_BYTE_DATA //
-void UBX_MSG::TWO_BYTE_DATA::swap()
-{
-    byte prev_data[2];
-    memcpy(prev_data, data, 2);
-    data[0] = prev_data[1];
-    data[1] = prev_data[0];
-    
-    if (debug_print)
-    {
-        display("TWO_BYTE_DATA::swap(), prev_data: ");
-        display(+prev_data[0], HEX);
-        display(+prev_data[1], HEX);
-        display(+data[0], HEX);
-        display(+data[1], HEX);
-        display("\n");
-    }
-}
-
-void UBX_MSG::TWO_BYTE_DATA::clear()
-{
-    memset(data, 0x00, 2);
-    if (debug_print)
-    {
-        display("TWO_BYTE_DATA::clear(), data: ");
-        display(+data[0], HEX);
-        display(+data[1], HEX);
-        display("\n");
-    }
-    index = 0;
 }
 
 // MSG_PACKET //
@@ -596,10 +577,9 @@ void UBX_MSG::MSG_PACKET::determine_input_msg_id()
                 if (msg_class_id.data[1] == (byte) UBX_MSG_ID[msg_class][i_msg_id])
                 {
                     msg_id = i_msg_id;
-                    break;
+                    return;
                 }
             }
-            break;
         }
     }
 }
@@ -686,7 +666,7 @@ void UBX_MSG::MSG_PACKET::compute_checksum(byte & ck_a, byte & ck_b)
 {
     int n = buffer_length + UBX_MSG_CLASS_ID_SIZE + UBX_MSG_LENGTH_SIZE;
     byte buffer_aug[n];
-    memset(buffer_aug, 0x00, n);
+    memset(buffer_aug, 0, n);
     
     if (debug_print)
     {
@@ -708,7 +688,9 @@ void UBX_MSG::MSG_PACKET::compute_checksum(byte & ck_a, byte & ck_b)
         for (int i=0; i<n; i++) { display(+buffer_aug[i], HEX); }
     }
     
-    memcpy(buffer_aug+UBX_MSG_CLASS_ID_SIZE+UBX_MSG_CLASS_ID_SIZE, buffer, buffer_length);
+    if (buffer)
+    { memcpy(buffer_aug+UBX_MSG_CLASS_ID_SIZE+UBX_MSG_CLASS_ID_SIZE, buffer, buffer_length); }
+    
     if (debug_print)
     {
         display(", buffer_aug after: ");
@@ -759,27 +741,38 @@ void UBX_MSG::MSG_PACKET::validate_checksum()
     }
 }
 
-void UBX_MSG::MSG_PACKET::set_buffer(byte* input, int length)
+void UBX_MSG::MSG_PACKET::set_buffer(byte* input, unsigned int length)
 {
-    if (debug_print) { display("set_buffer: "); }
-    for (int i = 0; i < length; i++)
-    {
-        if (debug_print) { display(+input[i], HEX); }
-        buffer[i] = input[i];
-    }
-    if (debug_print) { display("\n"); }
-}
-
-void UBX_MSG::MSG_PACKET::set_buffer(void* input, int length)
-{
+    delete_buffer();
+    buffer = new byte[length];
     memcpy(buffer, input, length);
     
-    if (debug_print) { display("set_buffer: "); }
-    for (int i = 0; i < length; i++)
+    if (debug_print)
     {
-        if (debug_print) { display(+buffer[i], HEX); }
+        display("set_buffer: ");
+        for (int i = 0; i < length; i++)
+        {
+            display(+buffer[i], HEX);
+        }
+        display("\n");
     }
-    if (debug_print) { display("\n"); }
+}
+
+void UBX_MSG::MSG_PACKET::set_buffer(void* input, unsigned int length)
+{
+    delete_buffer();
+    buffer = new byte[length];
+    memcpy(buffer, input, length);
+    
+    if (debug_print)
+    {
+        display("set_buffer: ");
+        for (int i = 0; i < length; i++)
+        {
+            display(+buffer[i], HEX);
+        }
+        display("\n");
+    }
 }
 
 void UBX_MSG::MSG_PACKET::print()
@@ -806,11 +799,20 @@ void UBX_MSG::MSG_PACKET::clear()
     msg_class_id.clear();
     msg_length.clear();
     msg_checksum.clear();
-    memset(buffer, 0x00, UBX_BUFFER_MAX_SIZE);
+    delete_buffer();
     buffer_length  = 0;
     buffer_index   = 0;
     msg_id         = UNKNOWN_MSG_ID;
     msg_class      = UNKNOWN_MSG_CLASS;
     state          = HEADER1;
     checksum_valid = false;
+}
+
+void UBX_MSG::MSG_PACKET::delete_buffer()
+{
+    if (buffer != nullptr)
+    {
+        delete[] buffer;
+        buffer = nullptr;
+    }
 }

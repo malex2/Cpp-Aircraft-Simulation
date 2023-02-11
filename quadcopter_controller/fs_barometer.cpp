@@ -9,7 +9,7 @@
 #include "fs_barometer.hpp"
 
 // Barometer Data
-barometerType baroData;
+BarometerType baroData;
 
 // Bools
 bool barometerSetup = false;
@@ -300,7 +300,7 @@ void FsBarometer_setStandby()
     baroData.state = baroStandby;
 }
 
-barometerType* FsBarometer_getBaroData() { return &baroData; }
+BarometerType* FsBarometer_getBaroData() { return &baroData; }
 
 baroStateType FsBarometer_getBaroState() { return baroData.state; }
 

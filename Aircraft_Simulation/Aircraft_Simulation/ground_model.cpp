@@ -282,10 +282,10 @@ GroundModelBase::GroundModelBase(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("gbyM ", &bodyMoment[1], savePlot, 2);
     //pMap->addLogVar("gbzM ", &bodyMoment[2], savePlot, 2);
     
-    pMap->addLogVar("Ground Roll", &groundEuler[0], savePlot, 2);
-    pMap->addLogVar("Ground Pitch", &groundEuler[1], savePlot, 2);
-    pMap->addLogVar("Ground Elevation ", &groundHeight, savePlot, 2);
-    pMap->addLogVar("onGround ", &onGroundPrint, savePlot, 2);
+    //pMap->addLogVar("Ground Roll", &groundEuler[0], savePlot, 2);
+    //pMap->addLogVar("Ground Pitch", &groundEuler[1], savePlot, 2);
+    //pMap->addLogVar("Ground Elevation ", &groundHeight, savePlot, 2);
+    //pMap->addLogVar("onGround ", &onGroundPrint, savePlot, 2);
     
     for (int i=0; i<maxContactPoints; i++)
     {
@@ -411,7 +411,7 @@ bool GroundModelBase::update(void)
     static bool groundPrint = false;
     if( isOnGround() )
     {
-        if (!groundPrint) { std::cout << "On Ground. " << bodyForce[2]/mass_init << std::endl; groundPrint = true; }
+        if (!groundPrint) { std::cout << "On Ground. Accleration: " << bodyForce[2]/mass_init << std::endl; groundPrint = true; }
         
         // Determine if in unrecoverable position
         if ( eulerAngles[0].deg() > maxGroundRoll || eulerAngles[0].deg() < minGroundRoll ||

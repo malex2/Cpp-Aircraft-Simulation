@@ -24,6 +24,7 @@ class PwmIn {
 public:
     // Constructor
     PwmIn();
+    ~PwmIn();
     
     void attach(int pinIn);
     

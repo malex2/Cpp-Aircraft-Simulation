@@ -31,11 +31,13 @@ public:
     virtual void updateSerial() { };
     virtual void setPerfectSensor(bool input) { perfectSensor = input; }
     
+    // Data Types
+    enum GPS_Type {NONE, GPS_NEO6M};
+    
 protected:
     class DynamicsModel* pDyn;
     class Time* pTime;
-    class RotateFrame* pRotate;
-    class SoftwareSerial* pGPSIO;
+    class SimulationSerial* pGPSIO;
     
     double gps_velNED[3];
     double gps_posECEF[3];
@@ -62,6 +64,8 @@ protected:
     double velErrorNED[3];
     double d_sendCount;
     double d_receiveCount;
+    double d_sendByteCount;
+    double d_receiveByteCount;
     
     // Error Inputs
     double horizPosAcc;
@@ -82,14 +86,17 @@ protected:
     // Serial Messaging
     const static int maxOutputMessages = 10;
     const static int maxInputMessages = 10;
+    GPS_Type gps_name;
     
     struct MessageType {
+        const static short max_buffer_size = 300;
         double updateRate;
         double updateOffset;
         double prevUpdateTime;
         bool   send;
         bool   init;
-        byte*  buffer;
+        bool   waitingForBuffer;
+        byte   buffer[max_buffer_size];
         int    buffer_length;
         bool   isInputMsg;
         static int nGPSInputMessages;
@@ -101,7 +108,8 @@ protected:
             prevUpdateTime     = 0.0;
             send               = false;
             init               = false;
-            buffer             = 0;
+            waitingForBuffer   = false;
+            memset(buffer, 0, sizeof(buffer));
             buffer_length      = 0;
             this->isInputMsg   = isInputMsg;
             
@@ -111,13 +119,21 @@ protected:
         
         void reset()
         {
+            if (buffer_length > max_buffer_size) { std::cout << "MessageType allocated more than buffer length!!" << std::endl; }
             send = false;
-            if(buffer)
-            {
-                delete [] buffer;
-                buffer = 0;
-            }
+            waitingForBuffer = false;
+            memset(buffer, 0, sizeof(buffer));
             buffer_length = 0;
+        }
+        
+        void print(double time=0.0, int i_msg=-1)
+        {
+            std::cout << time << std::dec << ") pOutputMessages[" << i_msg << "] " << buffer_length << ": ";
+            for (int i=0; i < buffer_length; i++)
+            {
+                std::cout << std::hex << std::setfill('0') << std::setw(2) << (int) buffer[i];
+            }
+            std::cout << std::dec << std::endl << std::endl;
         }
     };
     
@@ -127,10 +143,12 @@ protected:
     int nGPSInputMessages;
     int nGPSOutputMessages;
     
-    int    sendCount;
-    double sendTime;
-    int    receiveCount;
-    double receiveTime;
+    int           sendCount;
+    unsigned long sendByteCount;
+    double        sendTime;
+    int           receiveCount;
+    unsigned long receiveByteCount;
+    double        receiveTime;
     
     // Functions
     virtual void updatePositionError();
@@ -149,6 +167,7 @@ public:
     GPSNeo6m(ModelMap *pMapInit, bool debugFlagIn = false);
     ~GPSNeo6m();
     
+    virtual void initialize();
     virtual void updateSerial();
 private:
     typedef GPSModelBase Base;

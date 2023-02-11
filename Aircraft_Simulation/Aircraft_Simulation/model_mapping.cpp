@@ -33,7 +33,7 @@ void ModelMap::addLogVar(std::string name, double *var, const mapType *mappings,
 {
     for (int curMap = 0; curMap < nMappings; curMap++)
     {
-        if (mappings[curMap] == printVar )
+        if (mappings[curMap] == printVar)
         {
             if (debugFlag) { std::cout << "Adding " << iPrintNames << " " << name << " to print list." << std::endl; }
             printMapping.insert( std::pair<int, double*> (iPrintNames, var) );
@@ -41,7 +41,7 @@ void ModelMap::addLogVar(std::string name, double *var, const mapType *mappings,
             iPrintNames++;
         }
     
-        if (mappings[curMap] == saveVar )
+        if (mappings[curMap] == saveVar)
         {
             if (debugFlag) { std::cout << "Adding " << iSaveNames << " " << name << " to save list." << std::endl; }
             saveMapping.insert( std::pair<int, double*> (iSaveNames, var) );
@@ -49,7 +49,7 @@ void ModelMap::addLogVar(std::string name, double *var, const mapType *mappings,
             iSaveNames++;
         }
     
-        if (mappings[curMap] == plotVar )
+        if (mappings[curMap] == plotVar)
         {
             if (debugFlag) { std::cout << "Adding " << iPlotNames << " " << name << " to plot list." << std::endl; }
             plotMapping.insert( std::pair<int, double*> (iPlotNames, var) );

@@ -504,6 +504,16 @@ namespace UBX_MSG_TYPES {
             double flags            = 1.0;
         } scale;
         
+        void print()
+        {
+            display("UBX_MSG_AID_INI (bytes) "); display(sizeof(data)); display(": ");
+            for (int i=0; i<sizeof(data); i++)
+            {
+                display( +((char*)&data)[i], HEX);
+            }
+            display("\n");
+        }
+        
         void clear() { memset(&data, 0, sizeof(data)); }
     };
     
@@ -557,6 +567,16 @@ namespace UBX_MSG_TYPES {
             double week    = 1.0;
             double dwrd[8] = {1.0};
         } scale;
+        
+        void print()
+        {
+            display("UBX_MSG_AID_ALM (bytes) "); display(sizeof(data)); display(": ");
+            for (int i=0; i<sizeof(data); i++)
+            {
+                display( +((char*)&data)[i], HEX);
+            }
+            display("\n");
+        }
         
         void clear() { memset(&data, 0, sizeof(data)); }
     };
@@ -615,6 +635,16 @@ namespace UBX_MSG_TYPES {
             double sf2d[8] = {1.0};
             double sf3d[8] = {1.0};
         } scale;
+        
+        void print()
+        {
+            display("UBX_MSG_AID_EPH (bytes) "); display(sizeof(data)); display(": ");
+            for (int i=0; i<sizeof(data); i++)
+            {
+                display( +((char*)&data)[i], HEX);
+            }
+            display("\n");
+        }
         
         void clear() { memset(&data, 0, sizeof(data)); }
     };

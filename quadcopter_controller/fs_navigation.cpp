@@ -374,7 +374,6 @@ void performINS( double &navDt )
     NavData.altitude_msl = NavData.position[2] - NavData.geoidCorrection;
 }
 
-
 void propogateVariance( double &navDt )
 {
     // Intermidiate variables
@@ -643,7 +642,7 @@ void FsNavigation_performAccelerometerUpdate()
         R_ACCEL[ACCEL_ROLL][ACCEL_ROLL]   = errorToVariance(roll_error);
         R_ACCEL[ACCEL_PITCH][ACCEL_PITCH] = errorToVariance(pitch_error);
     
-        variance_set = true;
+        if (NavData.state != Calibration) { variance_set = true; }
     }
     
     if (NavData.accel_mag < 0.4
@@ -728,7 +727,7 @@ void FsNavigation_performGPSUpdate(GpsType* gpsData)
     }
 }
 
-void FsNavigation_performBarometerUpdate(barometerType* baroData)
+void FsNavigation_performBarometerUpdate(BarometerType* baroData)
 {
     if ( (NavData.state == Calibration) || (!navSetup) ) { return; }
     

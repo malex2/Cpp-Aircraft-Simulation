@@ -80,7 +80,7 @@ double GenericSensorModel::randomNoiseModel(double maxNoise)
     return randMinMax;
 }
 
-void GenericSensorModel::setSerialIO(SoftwareSerial* pIO)
+void GenericSensorModel::setSerialIO(SimulationSerial* pIO)
 {
     pSerialIO = pIO;
 }

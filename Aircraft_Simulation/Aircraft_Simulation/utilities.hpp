@@ -18,6 +18,7 @@
 #include <random>
 
 typedef unsigned char byte;
+//typedef char byte;
 
 // Mac key enum
 enum keyType {
@@ -812,6 +813,94 @@ private:
     std::normal_distribution<double> gaussianDistribution;
 };
 
+class SerialBuffer {
+public:
+    SerialBuffer(bool debug = false)
+    {
+        buffer = nullptr;
+        debug_print = debug;
+        clear();
+    }
+    
+    ~SerialBuffer() { clear(); }
+    
+    unsigned short buffer_size() { return buffer_length; }
+    
+    const byte* get_buffer() { return buffer; }
+    
+    void new_buffer(int size)
+    {
+        delete_buffer();
+        buffer_length = size;
+        buffer = new byte[buffer_length];
+        memset(buffer, buffer_length, 0);
+    }
+    
+    void set_buffer(byte val)
+    {
+        if (buffer_index < buffer_length) { buffer[buffer_index++] = val; }
+        else { overflow = true; }
+    }
+    
+    void set_buffer(const byte* input, int length)
+    {
+        delete_buffer();
+        buffer = new byte[length];
+        memcpy(buffer, input, length);
+    }
+    
+    void set_buffer(const void* input, int length)
+    {
+        delete_buffer();
+        buffer = new byte[length];
+        memcpy(buffer, input, length);
+    }
+    
+    bool buffer_full() { return buffer_index >= buffer_length; }
+    
+    void print()
+    {
+        std::cout << "[" << header1 << "," << header2 << "], " << buffer_length << " - ";
+        for (int i = 0; i < buffer_length; i++)
+        {
+            std::cout << std::hex << std::setfill('0') << std::setw(2) << +buffer[i];
+        }
+        std::cout << std::dec << std::endl;
+    }
+    
+    void delete_buffer()
+    {
+        if (buffer != nullptr) { delete[] buffer; buffer = nullptr; }
+    }
+    
+    void clear()
+    {
+        delete_buffer();
+        buffer_length  = 0;
+        buffer_index   = 0;
+        header1        = 0;
+        header2        = 0;
+        checksum       = 0;
+        state          = HEADER1;
+        checksum_valid = false;
+        overflow       = false;
+    }
+    
+    enum BufferState {HEADER1, HEADER2, READ_LENGTH, READ_BUFFER, CALC_CHECKSUM, READ_COMPLETE};
+    
+    BufferState    state;
+private:
+    byte*          buffer;
+    unsigned short buffer_index;
+    unsigned short buffer_length;
+    bool           checksum_valid;
+    short          header1;
+    short          header2;
+    short          checksum;
+    bool           overflow;
+    bool           debug_print;
+};
+
 class Utilities : public UnitConversions {
     
 public:
@@ -1098,7 +1187,7 @@ public:
     void dcmECEFtoNED(TempType *dcm, TempType *LLH);
     
     // Byte Operations
-    bool isLittleEndian();
+    bool isBigEndian();
 };
 
 #endif /* utilities_hpp */

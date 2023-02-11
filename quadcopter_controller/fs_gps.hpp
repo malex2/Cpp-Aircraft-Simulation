@@ -85,6 +85,10 @@ struct GpsType {
     unsigned long fifoWriteCount;
     unsigned int  fifoMaxReadLength;
     unsigned int  fifoMaxWriteLength;
+    unsigned long fifoReadOverflowCount;
+    unsigned long fifoWriteOverflowCount;
+    unsigned long bufferWriteOverflowCount;
+    
     
     struct DOP_t {
         double gDOP;
@@ -141,10 +145,13 @@ struct GpsType {
         GPStimestamp  = 0.0;
         dt_GPS_FS     = 0.0;
         
-        fifoReadCount      = 0;
-        fifoWriteCount     = 0;
-        fifoMaxReadLength  = 0;
-        fifoMaxWriteLength = 0;
+        fifoReadCount       = 0;
+        fifoWriteCount      = 0;
+        fifoMaxReadLength   = 0;
+        fifoMaxWriteLength  = 0;
+        fifoReadOverflowCount    = 0;
+        fifoWriteOverflowCount   = 0;
+        bufferWriteOverflowCount = 0;
         
         #ifdef SIMULATION
             for (int i=0; i<NMESSAGES; i++)

@@ -14,7 +14,6 @@
 
 class DataLogger : public GenericModel
 {
-    std::string savefile;
     std::ofstream outfile;
     
 public:

@@ -22,7 +22,7 @@
 //#define RealTime
 
 // Time
-const double runTime_init          = 300.0;
+const double runTime_init          = 201.0;
 const double printInterval_init    = 5.0;
 const double saveInterval_init     = 0.5;
 const double dynamicsInterval_init = 1.0/800.0;
@@ -39,8 +39,8 @@ const int second_init = 00;
 const bool saveOutput  = false;
 const bool printOutput = false;
 const bool plotOutput  = false;
-const std::string savefile    = "output.csv";
-const std::string gps_file    = "/Users/alexandermclean/Documents/Cpp-Aircraft-Simulation/gps_nav_messages_Adeline4.txt";
+const std::string savefile    = "output_nobias.csv";
+const std::string gps_file    = "/Users/alexandermclean/Documents/Cpp-Aircraft-Simulation/gps_nav_messages_Adeline5.txt";
 const bool readGPSFile        = true;
 const std::string eeprom_file = "/Users/alexandermclean/Documents/Cpp-Aircraft-Simulation/eeprom.txt";
 

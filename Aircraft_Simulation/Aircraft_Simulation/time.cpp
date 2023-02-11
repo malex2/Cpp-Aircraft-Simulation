@@ -20,6 +20,7 @@ Time::Time(ModelMap *pMapInit, bool debugFlagIn)
     // Start clock
 #ifdef RealTime
     startTime = std::chrono::system_clock::now();
+    curTime   = 0.0;
 #else
     startTime = 0.0;
     curTime   = 0.0;
@@ -36,7 +37,6 @@ Time::Time(ModelMap *pMapInit, bool debugFlagIn)
     timeSinceLastClockDt  = 0.0;
     
     // Update time constants
-    curTime          = systemtime;
     runTime          = runTime_init;
     printInterval    = printInterval_init;
     saveInterval     = saveInterval_init;

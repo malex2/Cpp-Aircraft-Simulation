@@ -15,64 +15,201 @@
 // Classes
 #ifdef SIMULATION
     class Time* pTime = 0;
+    ArduinoEEPROM EEPROM;
 #endif
 
-FS_FIFO::FS_FIFO(HardwareSerial* serialIO)
+// TWO_BYTE_DATA //
+void TWO_BYTE_DATA::swap()
 {
-    this->serialIO   = serialIO;
+    byte prev_data[2];
+    memcpy(prev_data, data, 2);
+    data[0] = prev_data[1];
+    data[1] = prev_data[0];
+#ifdef DEBUG_PRINT
+    if (debug_print)
+    {
+        display("TWO_BYTE_DATA::swap(), prev_data: ");
+        display(+prev_data[0], HEX);
+        display(+prev_data[1], HEX);
+        display(+data[0], HEX);
+        display(+data[1], HEX);
+        display("\n");
+    }
+#endif
+}
+
+void TWO_BYTE_DATA::clear()
+{
+    memset(data, 0, 2);
+#ifdef DEBUG_PRINT
+    if (debug_print)
+    {
+        display("TWO_BYTE_DATA::clear(), data: ");
+        display(+data[0], HEX);
+        display(+data[1], HEX);
+        display("\n");
+    }
+    index = 0;
+#endif
+}
+
+uint16_t TWO_BYTE_DATA::value()
+{
+    uint16_t val;
+    memcpy(&val, data, 2);
+    return val;
+}
+
+FS_FIFO::FS_FIFO()
+{
+    serialIO = nullptr;
+    nrf24L01 = nullptr;
     read_byte_count  = 0.0;
     write_byte_count = 0.0;
     prevWriteTime = 0.0;
-    baud_rate     = 0.0;
-    max_read_buffer_length  = 0;
-    max_write_buffer_length = 0;
+    baud_dt       = 0.0;
+    max_read_buffer_length    = 0;
+    read_fifo_overflow_count  = 0;
+    write_fifo_overflow_count = 0;
+    write_buffer_overflow_count = 0;
+    max_write_buffer_length     = 0;
     reset_read_buffer();
     reset_write_buffer();
+    memset(temp_nrf24L01_buffer, 0, NRF24L01_BUFFER_SIZE);
+}
+
+FS_FIFO::FS_FIFO(FS_Serial* serialIO)
+{
+    this->serialIO  = serialIO;
+    nrf24L01 = nullptr;
+    read_byte_count  = 0.0;
+    write_byte_count = 0.0;
+    prevWriteTime = 0.0;
+    baud_dt       = 0.0;
+    max_read_buffer_length    = 0;
+    read_fifo_overflow_count  = 0;
+    write_fifo_overflow_count = 0;
+    write_buffer_overflow_count = 0;
+    max_write_buffer_length     = 0;
+    reset_read_buffer();
+    reset_write_buffer();
+    memset(temp_nrf24L01_buffer, 0, NRF24L01_BUFFER_SIZE);
+}
+
+FS_FIFO::FS_FIFO(RF24* tmIO)
+{
+    serialIO = nullptr;
+    nrf24L01 = tmIO;
+    read_byte_count  = 0.0;
+    write_byte_count = 0.0;
+    prevWriteTime = 0.0;
+    baud_dt       = 0.0;
+    max_read_buffer_length    = 0;
+    read_fifo_overflow_count  = 0;
+    write_fifo_overflow_count = 0;
+    write_buffer_overflow_count = 0;
+    max_write_buffer_length     = 0;
+    reset_read_buffer();
+    reset_write_buffer();
+    memset(temp_nrf24L01_buffer, 0, NRF24L01_BUFFER_SIZE);
 }
 
 FS_FIFO::~FS_FIFO()
 {
-    serialIO = 0;
     reset_read_buffer();
     reset_write_buffer();
 }
 
-void FS_FIFO::begin(int baud_rate)
+void FS_FIFO::begin(uint32_t baud_rate)
 {
-    if (serialIO)
+    if (serialIO != nullptr)
     {
         serialIO->begin(baud_rate);
-        this->baud_rate = 1.0/baud_rate;
-        prevWriteTime = getTime();
     }
+    if (nrf24L01 != nullptr)
+    {
+        nrf24L01->begin();
+    }
+    this->baud_dt = 1.0/baud_rate;
+    prevWriteTime = getTime();
 }
 
 void FS_FIFO::update_fifo()
 {
-    if (!serialIO || baud_rate==0.0) { return ;}
-    
-    // Read from SerialIO
-    while (serialIO->available())
+    if (baud_dt == 0.0)
     {
-        if (!read_fifo_full())
+        // Copy write buffer into read buffer
+        if (write_available() && !read_fifo_full())
+        {
+            memcpy(read_buffer+read_buffer_length, write_buffer, write_buffer_length);
+            read_buffer_length += write_buffer_length;
+            reset_write_buffer();
+        }
+    }
+
+    else if (serialIO != nullptr)
+    {
+        // Read from SerialIO
+        while (serialIO->available() && !read_fifo_full())
         {
             read_buffer[read_buffer_length] = serialIO->read();
             read_buffer_length++;
             read_byte_count++;
             if (read_buffer_length > max_read_buffer_length) { max_read_buffer_length = read_buffer_length; }
+            
+            // Detect buffer overflow
+            if (read_fifo_full()) { read_fifo_overflow_count++; }
+        }
+    
+        // Write to SerialIO
+        if (write_available() &&  getTime() - prevWriteTime >= baud_dt)
+        {
+            int n_write = serialIO->write(write_buffer[write_buffer_index]);
+            write_buffer_index++;
+            write_byte_count++;
+            prevWriteTime = getTime();
+        
+            if (n_write < 1) { write_buffer_overflow_count++; }
+  
+            // Reset write buffer once all data written
+            if (!write_available()) { reset_write_buffer(); }
         }
     }
     
-    // Write to SerialIO
-    if (write_available() &&  getTime() - prevWriteTime >= baud_rate)
+    else if (nrf24L01 != nullptr)
     {
-        serialIO->write(write_buffer[write_buffer_index]);
-        write_buffer_index++;
-        prevWriteTime = getTime();
-        if (!write_available()) { reset_write_buffer(); }
-        write_byte_count++;
+        // Read from NRF24L01
+        if (nrf24L01->available() && !read_fifo_full())
+        {
+            nrf24L01->read(read_buffer+read_buffer_length, (unsigned int) NRF24L01_BUFFER_SIZE);
+            read_buffer_length += (unsigned int) NRF24L01_BUFFER_SIZE;
+            read_byte_count += (unsigned int) NRF24L01_BUFFER_SIZE;
+        }
+
+        // Write to NRF24L01
+        if (write_available() &&  getTime() - prevWriteTime >= baud_dt)
+        {
+            unsigned int write_length = write_buffer_length - write_buffer_index;
+            if (write_length > NRF24L01_BUFFER_SIZE) { write_length = NRF24L01_BUFFER_SIZE; }
+            memcpy(temp_nrf24L01_buffer, write_buffer+write_buffer_index, write_length);
+            
+            bool write_ok = nrf24L01->write(temp_nrf24L01_buffer, (unsigned int) NRF24L01_BUFFER_SIZE);
+            if (write_ok)
+            {
+                write_buffer_index += (unsigned int) write_length;
+                write_byte_count += (unsigned int) write_length;
+                prevWriteTime = getTime();
+            }
+            else
+            {
+                write_buffer_overflow_count++;
+            }
+
+            memset(temp_nrf24L01_buffer,0,NRF24L01_BUFFER_SIZE);
+            // Reset write buffer once all data written
+            if (!write_available()) { reset_write_buffer(); }
+        }
     }
-    
 }
 
 // Read from SerilaIO
@@ -80,33 +217,55 @@ byte FS_FIFO::read()
 {
     if (available())
     {
+        //std::cout << "FS_FIFO read(): read_buffer[" << read_buffer_index << "] = ";
+        //std::cout << std::hex << std::setfill('0') << std::setw(2) << +read_val;
+        //std::cout << std::dec << std::endl;
+        
         read_val = read_buffer[read_buffer_index];
         read_buffer_index++;
+        
+        // Reset read buffer once read complete
         if (!available()) { reset_read_buffer(); }
     }
     else
     {
-        read_val = 0x00;
+        read_val = 0;
     }
     
     return read_val;
 }
 
-int FS_FIFO::available()
+unsigned short FS_FIFO::available()
 {
     return (read_buffer_length - read_buffer_index);
 }
 
 bool FS_FIFO::read_fifo_full()
 {
-    return (read_buffer_length >= (int) (MAX_SERIAL_FIFO_SIZE));
+    if (serialIO != nullptr)
+    {
+        return (read_buffer_length >= (int) (MAX_SERIAL_FIFO_SIZE));
+    }
+    else if (nrf24L01 != nullptr)
+    {
+        return (read_buffer_length + (int) NRF24L01_BUFFER_SIZE > (int) MAX_SERIAL_FIFO_SIZE);
+    }
+    else
+    {
+        return (read_buffer_length + write_buffer_length > (int) MAX_SERIAL_FIFO_SIZE);
+    }
+    return false;
 }
 
 // Write to SerialIO
-int FS_FIFO::write(byte write_val)
+unsigned short FS_FIFO::write(byte write_val)
 {
     if (!write_fifo_full())
     {
+        //std::cout << "FS_FIFO write(): write_buffer[" << write_buffer_length << "] = ";
+        //std::cout << std::hex << std::setfill('0') << std::setw(2) << +write_val;
+        //std::cout << std::dec << std::endl;
+        
         write_buffer[write_buffer_length] = write_val;
         write_buffer_length++;
         if (write_buffer_length > max_write_buffer_length) { max_write_buffer_length = write_buffer_length; }
@@ -114,11 +273,12 @@ int FS_FIFO::write(byte write_val)
     }
     else
     {
+        write_fifo_overflow_count++;
         return 0;
     }
 }
 
-int FS_FIFO::write(byte* write_val, int length)
+unsigned short FS_FIFO::write(byte* write_val, unsigned long length)
 {
     int tx_count = 0;
     for (int i = 0; i < length; i++)
@@ -128,9 +288,23 @@ int FS_FIFO::write(byte* write_val, int length)
     return tx_count;
 }
 
-int FS_FIFO::write_available()
+bool FS_FIFO::write_available()
 {
-    return (write_buffer_length - write_buffer_index);
+    /*
+    if (serialIO != nullptr)
+    {
+        std::cout << "write_available() serialIO = [" << write_buffer_index << ", " << write_buffer_length << "]" << std::endl;
+    }
+    else if (nrf24L01 != nullptr)
+    {
+        std::cout << "write_available() nrf24L01 = [" << write_buffer_index << ", " << write_buffer_length << "]" << std::endl;
+    }
+    else
+    {
+        std::cout << "write_available() = [" << write_buffer_index << ", " << write_buffer_length << "]" << std::endl;
+    }
+     */
+    return (write_buffer_index < write_buffer_length);
 }
 
 bool FS_FIFO::write_fifo_full()
@@ -140,20 +314,21 @@ bool FS_FIFO::write_fifo_full()
 
 void FS_FIFO::reset_read_buffer()
 {
-    memset(read_buffer, 0x00, MAX_SERIAL_FIFO_SIZE);
+    memset(read_buffer, 0, MAX_SERIAL_FIFO_SIZE);
     read_buffer_index  = 0;
     read_buffer_length = 0;
 }
 
 void FS_FIFO::reset_write_buffer()
 {
-    memset(write_buffer, 0x00, MAX_SERIAL_FIFO_SIZE);
+    memset(write_buffer, 0, MAX_SERIAL_FIFO_SIZE);
     write_buffer_index  = 0;
     write_buffer_length = 0;
 }
 
 void FS_FIFO::display_read_buffer()
 {
+#ifdef DEBUG_PRINT
     display("FS_FIFO::read_buffer [");
     display(read_buffer_index);
     display("-");
@@ -164,10 +339,12 @@ void FS_FIFO::display_read_buffer()
         display(+read_buffer[i], HEX);
     }
     display("\n");
+#endif
 }
 
 void FS_FIFO::display_write_buffer()
 {
+#ifdef DEBUG_PRINT
     display("FS_FIFO::write_buffer [");
     display(write_buffer_index);
     display("-");
@@ -178,8 +355,8 @@ void FS_FIFO::display_write_buffer()
         display(+write_buffer[i], HEX);
     }
     display("\n");
+#endif
 }
-
 
 // Time
 double getTime()
@@ -193,7 +370,6 @@ double getTime()
 }
 
 // Memory
-ArduinoEEPROM EEPROM;
 void write_eeprom(unsigned int address, byte val)
 {
     EEPROM.write(address, val);
@@ -278,19 +454,35 @@ void LEDoff()
 }
 
 // Printing
-template<typename TempType>
-void display(TempType val)
+FS_FIFO FS_print_fifo;
+void display(const char* val, int printMode)
 {
+#ifdef TELEMETRY
+    FS_print_fifo.write((byte*) val, sizeof_char(val));
+#else
 #ifdef SIMULATION
     std::cout << val;
 #else
     Serial.print(val);
+#endif
 #endif
 }
 
 template<typename TempType>
 void display(TempType val, int printMode)
 {
+#ifdef TELEMETRY
+    String str;
+   // Turn into character array
+   #ifdef SIMULATION
+    if (printMode == HEX) { str = std::to_string((byte) val); }
+    else { str = std::to_string(val); }
+   #else
+    if (printMode == HEX) {}
+    else { str = String((byte) val,6); }
+   #endif
+    FS_print_fifo.write((byte*) str.c_str(), str.length());
+#else
 #ifdef SIMULATION
     if (printMode == HEX)
     {
@@ -299,15 +491,19 @@ void display(TempType val, int printMode)
     }
     else
     {
-        display(val);
+        std::cout << val;
     }
 #else
     Serial.print(val, printMode);
 #endif
+#endif
 }
 
-void display(I2C_Error_Code val)
+void display(I2C_Error_Code val, int printMode)
 {
+#ifdef TELEMETRY
+    FS_print_fifo.write((byte*) &val, sizeof(val));
+#else
     if (val == I2C_0_SUCCESS)
     {
         display("0 - success.\n");
@@ -336,20 +532,10 @@ void display(I2C_Error_Code val)
     {
         display("unkown error.\n");
     }
+#endif
 }
 
-template void display(const char*);
-template void display(char);
-template void display(String);
-template void display(short);
-template void display(unsigned short);
-template void display(int);
-template void display(unsigned int);
-template void display(long);
-template void display(unsigned long);
-template void display(double);
-template void display(byte);
-
+template void display(char, int printMode);
 template void display(short, int printMode);
 template void display(unsigned short, int printMode);
 template void display(int, int printMode);
@@ -359,9 +545,64 @@ template void display(unsigned long, int printMode);
 template void display(double, int printMode);
 template void display(byte, int printMode);
 
+FS_FIFO* get_print_fifo()
+{
+    return &FS_print_fifo;
+}
+
+unsigned int sizeof_char(const char* str)
+{
+    unsigned int max_length = 1000;
+    unsigned int size = 0;
+    while(size < max_length && str[size] != '\0')
+    {
+        size++;
+    }
+
+    if (size == max_length) { size = 0; }
+    return size;
+}
+
+void FsCommon_performSerialIO()
+{
+#ifdef TELEMETRY
+    FS_print_fifo.update_fifo();
+#endif
+}
+
 #ifdef SIMULATION
 void FsCommon_setSimulationModels(ModelMap* pMap)
 {
     if (pMap) { pTime = (Time*) pMap->getModel("Time"); }
 }
 #endif
+
+uint16_t FsCommon_computeChecksum(const void* buffer, unsigned int len)
+{
+    // fletcher16 algorithm
+    // Found by solving for c1 overflow:
+    // n > 0 and n * (n+1) / 2 * (2^8-1) < (2^32-1).
+    
+    byte* data = (byte*) buffer;
+    uint32_t c0, c1;
+    for (c0 = c1 = 0; len > 0; ) {
+        size_t blocklen = len;
+        if (blocklen > 5802) {
+            blocklen = 5802;
+        }
+        len -= blocklen;
+        do {
+            c0 = c0 + *data++;
+            c1 = c1 + c0;
+        } while (--blocklen);
+        c0 = c0 % 255;
+        c1 = c1 % 255;
+    }
+    return (c1 << 8 | c0);
+}
+
+bool FsCommon_checkChecksum(uint16_t buffer_checksum, const void* data, unsigned int len)
+{
+    uint16_t check_checksum = FsCommon_computeChecksum(data, len);
+    return (check_checksum == buffer_checksum);
+}

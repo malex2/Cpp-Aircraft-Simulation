@@ -63,7 +63,7 @@ public:
 
 class GenericSensorModel : public GenericModel {
 protected:
-    class SoftwareSerial* pSerialIO;
+    class SimulationSerial* pSerialIO;
     
     bool perfectSensor;
     
@@ -78,7 +78,7 @@ public:
     // Setters
     virtual void setPerfectSensor(bool input) { perfectSensor = input; }
     
-    void setSerialIO(SoftwareSerial*  pIO);
+    void setSerialIO(SimulationSerial*  pIO);
 };
 
 // Example class

@@ -135,6 +135,11 @@ PwmIn::PwmIn()
     }
 }
 
+PwmIn::~PwmIn()
+{
+    if (pTable) { delete pTable; pTable = NULL;}
+}
+
 void PwmIn::attach(int pinIn)
 {
     // Find Channel

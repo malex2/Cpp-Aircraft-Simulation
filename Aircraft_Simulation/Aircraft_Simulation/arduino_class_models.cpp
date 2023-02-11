@@ -12,6 +12,8 @@
 #include "actuator_model.hpp"
 #include "gps_model.hpp"
 
+#include <fstream>
+
 SimulationWire::SimulationWire()
 {
     active       = false;
@@ -437,98 +439,123 @@ void Servo::servo_setSimulationModels(ModelMap* pMap)
     }
 }
 
-ArduinoSerial::ArduinoSerial() { }
-
-void ArduinoSerial::begin(long baudRate) { }
-
-SoftwareSerial::SoftwareSerial()
+SimulationSerial::SimulationSerial(int rx_pin, int tx_pin)
 {
     baud_rate  = 0;
     baud_begin = false;
-    
-    memset(rx_buffer, max_buffer_size, 0);
-    rx_buffer_index = 0;
-    rx_pin   = 0;
-    
-    memset(tx_buffer, max_buffer_size, 0);
-    tx_buffer_index = 0;
-    tx_pin   = 0;
-    
+    this->rx_pin  = rx_pin;
+    this->tx_pin = tx_pin;
     pModel = 0;
     print_serial = false;
 }
 
-SoftwareSerial::SoftwareSerial(int rx_pin, int tx_pin)
+SimulationSerial::~SimulationSerial()
 {
-    baud_rate  = 0;
-    baud_begin = false;
-    
-    memset(rx_buffer, max_buffer_size, 0);
-    rx_buffer_index  = 0;
-    rx_buffer_length = 0;
-    this->rx_pin     = rx_pin;
-    
-    memset(tx_buffer, max_buffer_size, 0);
-    tx_buffer_index  = 0;
-    tx_buffer_length = 0;
-    this->tx_pin     = tx_pin;
-    
-    pModel = 0;
-    print_serial = false;
+    delete[] rx_buffer; rx_buffer = 0;
+    delete[] tx_buffer; tx_buffer = 0;
 }
 
-void SoftwareSerial::begin(int baud)
+void SimulationSerial::begin(int baud)
 {
+    rx_buffer = new byte[max_buffer_size];
+    reset_rx_buffer();
+    
+    tx_buffer = new byte[max_buffer_size];
+    reset_tx_buffer();
+    
     baud_rate = baud;
     baud_begin = true;
+    
+    //std::string filename = serial_type + ".csv";
+    //outfile.open(filename);
 }
 
-byte SoftwareSerial::read()
+template<typename TempType>
+void SimulationSerial::print(TempType val, PrintMode printMode)
 {
-    byte val;
-    if (rx_buffer_length>0)
+    if (printMode == HEX)
     {
-        val = rx_buffer[rx_buffer_index];
-        rx_buffer_length--;
-        if (rx_buffer_length>0) { rx_buffer_index++; }
-        else { rx_buffer_index = 0; }
-        return val;
+        std::cout << std::hex << std::setfill('0') << std::setw(2) << val;
+        std::cout << std::dec;
     }
     else
     {
-        rx_buffer_index = 0;
-        return 0x00;
+        std::cout << val;
     }
 }
 
-byte SoftwareSerial::slave_read()
+template<typename TempType>
+void SimulationSerial::println(TempType val, PrintMode printMode)
+{
+    print(val, printMode);
+    std::cout << std::endl;
+}
+
+byte SimulationSerial::read()
 {
     byte val;
-    if (tx_buffer_length>0)
-    {
-        val = tx_buffer[tx_buffer_index];
-        tx_buffer_length--;
-        if (tx_buffer_length>0) { tx_buffer_index++; }
-        else { tx_buffer_index = 0; }
-        return val;
-    }
-    else
-    {
-        tx_buffer_index = 0;
-        return 0x00;
-    }
-}
-
-int SoftwareSerial::write(byte val)
-{
     if (!baud_begin) { return 0; }
     
-    tx_buffer[tx_buffer_length] = val;
-    tx_buffer_length++;
-    return 1;
+    if (available())
+    {
+        val = rx_buffer[rx_buffer_index];
+        //std::cout << serial_type << " (" << max_buffer_size << ") read(): rx_buffer[" << rx_buffer_index << "] = ";
+        //std::cout << std::hex << std::setfill('0') << std::setw(2) << +val;
+        //std::cout << std::dec << std::endl;
+        
+        rx_buffer_index++;
+        if (!available()) { reset_rx_buffer(); }
+        return val;
+    }
+    else
+    {
+        return 0;
+    }
 }
 
-int SoftwareSerial::write(byte* val, int length)
+byte SimulationSerial::slave_read()
+{
+    byte val;
+    if (!baud_begin) { return 0; }
+    
+    if (slave_available())
+    {
+        val = tx_buffer[tx_buffer_index];
+        //std::cout << serial_type << " (" << max_buffer_size << ") slave_read(): tx_buffer[" << tx_buffer_index << "] = ";
+        //std::cout << std::hex << std::setfill('0') << std::setw(2) << +val;
+        //std::cout << std::dec << std::endl;
+        
+        tx_buffer_index++;
+        if (!slave_available()) { reset_tx_buffer(); }
+        return val;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+int SimulationSerial::write(byte val)
+{
+    if (!baud_begin) { return 0; }
+        
+    if (tx_buffer_length < max_buffer_size)
+    {
+        //std::cout << serial_type << " (" << max_buffer_size << ") write(): tx_buffer[" << tx_buffer_length << "] = ";
+        //std::cout << std::hex << std::setfill('0') << std::setw(2) << +val;
+        //std::cout << std::dec << std::endl;
+        
+        tx_buffer[tx_buffer_length] = val;
+        tx_buffer_length++;
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+int SimulationSerial::write(const byte* val, int length)
 {
     int tx_count;
     if (!baud_begin) { return 0; }
@@ -541,15 +568,27 @@ int SoftwareSerial::write(byte* val, int length)
     return tx_count;
 }
 
-int SoftwareSerial::slave_write(byte val)
+int SimulationSerial::slave_write(byte val)
 {
     if (!baud_begin) { return 0; }
-    rx_buffer[rx_buffer_length] = val;
-    rx_buffer_length++;
-    return 1;
+    
+    if (rx_buffer_length < max_buffer_size)
+    {
+        rx_buffer[rx_buffer_length] = val;
+        //std::cout << serial_type << " (" << max_buffer_size << ") slave_write(): rx_buffer[" << rx_buffer_length << "] = ";
+        //std::cout << std::hex << std::setfill('0') << std::setw(2) << +val;
+        //std::cout << std::dec << std::endl;
+        
+        rx_buffer_length++;
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
 }
 
-int SoftwareSerial::slave_write(byte* val, int length)
+int SimulationSerial::slave_write(const byte* val, int length)
 {
     int rx_count;
     if (!baud_begin) { return 0; }
@@ -562,19 +601,45 @@ int SoftwareSerial::slave_write(byte* val, int length)
     return rx_count;
 }
 
-int SoftwareSerial::available()
+int SimulationSerial::available()
 {
-    if (rx_buffer_length==0) { rx_buffer_index = 0; }
-    return rx_buffer_length;
+    if (!baud_begin) { return 0; }
+    else { return (rx_buffer_length - rx_buffer_index); }
 }
 
-int SoftwareSerial::slave_available()
+int SimulationSerial::availableForWrite()
 {
-    if (tx_buffer_length==0) { tx_buffer_index = 0; }
-    return tx_buffer_length;
+    if (!baud_begin) { return 0; }
+    else { return (max_buffer_size - tx_buffer_length); }
 }
 
-void SoftwareSerial::serial_setSimulationModels(ModelMap* pMap, std::string model, bool print)
+int SimulationSerial::slave_available()
+{
+    if (!baud_begin) { return 0; }
+    else { return (tx_buffer_length - tx_buffer_index); }
+}
+
+int SimulationSerial::slave_availableForWrite()
+{
+    if (!baud_begin) { return 0; }
+    return (max_buffer_size - rx_buffer_length);
+}
+
+void SimulationSerial::reset_rx_buffer()
+{
+    memset(rx_buffer, 0, max_buffer_size);
+    rx_buffer_index  = 0;
+    rx_buffer_length = 0;
+}
+
+void SimulationSerial::reset_tx_buffer()
+{
+    memset(tx_buffer, 0, max_buffer_size);
+    tx_buffer_index  = 0;
+    tx_buffer_length = 0;
+}
+
+void SimulationSerial::serial_setSimulationModels(ModelMap* pMap, std::string model, bool print)
 {
     print_serial = print;
     
@@ -588,15 +653,15 @@ void SoftwareSerial::serial_setSimulationModels(ModelMap* pMap, std::string mode
         }
         else
         {
-            std::cout << "SoftwareSerial::serial_setSimulationModels: cannot find " << model << " model." << std::endl;
+            std::cout << "SimulationSerial::serial_setSimulationModels: cannot find " << model << " model." << std::endl;
         }
     }
 }
 
-void SoftwareSerial::display_rx_buffer()
+void SimulationSerial::display_rx_buffer()
 {
     if (!available()) { return; }
-    std::cout << "SoftwareSerial::rx_buffer [" << rx_buffer_index << "-" << rx_buffer_length << "]: ";
+    std::cout << "SimulationSerial::rx_buffer [" << rx_buffer_index << "-" << rx_buffer_length << "]: ";
     for (int i = rx_buffer_index; i < rx_buffer_length; i++)
     {
         std::cout << std::hex << std::setfill('0') << std::setw(2) << +rx_buffer[i];
@@ -604,15 +669,205 @@ void SoftwareSerial::display_rx_buffer()
     std::cout << std::dec << std::endl;
 }
 
-void SoftwareSerial::display_tx_buffer()
+void SimulationSerial::display_tx_buffer()
 {
     if (!slave_available()) { return; }
-    std::cout << "SoftwareSerial::tx_buffer [" << tx_buffer_index << "-" << tx_buffer_length << "]: ";
+    std::cout << "SimulationSerial::tx_buffer [" << tx_buffer_index << "-" << tx_buffer_length << "]: ";
     for (int i = tx_buffer_index; i < tx_buffer_length; i++)
     {
         std::cout << std::hex << std::setfill('0') << std::setw(2) << +tx_buffer[i];
     }
     std::cout << std::dec << std::endl;
+}
+
+template void SimulationSerial::print(const char*, PrintMode printMode);
+template void SimulationSerial::print(char, PrintMode printMode);
+template void SimulationSerial::print(std::string, PrintMode printMode);
+template void SimulationSerial::print(short, PrintMode printMode);
+template void SimulationSerial::print(unsigned short, PrintMode printMode);
+template void SimulationSerial::print(int, PrintMode printMode);
+template void SimulationSerial::print(unsigned int, PrintMode printMode);
+template void SimulationSerial::print(long, PrintMode printMode);
+template void SimulationSerial::print(unsigned long, PrintMode printMode);
+template void SimulationSerial::print(double, PrintMode printMode);
+template void SimulationSerial::print(byte, PrintMode printMode);
+
+template void SimulationSerial::println(const char*, PrintMode printMode);
+template void SimulationSerial::println(char, PrintMode printMode);
+template void SimulationSerial::println(std::string, PrintMode printMode);
+template void SimulationSerial::println(short, PrintMode printMode);
+template void SimulationSerial::println(unsigned short, PrintMode printMode);
+template void SimulationSerial::println(int, PrintMode printMode);
+template void SimulationSerial::println(unsigned int, PrintMode printMode);
+template void SimulationSerial::println(long, PrintMode printMode);
+template void SimulationSerial::println(unsigned long, PrintMode printMode);
+template void SimulationSerial::println(double, PrintMode printMode);
+template void SimulationSerial::println(byte, PrintMode printMode);
+
+std::map<std::string, SimulationNRF24L01::buffer_type> SimulationNRF24L01::buffer_map;
+std::map<std::string, bool> SimulationNRF24L01::buffer_empty_map;
+
+SimulationNRF24L01::SimulationNRF24L01(unsigned int CE_PIN, unsigned int CSN_PIN)
+{
+    active = false;
+    listening = false;
+    address = "";
+}
+
+void SimulationNRF24L01::begin()
+{
+    active = true;
+}
+
+void SimulationNRF24L01::openWritingPipe(const byte* address_byte)
+{
+    address = reinterpret_cast<const char*> (address_byte);
+    if (!address_open(address))
+    {
+        buffer_type this_buffer;
+        buffer_map[address] = this_buffer;
+        buffer_empty_map[address] = true;
+    }
+    writing_pipe_map[address] = true;
+}
+
+void SimulationNRF24L01::openReadingPipe(byte number , const byte* address_byte)
+{
+    address = reinterpret_cast<const char*> (address_byte);
+    if (!address_open(address))
+    {
+        buffer_type this_buffer;
+        buffer_map[address] = this_buffer;
+        buffer_empty_map[address] = true;
+    }
+    writing_pipe_map[address] = false;
+}
+
+void SimulationNRF24L01::stopListening()
+{
+    listening = false;
+}
+
+void SimulationNRF24L01::startListening()
+{
+    listening = true;
+}
+
+bool SimulationNRF24L01::write(byte* buffer, unsigned int size)
+{
+    if (address != "" && buffer_empty() && !listening)
+    {
+        for(unsigned int i=0; i<size; i++)
+        { buffer_map[address].buffer[i] = buffer[i]; }
+        //memcpy(buffer_map[address].buffer, buffer, size);
+        buffer_empty_map[address] = false;
+        //std::cout << "NRF25L01 write(): "; print_buffer(address);
+        return true;
+    }
+    return false;
+}
+
+void SimulationNRF24L01::read(byte* buffer, unsigned int size)
+{
+    if (listening)
+    {
+        //std::cout << "NRF25L01 read(): "; print_buffer(address);
+        //memcpy(buffer, buffer_map[address].buffer, size);
+        for(unsigned int i=0; i<size; i++)
+        { buffer[i] = buffer_map[address].buffer[i]; }
+        memset(buffer_map[address].buffer, 0, buffer_size);
+        buffer_empty_map[address] = true;
+    }
+}
+
+bool SimulationNRF24L01::available()
+{
+    return (listening && !buffer_empty());
+}
+
+void SimulationNRF24L01::setPALevel(rf24_pa_dbm_e rf_level)
+{
+    // Do nothing //
+}
+
+void SimulationNRF24L01::setDataRate( rf24_datarate_e data_rate )
+{
+    int rate = 0;
+    if (data_rate == RF24_1MBPS)
+    {
+        rate = 1000000;
+    }
+    else if (data_rate == RF24_2MBPS)
+    {
+          rate = 2000000;
+    }
+    else if (data_rate == RF24_250KBPS)
+    {
+        rate = 250000;
+    }
+    
+    if (rate != 0 && address != "" && buffer_map.find(address) != buffer_map.end())
+    {
+        buffer_map[address].rate = rate;
+    }
+}
+
+bool SimulationNRF24L01::address_open(std::string address)
+{
+    bool map_empty = true;
+    for(std::map<std::string, buffer_type>::iterator it = buffer_map.begin(); it != buffer_map.end(); it++)
+    {
+        if (map_empty) { map_empty = false; }
+        if (it->first == address) { return true; }
+    }
+    return !map_empty;
+}
+
+bool SimulationNRF24L01::buffer_empty()
+{
+    if (address == "" || !address_open(address)) { return true; }
+    return buffer_empty_map[address];
+}
+
+void SimulationNRF24L01::print_buffer(std::string address)
+{
+    if (!address_open(address)) { return; }
+    std::cout << std::dec << "SimulationNRF25L01 buffer (" << address << "): ";
+    for (int i=0; i < buffer_map[address].payload_size; i++)
+    {
+        std::cout << std::hex << std::setfill('0') << std::setw(2) << (int) buffer_map[address].buffer[i];
+    }
+    std::cout << std::dec << std::endl;
+}
+
+void SimulationNRF24L01::print_buffer_empty()
+{
+    std::cout << "Printing buffer empty map" << std::endl;
+    int i=0;
+    for(std::map<std::string, bool>::iterator it = buffer_empty_map.begin(); it != buffer_empty_map.end(); it++)
+    {
+        std::cout << ++i << ") [address, buffer_size] = [" << it->first << ", " << it->second << "]" << std::endl;
+    }
+}
+
+void SimulationNRF24L01::print_buffer_map()
+{
+    std::cout << "Printing buffer map" << std::endl;
+    int i=0;
+    for(std::map<std::string, buffer_type>::iterator it = buffer_map.begin(); it != buffer_map.end(); it++)
+    {
+        std::cout << ++i << ") [address, buffer_size] = [" << it->first << ", " << it->second.payload_size << "]" << std::endl;
+    }
+}
+
+void SimulationNRF24L01::print_writing_map()
+{
+    std::cout << "Printing writing map" << std::endl;
+    int i=0;
+    for(std::map<std::string, bool>::iterator it = writing_pipe_map.begin(); it != writing_pipe_map.end(); it++)
+    {
+        std::cout << ++i << ") [address, writing_bool] = [" << it->first << ", " << it->second << "]" << std::endl;
+    }
 }
 
 ArduinoEEPROM::ArduinoEEPROM()
@@ -679,5 +934,6 @@ void ArduinoEEPROM::reset_eeprom()
 
 void pinMode(int pin, enum pinMode mode) { }
 
+SimulationSerial Serial = SimulationSerial();
+HardwareSerial Serial1 = HardwareSerial(0,1);
 SimulationWire Wire = SimulationWire();
-SoftwareSerial Serial1 = SoftwareSerial(0,1);

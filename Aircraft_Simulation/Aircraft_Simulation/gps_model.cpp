@@ -21,7 +21,6 @@ GPSModelBase::GPSModelBase(ModelMap *pMapInit, bool debugFlagIn)
 {
     pDyn    = NULL;
     pTime   = NULL;
-    pRotate = NULL;
     
     pMap = pMapInit;
     debugFlag = debugFlagIn;
@@ -60,9 +59,11 @@ GPSModelBase::GPSModelBase(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("velErrorD", &velErrorNED[2], savePlot, 2);
     
     //pMap->addLogVar("GPS sendTime", &sendTime, savePlot, 2);
-    //pMap->addLogVar("GPS sendCount", &d_sendCount, printSavePlot, 3);
-    //pMap->addLogVar("GPS receiveCount", &d_receiveCount, printSavePlot, 3);
-
+    //pMap->addLogVar("gps_sendCount", &d_sendCount, printSavePlot, 3);
+    //pMap->addLogVar("gps_sendByteCount", &d_sendByteCount, printSavePlot, 3);
+    //pMap->addLogVar("gps_receiveCount", &d_receiveCount, printSavePlot, 3);
+    //pMap->addLogVar("gps_receiveByteCount", &d_receiveByteCount, printSavePlot, 3);
+    
     util.initArray(gps_velNED, 0.0, 3);
     util.initArray(gps_posECEF, 0.0, 3);
     util.initArray(gps_posLLH, 0.0, 3);
@@ -98,7 +99,13 @@ GPSModelBase::GPSModelBase(ModelMap *pMapInit, bool debugFlagIn)
     nGPSOutputMessages = 0;
     sendCount          = 0;
     receiveCount       = 0;
-
+    gps_name           = NONE;
+    
+    d_sendCount        = 0.0;
+    d_sendByteCount    = 0.0;
+    d_receiveCount     = 0.0;
+    d_receiveByteCount = 0.0;
+    
     for (int i=0; i<maxOutputMessages; i++)
     {
         pOutputMessages[i] = NULL;
@@ -118,6 +125,7 @@ GPSModelBase::~GPSModelBase()
         if (pOutputMessages[i] != NULL)
         {
             delete pOutputMessages[i];
+            pOutputMessages[i] = NULL;
         }
     }
     
@@ -126,17 +134,17 @@ GPSModelBase::~GPSModelBase()
         if (pInputMessages[i] != NULL)
         {
             delete pInputMessages[i];
+            pInputMessages[i] = NULL;
         }
     }
     
-    if (pGPSIO) { delete pGPSIO; }
+    if (pGPSIO) { delete pGPSIO; pGPSIO=0;}
 }
 
 void GPSModelBase::initialize()
 {
     pDyn    = (DynamicsModel*) pMap->getModel("DynamicsModel");
     pTime   = (Time*) pMap->getModel("Time");
-    pRotate = (RotateFrame*) pMap->getModel("RotateFrame");
     
     horizPosNoise.setNoise(horizPosAcc);
     horizPosNoiseDir.setNoise(M_PI);
@@ -188,6 +196,8 @@ bool GPSModelBase::update()
     gps_lon = gps_posLLH[1] / util.deg2rad;
     d_sendCount    = (double) sendCount;
     d_receiveCount = (double) receiveCount;
+    d_sendByteCount    = (double) sendByteCount;
+    d_receiveByteCount = (double) receiveByteCount;
     
     return true;
 }
@@ -279,17 +289,30 @@ void GPSModelBase::readInputIO()
 {
     if (pSerialIO && !pGPSIO)
     {
-        pGPSIO = new SoftwareSerial(pSerialIO->getTXPin(), pSerialIO->getRXPin());
+        if (gps_name == GPS_NEO6M)
+        {
+            pGPSIO = (SimulationSerial*) new GPSNeo6MSerial(pSerialIO->getTXPin(), pSerialIO->getRXPin());
+        }
+        else
+        {
+            pGPSIO = new SimulationSerial(pSerialIO->getTXPin(), pSerialIO->getRXPin());
+        }
         pGPSIO->begin( pSerialIO->getBaudRate() );
     }
     
-    if (pGPSIO)
+    if (pSerialIO && pGPSIO)
     {
+        int n_attempt = pSerialIO->slave_available();
+        int n_write = 0;
         while (pSerialIO->slave_available())
         {
-            pGPSIO->slave_write(pSerialIO->slave_read());
+            n_write += pGPSIO->slave_write(pSerialIO->slave_read());
         }
-        //pGPSIO->display_rx_buffer();
+        receiveByteCount += n_write;
+        if (n_write < n_attempt)
+        {
+            std::cout << pTime->getSimTime() << "GPSModelBase::readInputIO() - SerialIO failed to write to GPSIO!!" << std::endl;
+        }
     }
 }
 
@@ -307,10 +330,11 @@ void GPSModelBase::readInputMessages()
         if (nAvailable > 0)
         {
             pInputMessages[iGPSInputMessage]->buffer_length = nAvailable;
-            pInputMessages[iGPSInputMessage]->buffer = new byte[nAvailable];
             for (int i = 0; i < nAvailable; i++)
             {
-                pInputMessages[iGPSInputMessage]->buffer[i] = pGPSIO->read();
+                if (i < MessageType::max_buffer_size)
+                { pInputMessages[iGPSInputMessage]->buffer[i] = pGPSIO->read(); }
+                else { std::cout << "MessageType allocated more than read buffer length!!" << std::endl;}
             }
             pInputMessages[iGPSInputMessage]->prevUpdateTime = pTime->getSimTime();
         
@@ -355,37 +379,77 @@ void GPSModelBase::writeOutputMessages()
         }
         
         // Send periodic messages
-        if (pOutputMessages[i]->updateRate == 0.0 || pOutputMessages[i]->buffer == 0)
+        if (pOutputMessages[i]->updateRate == 0.0 || pOutputMessages[i]->buffer_length == 0)
         {
             pOutputMessages[i]->send = false;
+        }
+        else if (pGPSIO && pOutputMessages[i]->buffer_length > pGPSIO->availableForWrite())
+        {
+            if (!pOutputMessages[i]->waitingForBuffer)
+            {
+                pOutputMessages[i]->waitingForBuffer = true;
+                if (debugFlag)
+                {
+                    std::cout << "pOutputMessages[" << i << "] waiting for buffer.";
+                    std::cout << "[available, buffer_length] = " << "[" << pGPSIO->availableForWrite() << ", " << pOutputMessages[i]->buffer_length << "]" << std::endl;
+                }
+            }
         }
         else if (pTime->getSimTime() >= pOutputMessages[i]->prevUpdateTime + 1.0/pOutputMessages[i]->updateRate)
         {
             pOutputMessages[i]->send = true;
+            if (pOutputMessages[i]->waitingForBuffer)
+            {
+                pOutputMessages[i]->waitingForBuffer = false;
+                if (debugFlag)
+                {
+                    std::cout << "pOutputMessages[" << i << "] done waiting for buffer." << std::endl;
+                    std::cout << "[available, buffer_length] = " << "[" << pGPSIO->availableForWrite() << ", " << pOutputMessages[i]->buffer_length << "]" << std::endl;
+                }
+            }
         }
         
         // Send messages that are ready
         if (pGPSIO && pOutputMessages[i]->send)
         {
-            if (debugFlag) { std::cout << pTime->getSimTime() << ") Sending message " << i << std::endl; }
+            if (debugFlag)
+            {
+                std::cout << pTime->getSimTime() << ") Sending message " << i << std::endl;
+            }
             
-            pGPSIO->write(pOutputMessages[i]->buffer, pOutputMessages[i]->buffer_length);
-            pOutputMessages[i]->reset();
-            pOutputMessages[i]->prevUpdateTime = pTime->getSimTime();
-            sendCount++;
-            sendTime = pTime->getSimTime();
+            int n_write = pGPSIO->write(pOutputMessages[i]->buffer, pOutputMessages[i]->buffer_length);
+            if (n_write == pOutputMessages[i]->buffer_length)
+            {
+                pOutputMessages[i]->reset();
+                pOutputMessages[i]->prevUpdateTime = pTime->getSimTime();
+                sendCount++;
+            }
+            else
+            {
+                std::cout << "GPSModelBase::writeOutputMessages() - Failed to write to GPSIO!!"<< std::endl;
+            }
         }
     }
 }
 
 void GPSModelBase::writeOutputIO()
 {
-    if (pGPSIO)
+    if (pSerialIO && pGPSIO)
     {
-        while (pGPSIO->slave_available())
+        int n_write = 0;
+        if (pGPSIO->slave_available() && pTime->getSimTime() > sendTime+1.0/pGPSIO->getBaudRate())
         {
-            pSerialIO->slave_write(pGPSIO->slave_read());
+            //pGPSIO->display_tx_buffer();
+            sendTime = pTime->getSimTime();
+            n_write += pSerialIO->slave_write(pGPSIO->slave_read());
+            
+            //std::cout << "[GPSIO, SerialIO] = [" << pGPSIO->slave_available()  << ", " << pSerialIO->available() << "]" << std::endl;
+            if (pGPSIO->slave_available() && n_write < 1)
+            {
+                std::cout << pTime->getSimTime() << "GPSModelBase::writeOutputIO() - GPSIO failed to write to SerialIO!!" << std::endl;
+            }
         }
+        sendByteCount += n_write;
     }
 }
 
@@ -452,6 +516,12 @@ GPSNeo6m::~GPSNeo6m()
     delete gpsData;
     
     if (readGPSFile) { gps_msg_file.close(); }
+}
+
+void GPSNeo6m::initialize()
+{
+    gps_name = GPS_NEO6M;
+    Base::initialize();
 }
 
 void GPSNeo6m::updateSerial()
@@ -572,7 +642,6 @@ void GPSNeo6m::constructOutputMessages()
                 ubx_msg_begin = ubx_msg_idx;
                 look_for_next_msg = false;
                 if (i_msg == -1) { done = true; gps_msg_file.seekg(ubx_msg_begin); break; }
-                else { pOutputMessages[i_msg]->buffer = new byte[100]; }
             }
             else if (!look_for_next_msg)
             {
@@ -585,7 +654,18 @@ void GPSNeo6m::constructOutputMessages()
                 ubx_msg.msg_class_id.data[1] = (byte) gpsbyte;
                 ubx_msg.determine_input_msg_id();
                 bool msg_stored = file_info.store_message(ubx_msg.msg_class, ubx_msg.msg_id);
-                if (!msg_stored)
+                if (msg_stored)
+                {
+                    if (ubx_msg.msg_class == UBX_MSG_TYPES::AID || ubx_msg.msg_class == UBX_MSG_TYPES::ACK)
+                    {
+                        pOutputMessages[i_msg]->updateRate = 1000.0;
+                    }
+                    else
+                    {
+                        pOutputMessages[i_msg]->updateRate = 1.0;
+                    }
+                }
+                else
                 {
                     pOutputMessages[i_msg]->reset();
                     look_for_next_msg = true;
@@ -606,19 +686,21 @@ void GPSNeo6m::constructOutputMessages()
             }
             if (!look_for_next_msg)
             {
-                pOutputMessages[i_msg]->buffer[msg_count] = (byte) gpsbyte;
+                if (msg_count < MessageType::max_buffer_size)
+                {
+                    pOutputMessages[i_msg]->buffer[msg_count] = (byte) gpsbyte;
+                }
+                else
+                {
+                    std::cout << "MessageType allocated more than buffer length!!" << std::endl;
+                }
                 
                 if (msg_count > 5 && msg_count == pOutputMessages[i_msg]->buffer_length-1)
                 {
                     look_for_next_msg = true;
                     if (debugFlag)
                     {
-                        std::cout << pTime->getSimTime() << std::dec << ") pOutputMessages[" << i_msg << "] " << pOutputMessages[i_msg]->buffer_length << ": ";
-                        for (int i=0; i < pOutputMessages[i_msg]->buffer_length; i++)
-                        {
-                            std::cout << std::hex << std::setfill('0') << std::setw(2) << (int) pOutputMessages[i_msg]->buffer[i];
-                        }
-                        std::cout << std::dec << std::endl << std::endl;
+                        pOutputMessages[i_msg]->print(pTime->getSimTime(), i_msg);
                     }
                 }
             }
@@ -743,6 +825,7 @@ int GPSNeo6m::encodeOutputMessage(int gpsMsgType, void* buffer, int buffer_lengt
     
     // Copy data
     ubx_msg.buffer_length = buffer_length;
+    ubx_msg.buffer = new byte[buffer_length];
     memcpy(ubx_msg.buffer, buffer, buffer_length);
     
     // Compute message length and checksum
@@ -756,10 +839,10 @@ int GPSNeo6m::encodeOutputMessage(int gpsMsgType, void* buffer, int buffer_lengt
     + UBX_MSG_LENGTH_SIZE
     + UBX_MSG_CHECKSUM_SIZE;
     
-    if (pOutputMessages[gpsMsgType]->buffer == 0)
-    {
-        pOutputMessages[gpsMsgType]->buffer = new byte[pOutputMessages[gpsMsgType]->buffer_length];
-    }
+    //if (pOutputMessages[gpsMsgType]->buffer == 0)
+    //{
+    //    pOutputMessages[gpsMsgType]->buffer = new byte[pOutputMessages[gpsMsgType]->buffer_length];
+    //}
     
     // ubx header
     int idx = 0;
@@ -784,7 +867,10 @@ int GPSNeo6m::encodeOutputMessage(int gpsMsgType, void* buffer, int buffer_lengt
     
     if (debugFlag)
     {
+        ubx_msg.print();
+        pOutputMessages[gpsMsgType]->print(pTime->getSimTime(), gpsMsgType);
         
+        /*
         std::cout << std::dec << "ubx_msg.buffer " << ubx_msg.buffer_length << ": ";
         for (int i=0; i < ubx_msg.buffer_length; i++)
         {
@@ -798,8 +884,9 @@ int GPSNeo6m::encodeOutputMessage(int gpsMsgType, void* buffer, int buffer_lengt
             std::cout << std::hex << std::setfill('0') << std::setw(2) << (int) pOutputMessages[gpsMsgType]->buffer[i];
         }
         std::cout << std::endl << std::endl;
+         */
     }
-    
+    ubx_msg.clear();
     return 1;
 }
 
@@ -811,11 +898,11 @@ GPSNeo6m::gps_file_info::gps_file_info()
     duplicate_class[1] = UBX_MSG_TYPES::ACK;
     duplicate_id[1]    = UBX_MSG_TYPES::ACK_NAK;
     
-    duplicate_class[2] = UBX_MSG_TYPES::UNKNOWN_MSG_CLASS;
-    duplicate_id[2]    = UBX_MSG_TYPES::UNKNOWN_MSG_ID;
+    duplicate_class[2] = UBX_MSG_TYPES::AID;
+    duplicate_id[2]    = UBX_MSG_TYPES::AID_ALM;
     
-    duplicate_class[3] = UBX_MSG_TYPES::UNKNOWN_MSG_CLASS;
-    duplicate_id[3]    = UBX_MSG_TYPES::UNKNOWN_MSG_ID;
+    duplicate_class[3] = UBX_MSG_TYPES::AID;
+    duplicate_id[3]    = UBX_MSG_TYPES::AID_EPH;
     
     duplicate_class[4] = UBX_MSG_TYPES::UNKNOWN_MSG_CLASS;
     duplicate_id[4]    = UBX_MSG_TYPES::UNKNOWN_MSG_ID;
@@ -884,7 +971,7 @@ void GPSNeo6m::gps_file_info::check_for_sent_messages(MessageType* pOutputMessag
 {
     for (int i = 0; i < maxOutputMessages; i++)
     {
-        if (pOutputMessages[i]->buffer == 0 && (prev_msg_class[i] != UBX_MSG_TYPES::UNKNOWN_MSG_CLASS || prev_msg_id[i] != UBX_MSG_TYPES::UNKNOWN_MSG_ID))
+        if (pOutputMessages[i]->buffer_length == 0 && (prev_msg_class[i] != UBX_MSG_TYPES::UNKNOWN_MSG_CLASS || prev_msg_id[i] != UBX_MSG_TYPES::UNKNOWN_MSG_ID))
         {
             prev_msg_class[i] = UBX_MSG_TYPES::UNKNOWN_MSG_CLASS;
             prev_msg_id[i]    = UBX_MSG_TYPES::UNKNOWN_MSG_ID;

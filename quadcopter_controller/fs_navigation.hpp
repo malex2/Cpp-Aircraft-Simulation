@@ -75,10 +75,6 @@ struct NavType {
     NavState     state;
     double       timestamp;
     double       imuTimestamp;
-    unsigned int InsUpdateCount;
-    unsigned int BaroUpdateCount;
-    unsigned int GpsUpdateCount;
-    unsigned int GroundAlignCount;
     unsigned int updateCount[NNAVSTATES];
     unsigned int skippedUpdateCount[NNAVSTATES];
     double       sensorTimestamp[NNAVSTATES];
@@ -92,9 +88,6 @@ struct NavType {
         altitude_msl = 0.0;
         geoidCorrection = 0.0;
         initNED = false;
-        InsUpdateCount  = 0;
-        BaroUpdateCount = 0;
-        GpsUpdateCount  = 0;
         
         accel_pitch = 0.0;
         accel_roll  = 0.0;
@@ -141,7 +134,7 @@ void applyCorrections();
 void filterUpdate(double* residual, double* R, double* H, double* K, int nMeas);
 void FsNavigation_performAccelerometerUpdate();
 void FsNavigation_performGPSUpdate(GpsType* gpsData);
-void FsNavigation_performBarometerUpdate(barometerType* baroData);
+void FsNavigation_performBarometerUpdate(BarometerType* baroData);
 void FsNavigation_groundAlign();
 
 // Calibration

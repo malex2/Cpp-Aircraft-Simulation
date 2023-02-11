@@ -132,29 +132,29 @@ private:
     double mapToValue(unsigned long pwm, unsigned long pwmMin, unsigned long pwmMax, double valueMin, double valueMax);
 };
 
-class ArduinoSerial {
+class SimulationSerial {
 public:
-    ArduinoSerial();
+    SimulationSerial(int rx_pin=0, int tx_pin=0);
+    ~SimulationSerial();
     
-    void begin(long baudRate);
-};
-
-class SoftwareSerial {
-public:
-    SoftwareSerial();
-    SoftwareSerial(int rx_pin, int tx_pin);
-
     void begin(int baud);
     byte read();
     int write(byte val);
-    int write(byte* val, int length);
+    int write(const byte* val, int length);
     int available();
+    int availableForWrite();
+    
+    template<typename TempType>
+    void print(TempType val, PrintMode printMode = DEC);
+    template<typename TempType>
+    void println(TempType val, PrintMode printMode = DEC);
     
     // slave read/write
     byte slave_read();
     int slave_write(byte val);
-    int slave_write(byte* val, int length);
+    int slave_write(const byte* val, int length);
     int slave_available();
+    int slave_availableForWrite();
     
     // simulation support
     int getRXPin()    { return rx_pin; }
@@ -164,23 +164,78 @@ public:
     void display_tx_buffer();
     
     void serial_setSimulationModels(ModelMap* pMap, std::string model, bool print = false);
-private:
-    static const int max_buffer_size = 64;
-    static const int max_gps_neo_buffer_size = 700;
+protected:
+    void reset_rx_buffer();
+    void reset_tx_buffer();
+    
+    static const int max_arduino_buffer_size = 2000;//64;
+    static const int max_teensy3_series_buffer_size = 2000;//8;
+    static const int max_teensy4_series_buffer_size = 2000;//4;
+    static const int max_gps_neo6m_buffer_size = 2000;//720;
+    static const int max_nRF24L01_buffer_size = 2000;//32;
+    static const int max_HC05_buffer_size = 2000;//100;
+    
+    std::string serial_type = "unknown";
+    int max_buffer_size = max_arduino_buffer_size;
     int baud_rate;
     bool baud_begin;
-    byte rx_buffer[max_gps_neo_buffer_size];
+    byte* rx_buffer;
     int rx_buffer_index;
     int rx_buffer_length;
     int rx_pin;
     
-    byte tx_buffer[max_gps_neo_buffer_size];
+    byte* tx_buffer;
     int tx_buffer_index;
     int tx_buffer_length;
     int tx_pin;
   
     GenericSensorModel* pModel;
     bool print_serial;
+};
+
+class ArduinoSerial : public SimulationSerial {
+public:
+    ArduinoSerial(int rx_pin, int tx_pin) : SimulationSerial(rx_pin, tx_pin)
+    {
+        serial_type = "Arduino_Nano";
+        max_buffer_size = max_arduino_buffer_size;
+    }
+};
+
+class Teensy3Serial : public SimulationSerial {
+public:
+    Teensy3Serial(int rx_pin, int tx_pin) : SimulationSerial(rx_pin, tx_pin)
+    {
+        serial_type = "Teensy3_series";
+        max_buffer_size = max_teensy3_series_buffer_size;
+    }
+};
+
+class Teensy4Serial : public SimulationSerial {
+public:
+    Teensy4Serial(int rx_pin, int tx_pin) : SimulationSerial(rx_pin, tx_pin)
+    {
+        serial_type = "Teensy4_series";
+        max_buffer_size = max_teensy4_series_buffer_size;
+    }
+};
+
+class GPSNeo6MSerial : public SimulationSerial {
+public:
+    GPSNeo6MSerial(int rx_pin, int tx_pin) : SimulationSerial(rx_pin, tx_pin)
+    {
+        serial_type = "GPS_Neo6m";
+        max_buffer_size = max_gps_neo6m_buffer_size;
+    }
+};
+
+class BluetoothHC05Serial : public SimulationSerial {
+public:
+    BluetoothHC05Serial(int rx_pin, int tx_pin) : SimulationSerial(rx_pin, tx_pin)
+    {
+        serial_type = "HC-05";
+        max_buffer_size = max_HC05_buffer_size;
+    }
 };
 
 class ArduinoEEPROM {
@@ -201,11 +256,71 @@ private:
     void reset_eeprom();
 };
 
+typedef enum { RF24_1MBPS, RF24_2MBPS, RF24_250KBPS } rf24_datarate_e;
+typedef enum { RF24_PA_MIN , RF24_PA_LOW, RF24_PA_HIGH, RF24_PA_MAX, RF24_PA_ERROR } rf24_pa_dbm_e;
+
+class SimulationNRF24L01 {
+public:
+    SimulationNRF24L01(unsigned int CE_PIN, unsigned int CSN_PIN);
+    void begin();
+    void openWritingPipe(const byte* address);
+    void openReadingPipe(byte number , const byte* address);
+    void stopListening();
+    void startListening();
+    bool write(byte* buffer, unsigned int size);
+    void read(byte* buffer, unsigned int size);
+    bool available();
+    
+    void setPALevel(rf24_pa_dbm_e rf_level);
+    void setDataRate( rf24_datarate_e data_rate );
+    
+    static const byte address_size = 5;
+    static const byte buffer_size  = 32;
+    
+    struct buffer_type {
+        byte buffer[buffer_size];
+        unsigned int rate;
+        unsigned int payload_size;
+        buffer_type() {
+            memset(buffer, 0, buffer_size);
+            rate =  250000;
+            payload_size = buffer_size;
+        }
+    };
+    
+    // Buffer shared by all instances
+    static std::map<std::string, buffer_type> buffer_map;
+    static std::map<std::string, bool> buffer_empty_map;
+    
+    //int getPayloadSize();
+    //enableAckPayload();
+    //setRetries(5, 5);
+    //writeAckPayload(1, &sent_1, sizeof(sent_1))
+private:
+    bool address_open(std::string address);
+    bool buffer_empty();
+    
+    // Info local to this instance
+    std::map<std::string, bool> writing_pipe_map;
+    
+    bool active;
+    bool listening;
+    std::string address;
+    
+    void print_buffer(std::string address);
+    void print_buffer_map();
+    void print_buffer_empty();
+    void print_writing_map();
+};
+
 void pinMode(int pin, pinMode mode);
 
-#define HardwareSerial SoftwareSerial
+#define RF24 SimulationNRF24L01
+#define SoftwareSerial ArduinoSerial
+#define HardwareSerial Teensy4Serial
+extern HardwareSerial Serial1;
+extern SimulationSerial Serial;
 extern SimulationWire Wire;
-extern SoftwareSerial Serial1;
-extern ArduinoEEPROM  EEPROM;
+extern ArduinoEEPROM EEPROM;
 
 #endif /* arduino_class_models_hpp */

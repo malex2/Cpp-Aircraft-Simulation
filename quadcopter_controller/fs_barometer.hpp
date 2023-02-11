@@ -14,7 +14,7 @@
 // Data Types
 enum baroStateType {startSequence, requestTemperature, readTemperature, requestPressure, readPressure, baroReady, baroStandby, nBaroStates};
 
-struct barometerType {
+struct BarometerType {
     double pressure;
     double temperature;
     double altitude;
@@ -24,7 +24,7 @@ struct barometerType {
     
     // temp vars
     double pu, tu;
-    barometerType()
+    BarometerType()
     {
         pressure    = 0.0;
         temperature = 0.0;
@@ -55,7 +55,7 @@ void FsBarometer_setStandby();
 void FsBarometer_setPressureResolution(byte pressureResolutionIn);
 
 // Getters
-barometerType* FsBarometer_getBaroData();
+BarometerType* FsBarometer_getBaroData();
 baroStateType FsBarometer_getBaroState();
 double FsBarometer_getAltitudeVariance();
 #endif /* fs_barometer_hpp */

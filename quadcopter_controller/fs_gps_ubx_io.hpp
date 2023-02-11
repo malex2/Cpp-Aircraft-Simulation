@@ -50,7 +50,7 @@ public:
     UBX_MSG_TYPES::UBX_MSG_AID_INI*        get_aidInit_p()        { return &aidInit; }
     UBX_MSG_TYPES::UBX_MSG_AID_ALM_POLL_SV get_almanacPollSv()    { return almanacPollSv; }
     UBX_MSG_TYPES::UBX_MSG_AID_ALM_INVALID get_almanacInvalid()   { return almanacInvalid; }
-    UBX_MSG_TYPES::UBX_MSG_AID_ALM *       get_almanac()          { return &almanac[0]; }
+    UBX_MSG_TYPES::UBX_MSG_AID_ALM*        get_almanac()          { return &almanac[0]; }
     UBX_MSG_TYPES::UBX_MSG_AID_EPH_POLL_SV get_ephemerisPollSv()  { return ephemerisPollSv; }
     UBX_MSG_TYPES::UBX_MSG_AID_EPH_INVALID get_ephemerisInvalid() { return ephemerisInvalid; }
     UBX_MSG_TYPES::UBX_MSG_AID_EPH*        get_ephemeris()        { return &ephemeris[0]; }
@@ -58,22 +58,11 @@ public:
     UBX_MSG_TYPES::UBX_MSG_AID_HUI*        get_gpsHealth_p()      { return &gpsHealth; }
     
     // Data Types
-    struct TWO_BYTE_DATA
-    {
-        TWO_BYTE_DATA(bool debug = false) { debug_print = debug; clear(); }
-        
-        byte         data[2];
-        unsigned int index;
-        bool         debug_print;
-        
-        void swap();
-        void clear();
-    };
-    
     struct MSG_PACKET
     {
         MSG_PACKET(bool debug = false) :  msg_class_id(debug), msg_length(debug), msg_checksum(debug)
         {
+            buffer = nullptr;
             debug_print = debug;
             clear();
         }
@@ -83,7 +72,7 @@ public:
         TWO_BYTE_DATA  msg_class_id;
         TWO_BYTE_DATA  msg_length;
         TWO_BYTE_DATA  msg_checksum;
-        byte           buffer[UBX_BUFFER_MAX_SIZE];
+        byte*          buffer;
         unsigned short buffer_index;
         unsigned short buffer_length;
         bool           checksum_valid;
@@ -102,10 +91,11 @@ public:
         void compute_checksum(byte & ck_a, byte & ck_b);
         void validate_checksum();
         
-        void set_buffer(byte* input, int length);
-        void set_buffer(void* input, int length);
+        void set_buffer(byte* input, unsigned int length);
+        void set_buffer(void* input, unsigned int length);
         void print();
         void clear();
+        void delete_buffer();
     };
     
 private:
@@ -141,9 +131,8 @@ private:
     byte gpsbyte;
     
     // functions
-    void write(MSG_PACKET* output_msg);
+    unsigned int write(MSG_PACKET* output_msg);
     int decode(int msg_class, int msg_id, byte* buffer, unsigned short buffer_length);
-    void clear_input_buffer();
 };
 
 #endif /* fs_gps_ubx_io_hpp */
