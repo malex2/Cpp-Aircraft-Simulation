@@ -164,6 +164,7 @@ struct GpsType {
 };
 
 void FsGPS_setupGPS(int baudRate, bool fs_allow2DFix);
+void init_GPS_messages();
 void FsGPS_performGPS();
 void FsGPS_performSerialIO();
 

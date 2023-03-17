@@ -11,6 +11,7 @@
 #include "atmosphere_model.hpp"
 #include "actuator_model.hpp"
 #include "gps_model.hpp"
+#include "time.hpp"
 
 #include <fstream>
 
@@ -465,9 +466,6 @@ void SimulationSerial::begin(int baud)
     
     baud_rate = baud;
     baud_begin = true;
-    
-    //std::string filename = serial_type + ".csv";
-    //outfile.open(filename);
 }
 
 template<typename TempType>
@@ -658,6 +656,25 @@ void SimulationSerial::serial_setSimulationModels(ModelMap* pMap, std::string mo
     }
 }
 
+void SimulationSerial::serial_setTwoHardwareSerialModels(ModelMap* pMap, std::string model, std::string periphialType, bool print)
+{
+    print_serial = print;
+    
+    if (pMap)
+    {
+        pModel = (GenericSensorModel*) pMap->getModel(model);
+        if (pModel)
+        {
+            static_cast<TwoHardwareSerial*>(pModel)->setSerialIO(this, periphialType);
+            pModel = 0;
+        }
+        else
+        {
+            std::cout << "SimulationSerial::serial_setSimulationModels: cannot find " << model << " model." << std::endl;
+        }
+    }
+}
+
 void SimulationSerial::display_rx_buffer()
 {
     if (!available()) { return; }
@@ -703,6 +720,201 @@ template void SimulationSerial::println(long, PrintMode printMode);
 template void SimulationSerial::println(unsigned long, PrintMode printMode);
 template void SimulationSerial::println(double, PrintMode printMode);
 template void SimulationSerial::println(byte, PrintMode printMode);
+
+TwoHardwareSerial::TwoHardwareSerial(ModelMap *pMapInit, bool debugFlagIn)
+{
+    pMap = pMapInit;
+    debugFlag = false;
+}
+
+bool TwoHardwareSerial::update()
+{
+    if (!MCU1.init || !MCU2.init) { return false; }
+
+    MCU1.update(MCU2);
+    MCU2.update(MCU1);
+        
+    return true;
+}
+
+void TwoHardwareSerial::setSerialIO(SimulationSerial* pSerial, std::string periphialType)
+{
+    if      (!MCU1.init) { MCU1.set(pSerial, periphialType); }
+    else if (!MCU2.init) { MCU2.set(pSerial, periphialType); }
+    else    { std::cout << "TwoHardwareSerial - Attempt to set more than 2 MCU's!" << std::endl; }
+}
+
+TwoHardwareSerial::MCUIO::MCUIO()
+{
+    init = false;
+    pMCUSerial=0;
+    pMCUperiphial=0;
+    mcu_rx_fail_count = 0;
+    mcu_tx_fail_count = 0;
+    periphial_rx_fail_count = 0;
+    periphial_tx_fail_count = 0;
+    
+}
+
+void TwoHardwareSerial::initialize()
+{
+    pTime  = (Time*) pMap->getModel("Time");
+}
+
+TwoHardwareSerial::MCUIO::~MCUIO()
+{
+    if (pMCUperiphial)
+    {
+        delete pMCUperiphial;
+        pMCUperiphial=0;
+    }
+}
+
+void TwoHardwareSerial::MCUIO::update(MCUIO &otherMCU)
+{
+    int n_write_attempt;
+    int n_write;
+    
+    // Read MCU into periphial buffer (MCU tx -> periph tx)
+    n_write_attempt = pMCUSerial->slave_available();
+    n_write = 0;
+    while (pMCUSerial->slave_available())
+    {
+        n_write += pMCUperiphial->write(pMCUSerial->slave_read());
+    }
+    if (n_write < n_write_attempt)
+    {
+        mcu_tx_fail_count++;
+    }
+    
+    // Read MCU periphial into otherMCU periphial (periph tx -> otherPeriph rx)
+    n_write_attempt = pMCUperiphial->slave_available();
+    n_write = 0;
+    while (pMCUperiphial->slave_available())
+    {
+        n_write += otherMCU.pMCUperiphial->slave_write(pMCUperiphial->slave_read());
+    }
+    if (n_write < n_write_attempt)
+    {
+        periphial_tx_fail_count++;
+        otherMCU.periphial_rx_fail_count++;
+    }
+    
+    // Read otherMCU periphial into otherMCU (otherPeriph rx -> otherMCU rx)
+    n_write_attempt = otherMCU.pMCUperiphial->available();
+    n_write = 0;
+    while (otherMCU.pMCUperiphial->available())
+    {
+        n_write += otherMCU.pMCUSerial->slave_write(otherMCU.pMCUperiphial->read());
+    }
+    if (n_write < n_write_attempt)
+    {
+        otherMCU.mcu_rx_fail_count++;
+    }
+}
+
+void TwoHardwareSerial::MCUIO::set(SimulationSerial* pSerial, std::string periphialType)
+{
+    pMCUSerial = pSerial;
+    if (periphialType == "Arduino_Nano")
+    {
+        pMCUperiphial = new ArduinoSerial(pMCUSerial->getTXPin(),pMCUSerial->getRXPin());
+        init = true;
+    }
+    else if (periphialType == "Teensy3_series")
+    {
+        pMCUperiphial = new Teensy3Serial(pMCUSerial->getTXPin(),pMCUSerial->getRXPin());
+        init = true;
+    }
+    else if (periphialType == "Teensy4_series")
+    {
+        pMCUperiphial = new Teensy4Serial(pMCUSerial->getTXPin(),pMCUSerial->getRXPin());
+        init = true;
+    }
+    else if (periphialType == "GPS_Neo6m")
+    {
+        pMCUperiphial = new GPSNeo6MSerial(pMCUSerial->getTXPin(),pMCUSerial->getRXPin());
+        init = true;
+    }
+    else if (periphialType == "HC05_Bluetooth")
+    {
+        pMCUperiphial = new BluetoothHC05Serial(pMCUSerial->getTXPin(),pMCUSerial->getRXPin());
+        init = true;
+    }
+    else if (periphialType == "APC220Radio")
+    {
+        pMCUperiphial = new APC220RadioSerial(pMCUSerial->getTXPin(),pMCUSerial->getRXPin());
+        init = true;
+    }
+    
+    if (pMCUperiphial)
+    {
+        pMCUperiphial->begin(pMCUSerial->getBaudRate());
+    }
+        
+}
+
+ArduinoEEPROM::ArduinoEEPROM()
+{
+    size = 1080;
+    new_file = false;
+    
+    if (!std::ifstream(eeprom_file))
+    {
+        std::ofstream temp(eeprom_file);
+        temp.close();
+        new_file = true;
+    }
+    memoryfile.open(eeprom_file, std::ios::in | std::ios::out);
+    
+    memoryfile.seekg(0, std::ios::end);
+    file_length = memoryfile.tellg();
+    memoryfile.clear();
+    memoryfile.seekg(0, std::ios::beg);
+    
+    reset_eeprom();
+}
+
+ArduinoEEPROM::~ArduinoEEPROM()
+{
+    if (memoryfile.is_open())
+    {
+        memoryfile.close();
+    }
+}
+
+byte ArduinoEEPROM::read(unsigned int address)
+{
+    byte val = 0;
+    
+    if (memoryfile.fail()) { return val; }
+    
+    memoryfile.seekg(address);
+    memoryfile >> val;
+    
+    return val;
+}
+
+void ArduinoEEPROM::write(unsigned int address, byte val)
+{
+    if (memoryfile.fail()) { return; }
+    
+    memoryfile.seekp(address);
+    memoryfile << val;
+    memoryfile.flush();
+}
+
+void ArduinoEEPROM::reset_eeprom()
+{
+    if (memoryfile.fail() || (!new_file && file_length == size)) { return; }
+    
+    byte val = 48;
+    for (int i = 0; i < size; i++)
+    {
+        memoryfile << val;
+    }
+    memoryfile.flush();
+}
 
 std::map<std::string, SimulationNRF24L01::buffer_type> SimulationNRF24L01::buffer_map;
 std::map<std::string, bool> SimulationNRF24L01::buffer_empty_map;
@@ -870,70 +1082,9 @@ void SimulationNRF24L01::print_writing_map()
     }
 }
 
-ArduinoEEPROM::ArduinoEEPROM()
-{
-    size = 1080;
-    new_file = false;
-    
-    if (!std::ifstream(eeprom_file))
-    {
-        std::ofstream temp(eeprom_file);
-        temp.close();
-        new_file = true;
-    }
-    memoryfile.open(eeprom_file, std::ios::in | std::ios::out);
-    
-    memoryfile.seekg(0, std::ios::end);
-    file_length = memoryfile.tellg();
-    memoryfile.clear();
-    memoryfile.seekg(0, std::ios::beg);
-    
-    reset_eeprom();
-}
-
-ArduinoEEPROM::~ArduinoEEPROM()
-{
-    if (memoryfile.is_open())
-    {
-        memoryfile.close();
-    }
-}
-
-byte ArduinoEEPROM::read(unsigned int address)
-{
-    byte val = 0;
-    
-    if (memoryfile.fail()) { return val; }
-    
-    memoryfile.seekg(address);
-    memoryfile >> val;
-    
-    return val;
-}
-
-void ArduinoEEPROM::write(unsigned int address, byte val)
-{
-    if (memoryfile.fail()) { return; }
-    
-    memoryfile.seekp(address);
-    memoryfile << val;
-    memoryfile.flush();
-}
-
-void ArduinoEEPROM::reset_eeprom()
-{
-    if (memoryfile.fail() || (!new_file && file_length == size)) { return; }
-
-    byte val = 48;
-    for (int i = 0; i < size; i++)
-    {
-        memoryfile << val;
-    }
-    memoryfile.flush();
-}
-
 void pinMode(int pin, enum pinMode mode) { }
 
 SimulationSerial Serial = SimulationSerial();
 HardwareSerial Serial1 = HardwareSerial(0,1);
+HardwareSerial Serial2 = HardwareSerial(7,8);
 SimulationWire Wire = SimulationWire();

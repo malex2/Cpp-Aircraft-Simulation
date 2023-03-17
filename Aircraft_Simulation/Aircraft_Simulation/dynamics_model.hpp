@@ -24,7 +24,8 @@ public:
     // Update dynamic states
     virtual bool update(void);
     
-    void updateIntegralQuaternion(double* dTheta, double dt);
+    void deltaIMU(double dt);
+    void resetIMU();
     
     // Getters
     double* getPosLLH(void)   { return posLLH; }   // Lat, Lon, Alt
@@ -41,6 +42,7 @@ public:
     double  getSpeed(void)    { return velMag; }
     
     double* getAccBody(void)        { return accelBody; }
+    double* getAccLL(void)          { return accelLL; }
     double* getbodyAngularAcc(void) { return bodyAngularAcc; }
     
     double* getEulerAngles(void)    { return eulerAngles; }
@@ -50,6 +52,8 @@ public:
     double  getMass(void)           { return mass; }
     double  getTimestamp(void)      { return timestamp; }
 
+    double* getDeltaTheta(void)    { return deltaTheta; }
+    double* getDeltaVelocity(void) { return deltaVelocity; }
     
 private:
     // Classes
@@ -66,9 +70,13 @@ private:
     double getEllipsoidHeight();
     
     // Variables
+    double deltaTheta[3];
+    double deltaVelocity[3];
+    
     double forceECI[3];
     double accelECI[3];
     double accelBody[3];
+    double accelLL[3];
     double accelMag;
     
     double velECI[3];

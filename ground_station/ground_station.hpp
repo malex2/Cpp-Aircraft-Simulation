@@ -11,28 +11,31 @@
 
 #define GROUND_STATION_SIMULATION
 #define TELEMETRY
-#define BLUETOOTH
+//#define BLUETOOTH
 //#define TEST_MODE
 
 #ifdef GROUND_STATION_SIMULATION
    #include "arduino_class_models.hpp"
     #include "time.hpp"
 #else
-   #include <SPI.h>
-   #include <nRF24L01.h>
-   #include <RF24.h>
+   #include "arduino.h"
+   #include <SoftwareSerial.h>
+   //#include <SPI.h>
+   //#include <nRF24L01.h>
+   //#include <RF24.h>
 #endif
 
 // SPI Pints
 #define ARDUINO_NANO_CE 9
 #define ARDUINO_NANO_CSN 10
-#define TEENSY40_CE 4
-#define TEENSY40_CSN 2
-#define NRF24L01_BUFFER_SIZE 32
+//#define NRF24L01_BUFFER_SIZE 32
 
 // Bluetooth Pins
 #define BLUETOOTH_RXPIN 2 // Rcv Bluetooth msgs, connect to Bluetooth TX
 #define BLUETOOTH_TXPIN 3 // Txmit Bluetooth msgs, connect to Bluetooth RX
+
+#define TELEMETRY_RADIO_RXPIN 4 // Rcv Bluetooth msgs, connect to Telemetry TX
+#define TELEMETRY_RADIO_TXPIN 5 // Txmit Bluetooth msgs, connect to Telemetry RX
 
 #define TM_HEADER       0xA0
 #define TM_TM_HEADER    0xB1

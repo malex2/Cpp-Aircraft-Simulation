@@ -149,19 +149,19 @@ void FsControls_groundDetection()
 #ifdef GROUND_DETECTION
     if (controlData.onGround)
     {
-        // Detect crash landings
-        if (!controlData.takeOff &&
-            (fabs(eulerAngles[0]) > 15.0*degree2radian ||
-            fabs(eulerAngles[1]) > 15.0*degree2radian))
-        {
-            controlData.crashLand = true;
-        }
-        
         // Detect take off command
         if (!controlData.takeOff &&
             ((controlData.mode == ThrottleControl && controlData.pwmCmd[THROTTLE_CHANNEL] > PWMMINRPM) || controlData.VLLzCmd < -AltHoldVelExit) )
         {
             controlData.takeOff = true;
+        }
+        
+        // Detect crash landings
+        if (!controlData.takeOff &&
+            (fabs(eulerAngles[0]) > 15.0*degree2radian || fabs(eulerAngles[1]) > 15.0*degree2radian) &&
+            (sqrt(bodyRates[0]*bodyRates[0] + bodyRates[1]*bodyRates[1]) > 5.0*degree2radian))
+        {
+            controlData.crashLand = true;
         }
         
         // Detect off ground

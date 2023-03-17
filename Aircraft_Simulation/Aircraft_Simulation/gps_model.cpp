@@ -183,13 +183,11 @@ bool GPSModelBase::update()
     gps_groundSpeed = util.mag(gps_velNE, 2);
     gps_heading     = atan2(gps_velNE[1], gps_velNE[0]) / util.deg2rad;
     
-    readInputIO();
     readInputMessages();
     decodeInputMessages();
     
     constructOutputMessages();
     writeOutputMessages();
-    writeOutputIO();
     
     // Log Vars
     gps_lat = gps_posLLH[0] / util.deg2rad;
@@ -434,23 +432,32 @@ void GPSModelBase::writeOutputMessages()
 
 void GPSModelBase::writeOutputIO()
 {
+    static double prev_time = 0.0;
     if (pSerialIO && pGPSIO)
     {
+        double dt = pTime->getSimTime() - prev_time;
         int n_write = 0;
-        if (pGPSIO->slave_available() && pTime->getSimTime() > sendTime+1.0/pGPSIO->getBaudRate())
+        int n_to_send = util.min( static_cast<int> (round(pGPSIO->getBaudRate()*dt)), pGPSIO->slave_available());
+        int expected_to_send = n_to_send;
+        //if (pGPSIO->slave_available() && pTime->getSimTime() > sendTime+1.0/pGPSIO->getBaudRate())
+        while (n_to_send)
         {
             //pGPSIO->display_tx_buffer();
-            sendTime = pTime->getSimTime();
             n_write += pSerialIO->slave_write(pGPSIO->slave_read());
             
             //std::cout << "[GPSIO, SerialIO] = [" << pGPSIO->slave_available()  << ", " << pSerialIO->available() << "]" << std::endl;
-            if (pGPSIO->slave_available() && n_write < 1)
-            {
-                std::cout << pTime->getSimTime() << "GPSModelBase::writeOutputIO() - GPSIO failed to write to SerialIO!!" << std::endl;
-            }
+            n_to_send--;
+        }
+        sendTime = pTime->getSimTime();
+        
+        if (n_write < expected_to_send)
+        {
+            std::cout << pTime->getSimTime() << "GPSModelBase::writeOutputIO() - GPSIO failed to write to SerialIO!!" << std::endl;
         }
         sendByteCount += n_write;
     }
+    
+    prev_time = pTime->getSimTime();
 }
 
 
@@ -526,6 +533,8 @@ void GPSNeo6m::initialize()
 
 void GPSNeo6m::updateSerial()
 {
+    readInputIO();
+    writeOutputIO();
     if (pUBXFIFO)
     {
         pUBXFIFO->update_fifo();

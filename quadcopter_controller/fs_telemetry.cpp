@@ -22,7 +22,7 @@ double* pFSTiming = 0;
 
 FS_Telemetry_Type TM;
 FS_FIFO* pPrintFIFO = 0;
-RF24 tmIO(TEENSY40_CE, TEENSY40_CSN);
+#define tmIO Serial2 // [RX,TX] = [7,8]
 FS_FIFO telemetryFIFO(&tmIO);
 
 telemetryStateType tmState;
@@ -30,13 +30,14 @@ byte temp_TM_buffer[MAX_SERIAL_FIFO_SIZE];
 unsigned int temp_buffer_size;
 unsigned long tm_timeout_count;
 unsigned long tm_failed_write_count;
-
+double tm_start_time;
+double max_tm_rate;
 TM_Message_Info TM_info;
 TM_Message_Info print_info;
 TM_Message_Info* pSendInfo = 0;
 byte print_buffer_copy[MAX_SERIAL_FIFO_SIZE];
 
-void FsTelemetry_setupTelemetry(rf24_datarate_e data_rate, rf24_pa_dbm_e power_level)
+void FsTelemetry_setupTelemetry(int baud_rate)
 {
 #ifdef TELEMETRY
     pPrintFIFO = get_print_fifo();
@@ -44,17 +45,15 @@ void FsTelemetry_setupTelemetry(rf24_datarate_e data_rate, rf24_pa_dbm_e power_l
     temp_buffer_size = 0;
     tm_failed_write_count = 0;
     tm_timeout_count = 0;
+    tm_start_time = 0.0;
+    max_tm_rate = 0.0;
     memset(print_buffer_copy, 0, MAX_SERIAL_FIFO_SIZE);
     memset(temp_TM_buffer, 0, MAX_SERIAL_FIFO_SIZE);
     
     tmState = doneSendingTM;
     
     // Begin telemetry port
-    telemetryFIFO.begin(RF24_DataRate[data_rate]);
-    tmIO.openWritingPipe(TM_FS_address);
-    tmIO.setPALevel(power_level);
-    tmIO.setDataRate(data_rate);
-    tmIO.stopListening();
+    telemetryFIFO.begin(baud_rate);
 #endif
 }
 
@@ -68,11 +67,14 @@ void FsTelemetry_sendTelemetry()
     else
     {
         tm_timeout_count++;
+        display("TM timeout count: ");
+        display(tm_timeout_count);
+        display("\n");
     }
 #endif
 }
 
-void FsTelemetry_performTelemetry()
+void FsTelemetry_performTelemetry(double &tmDt)
 {
 #ifdef TELEMETRY
     if (tmState == commandSend)
@@ -160,13 +162,13 @@ void FsTelemetry_performTelemetry()
         TM.data.takeOff = pCtrl->takeOff / TM.scale.takeOff;
         TM.data.crashLand = pCtrl->crashLand / TM.scale.crashLand;
         
+        TM.data.max_tm_rate = max_tm_rate / TM.scale.max_tm_rate;
         TM.data.tm_timeout_count = tm_timeout_count / TM.scale.tm_timeout_count;
         TM.data.hz1_avg_rate = (1.0/pFSTiming[hz1]) / TM.scale.hz1_avg_rate;
         TM.data.hz50_avg_rate = (1.0/pFSTiming[hz50]) / TM.scale.hz50_avg_rate;
         TM.data.hz100_avg_rate = (1.0/pFSTiming[hz100]) / TM.scale.hz100_avg_rate;
         TM.data.hz200_avg_rate = (1.0/pFSTiming[hz200]) / TM.scale.hz200_avg_rate;
         TM.data.hz800_avg_rate = (1.0/pFSTiming[hz800]) / TM.scale.hz800_avg_rate;
-        TM.data.pad =  0.0 / TM.scale.pad;
         
         //std::cout << std::dec << "FS TM" << std::endl;
         //TM.print();
@@ -187,6 +189,8 @@ void FsTelemetry_performTelemetry()
         
         memset(temp_TM_buffer, 0, MAX_SERIAL_FIFO_SIZE);
         pSendInfo = &TM_info;
+        
+        tm_start_time = getTime();
         tmState = sendingTM;
     }
     
@@ -242,17 +246,19 @@ void FsTelemetry_performTelemetry()
         if (TM_info.done && !print_info.done)
         {
             if (print_info.size > 0) { pSendInfo = &print_info; }
-            else { finishSendingTelemetry(); }
+            else { finishSendingTelemetry(tmDt); }
         }
-        else if (print_info.done) { finishSendingTelemetry(); }
+        else if (print_info.done) { finishSendingTelemetry(tmDt); }
     }
 #endif
 }
 
-void finishSendingTelemetry()
+void finishSendingTelemetry(double &tmDt)
 {
     pSendInfo = 0;
     tmState = doneSendingTM;
+    if (getTime() == tm_start_time) { max_tm_rate = 1.0/tmDt; }
+    else { max_tm_rate = 1.0/(getTime() - tm_start_time); }
 }
 
 void FsTelemetry_performSerialIO()
@@ -275,3 +281,13 @@ void FsTelemetry_setTimingPointer(double* pTiming)
 {
     pFSTiming = pTiming;
 }
+
+#ifdef SIMULATION
+void FsTelemetry_setSimulationModels(ModelMap* pMap)
+{
+    if (pMap)
+    {
+        tmIO.serial_setTwoHardwareSerialModels(pMap, "FS_GS_Interface", "APC220Radio");
+    }
+}
+#endif

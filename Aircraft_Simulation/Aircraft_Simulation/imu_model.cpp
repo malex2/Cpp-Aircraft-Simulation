@@ -129,8 +129,8 @@ IMUModelBase::IMUModelBase(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("dVelocity Dyn z", &dVelocity_dyn[2], savePlot, 2);
     //pMap->addLogVar("IntSumTime", &sumTime, printSavePlot, 3);
     
-    pMap->addLogVar("accel_roll", &accel_roll, savePlot, 2);
-    pMap->addLogVar("accel_pitch", &accel_pitch, savePlot, 2);
+    //pMap->addLogVar("accel_roll", &accel_roll, savePlot, 2);
+    //pMap->addLogVar("accel_pitch", &accel_pitch, savePlot, 2);
     
     //pMap->addLogVar("lin_accel_roll", &lin_accel_roll, savePlot, 2);
     //pMap->addLogVar("lin_accel_pitch", &lin_accel_pitch, savePlot, 2);
@@ -313,6 +313,7 @@ void IMUModelBase::deltaIMU(double dt)
     pRotate->imuToBody(gyroBody, getGyroscopeDps());
     pRotate->imuToBody(accelBody, getAccelerometerGs());
     util.vgain(accelBody, refGravity, 3);
+    
     
     for (int i=0; i<3; i++)
     {

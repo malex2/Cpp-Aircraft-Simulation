@@ -13,16 +13,16 @@
 #include <math.h>
 
 // MACROS
-#define SIMULATION
-//#define IMU
+//#define SIMULATION
+#define IMU
 #define GPS
-//#define BAROMETER
+#define BAROMETER
 //#define PWM
 //#define CONTROLS
 //#define GROUND_DETECTION
-//#define NAVIGATION
-#define TELEMETRY
-#define PRINT
+#define NAVIGATION
+//#define TELEMETRY
+//#define PRINT
 //#define UBX_PRINT
 
 #ifdef SIMULATION
@@ -48,18 +48,18 @@
     #endif
     #define LEDPIN LED_BUILTIN
 
-    #ifdef TEENSYDUINO
+    //#ifdef TEENSYDUINO
       #define FS_Serial HardwareSerial
       #define DEBUG_PRINT
       #include "Wire.h"
-    #else //ARDUINO
-      #include <SoftwareSerial.h>
-      #define FS_Serial SoftwareSerial
-    #endif
 
-   #include <SPI.h>
-   #include <nRF24L01.h>
-   #include <RF24.h>
+      #include <SPI.h>
+      #include <nRF24L01.h>
+      #include <RF24.h>
+    //#else //ARDUINO
+    //  #include <SoftwareSerial.h>
+    //  #define FS_Serial SoftwareSerial
+    //#endif
 #endif
 
 // Forward References
@@ -133,17 +133,6 @@ const double dtPad = 1e-10;
 // High Dynamics
 #define highRate  5.0*degree2radian
 #define highAccel 12.0
-
-// RF Constants
-const byte TM_FS_address[5] = {'0', '0', '0', '0', '1'};
-const byte TM_GS_address[5] = {'0', '0', '0', '0', '2'};
-const uint32_t RF24_DataRate[3] = {1000000, 2000000, 250000};
-
-// SPI Pints
-#define ARDUINO_NANO_CE 9
-#define ARDUINO_NANO_CSN 10
-#define TEENSY40_CE 4
-#define TEENSY40_CSN 2
 
 // GPS Pins
 #define GPSRXPIN 2 // Rcv GPS msgs, connect to GPS TX
@@ -267,7 +256,6 @@ const uint32_t RF24_DataRate[3] = {1000000, 2000000, 250000};
 
 #define UBX_TIM        0x0D
 
-//#define UBX_BUFFER_MAX_SIZE       150
 #define UBX_CFG_ON_OFF_SHORT_SIZE 3
 #define UBX_CFG_ON_OFF_LONG_SIZE  8
 
@@ -512,12 +500,12 @@ struct FS_Telemetry_Type
         byte takeOff = 0;
         byte crashLand = 0;
         uint32_t tm_timeout_count = 0;
+        uint16_t max_tm_rate = 0;
         uint16_t hz1_avg_rate = 0;
         uint16_t hz50_avg_rate = 0;
         uint16_t hz100_avg_rate = 0;
         uint16_t hz200_avg_rate = 0;
         uint16_t hz800_avg_rate = 0;
-        uint16_t pad = 0;
 
     } __attribute__((packed)) data;
     
@@ -607,12 +595,12 @@ struct FS_Telemetry_Type
         double crashLand = 1.0;
         
         double tm_timeout_count = 1.0;
+        double max_tm_rate = 0.1;
         double hz1_avg_rate = 0.1;
         double hz50_avg_rate = 0.1;
         double hz100_avg_rate = 0.1;
         double hz200_avg_rate = 0.1;
         double hz800_avg_rate = 0.1;
-        double pad = 1.0;
     } scale;
     
     void clear() { memset(&data, 0, sizeof(data)); }
@@ -636,8 +624,9 @@ struct FS_Telemetry_Type
             Serial.print(data.hz200_avg_rate * scale.hz200_avg_rate); Serial.print(", ");
             Serial.print(data.hz800_avg_rate * scale.hz800_avg_rate); Serial.println("]");
             
-            Serial.print("tm_timeout_count: "); Serial.println(data.tm_timeout_count * scale.tm_timeout_count);
-            Serial.print("\n");
+            Serial.print("[max_tm_rate, tm_timeout_count]: ["); Serial.println(data.max_tm_rate * scale.max_tm_rate);
+            Serial.print(", "); Serial.println(data.tm_timeout_count * scale.tm_timeout_count);
+            Serial.print("]\n");
         }
         
         if (print_bool[IMU_TM])

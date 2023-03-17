@@ -9,6 +9,7 @@
 #include "fs_imu.hpp"
 #ifdef SIMULATION
     #include "imu_model.hpp"
+    #include "dynamics_model.hpp"
 #endif
 
 // IMU data
@@ -43,7 +44,7 @@ double gyroSumSqr = 0.0;
 
 // Simulation
 #ifdef SIMULATION
-    class IMUModelBase;
+    DynamicsModel* pDYNModel = 0;
     IMUModelBase* pIMUmodel = 0;
 #endif
 
@@ -166,6 +167,7 @@ void updateDelta( double &imuDt )
     }
     
 #ifdef SIMULATION
+    if (pDYNModel) { pDYNModel->deltaIMU(imuDt); }
     if (pIMUmodel) { pIMUmodel->deltaIMU(imuDt); }
 #endif
 }
@@ -186,6 +188,7 @@ void FsImu_zeroDelta()
     }
 
 #ifdef SIMULATION
+    if (pDYNModel) { pDYNModel->resetIMU(); }
     if (pIMUmodel) { pIMUmodel->reset(); }
 #endif
 }
@@ -199,6 +202,7 @@ void printI2CErrors(bool printBool)
 void FsImu_setSimulationModels(ModelMap* pMap)
 {
     Wire.wire_setSimulationModels(pMap, print_wire);
+    pDYNModel = (DynamicsModel*) pMap->getModel("DynamicsModel");
     pIMUmodel = (IMUModelBase*) pMap->getModel("IMUModel");
 }
 #endif

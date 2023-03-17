@@ -164,16 +164,17 @@ public:
     void display_tx_buffer();
     
     void serial_setSimulationModels(ModelMap* pMap, std::string model, bool print = false);
+    void serial_setTwoHardwareSerialModels(ModelMap* pMap, std::string model, std::string serialType, bool print = false);
 protected:
     void reset_rx_buffer();
     void reset_tx_buffer();
     
-    static const int max_arduino_buffer_size = 2000;//64;
-    static const int max_teensy3_series_buffer_size = 2000;//8;
-    static const int max_teensy4_series_buffer_size = 2000;//4;
-    static const int max_gps_neo6m_buffer_size = 2000;//720;
-    static const int max_nRF24L01_buffer_size = 2000;//32;
-    static const int max_HC05_buffer_size = 2000;//100;
+    static const int max_arduino_buffer_size = 64;
+    static const int max_teensy3_series_buffer_size = 8;
+    static const int max_teensy4_series_buffer_size = 4;
+    static const int max_gps_neo6m_buffer_size = 720;
+    static const int max_HC05Bluetooth_buffer_size = 100;
+    static const int max_APC220Radio_buffer_size = 256;
     
     std::string serial_type = "unknown";
     int max_buffer_size = max_arduino_buffer_size;
@@ -233,9 +234,48 @@ class BluetoothHC05Serial : public SimulationSerial {
 public:
     BluetoothHC05Serial(int rx_pin, int tx_pin) : SimulationSerial(rx_pin, tx_pin)
     {
-        serial_type = "HC-05";
-        max_buffer_size = max_HC05_buffer_size;
+        serial_type = "HC05_Bluetooth";
+        max_buffer_size = max_HC05Bluetooth_buffer_size;
     }
+};
+
+class APC220RadioSerial : public SimulationSerial {
+public:
+    APC220RadioSerial(int rx_pin, int tx_pin) : SimulationSerial(rx_pin, tx_pin)
+    {
+        serial_type = "APC220Radio";
+        max_buffer_size = max_APC220Radio_buffer_size;
+    }
+};
+
+class TwoHardwareSerial : public GenericSensorModel {
+public:
+    TwoHardwareSerial(ModelMap *pMapInit, bool debugFlagIn = false);
+    
+    virtual void initialize();
+    virtual bool update();
+    virtual void setSerialIO(SimulationSerial* pSerial, std::string periphialType);
+private:
+    class Time* pTime;
+    
+    struct MCUIO {
+        MCUIO();
+        ~MCUIO();
+        
+        SimulationSerial* pMCUSerial;
+        SimulationSerial* pMCUperiphial;
+        bool init;
+        unsigned int mcu_rx_fail_count;
+        unsigned int mcu_tx_fail_count;
+        unsigned int periphial_rx_fail_count;
+        unsigned int periphial_tx_fail_count;
+        
+        void set(SimulationSerial* pSerial, std::string periphialType);
+        void update(MCUIO &otherMCU);
+    };
+    
+    MCUIO MCU1;
+    MCUIO MCU2;
 };
 
 class ArduinoEEPROM {
@@ -318,7 +358,9 @@ void pinMode(int pin, pinMode mode);
 #define RF24 SimulationNRF24L01
 #define SoftwareSerial ArduinoSerial
 #define HardwareSerial Teensy4Serial
+
 extern HardwareSerial Serial1;
+extern HardwareSerial Serial2;
 extern SimulationSerial Serial;
 extern SimulationWire Wire;
 extern ArduinoEEPROM EEPROM;

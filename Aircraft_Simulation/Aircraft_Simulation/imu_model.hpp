@@ -34,12 +34,14 @@ public:
     double* getGyroscopeDps(void)    { return gyroInUnits; }
     double* getAccelerometerGs(void) { return accInUnits; }
     
+    double* getDeltaTheta(void)    { return dTheta; }
+    double* getDeltaVelocity(void) { return dVelocity; }
+    
     AngleType<double>* getIMUEuler(void) { return sensorFrameEuler; }
     bool getIMUReady(void)               { return imuReady; }
     
     // setters
     virtual void setPerfectSensor(bool input) { perfectSensor = input; }
-    //void setPerfectSensor(bool input) { perfectSensor = input; }
     void setLSBdps(double LSBdps_in)  { LSBdps = LSBdps_in;    }
     void setLSBg(double LSBg_in)      { LSBg   = LSBg_in;      }
     void setLSBuT(double LSBuT_in)    { LSBuT = LSBuT_in;      }

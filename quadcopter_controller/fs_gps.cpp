@@ -26,7 +26,7 @@ double ref_clon;
 double ref_slat;
 double ref_clat;
 
-#define gpsIO Serial1
+#define gpsIO Serial1 // [RX,TX] = [0,1]
 FS_FIFO gpsFIFO(&gpsIO);
 UBX_MSG ubx_msg(&gpsFIFO);
 
@@ -41,18 +41,6 @@ void FsGPS_setupGPS(int baudRate, bool fs_allow2DFix)
 #ifdef GPS
     allow2DFix = fs_allow2DFix;
     gpsFIFO.begin(baudRate);
-    
-    // Configure Messsages
-    ubx_msg.write_nmea_off();
-    ubx_msg.write_ubx_off();
-    ubx_msg.write_ubx_on();
-    
-    // Set dynmaic mode
-    ubx_msg.set_nav_config();
-    ubx_msg.get_nav_config();
-    
-    // Poll needed almanac data
-    ubx_msg.init_aid_request();
     
     d_posECEF[0] = 0.0;
     d_posECEF[1] = 0.0;
@@ -72,14 +60,32 @@ void FsGPS_setupGPS(int baudRate, bool fs_allow2DFix)
     
     display(getTime());
     display(") GPS setup.\n");
-    gps_setup = true;
 #endif
+}
+
+void init_GPS_messages()
+{
+    // Configure Messsages
+    ubx_msg.write_nmea_off();
+    ubx_msg.write_ubx_off();
+    ubx_msg.write_ubx_on();
+    
+    // Set dynmaic mode
+    ubx_msg.set_nav_config();
+    ubx_msg.get_nav_config();
+    
+    // Poll needed almanac data
+    ubx_msg.init_aid_request();
 }
 
 void FsGPS_performGPS()
 {
 #ifdef GPS
-    if (!gps_setup) { return; }
+    if (!gps_setup)
+    {
+        init_GPS_messages();
+        gps_setup = true;
+    }
     
     GpsData.fifoReadCount  = gpsFIFO.get_read_count();
     GpsData.fifoWriteCount = gpsFIFO.get_write_count();

@@ -53,13 +53,17 @@ struct TM_Message_Info {
     }
 };
 
-void FsTelemetry_setupTelemetry(rf24_datarate_e data_rate, rf24_pa_dbm_e power_level);
-void FsTelemetry_performTelemetry();
+void FsTelemetry_setupTelemetry(int baud_rate);
+void FsTelemetry_performTelemetry(double &tmDt);
 void FsTelemetry_performSerialIO();
 
 void FsTelemetry_sendTelemetry();
-void finishSendingTelemetry();
+void finishSendingTelemetry(double &tmDt);
 
 void FsTelemetry_setTelemetryData(IMUtype* pIMUIn, BarometerType* pBaroIn, GpsType* pGPSIn, NavType* pNavIn, ControlType* pCtrlIn);
 void FsTelemetry_setTimingPointer(double* pTiming);
+
+#ifdef SIMULATION
+   void FsTelemetry_setSimulationModels(ModelMap* pMap);
+#endif
 #endif /* fs_telemetry_hpp */

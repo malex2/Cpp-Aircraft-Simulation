@@ -21,12 +21,17 @@
 
 //#define RealTime
 
+// Ground Slopes
+#define STEEP_GROUND
+//#define SHALLOW_GROUND
+//#define FLAT_GROUND
+
 // Time
-const double runTime_init          = 201.0;
+const double runTime_init          = 220;
 const double printInterval_init    = 5.0;
-const double saveInterval_init     = 0.5;
+const double saveInterval_init     = 0.1;
 const double dynamicsInterval_init = 1.0/800.0;
-const double clock_dt              = 1.0/800.0;//1.0/19200.0; // time interval when not in real time mode
+const double clock_dt              = 1.0/9600.0; // time interval when not in real time mode
 
 const int month_init  = EARTHCONSTANTS::SEP;
 const int day_init    = 30;
@@ -36,19 +41,19 @@ const int minute_init = 30;
 const int second_init = 00;
 
 // Print options
-const bool saveOutput  = false;
-const bool printOutput = false;
+const bool saveOutput  = true;
+const bool printOutput = true;
 const bool plotOutput  = false;
-const std::string savefile    = "output_nobias.csv";
+const std::string savefile    = "output.csv";
 const std::string gps_file    = "/Users/alexandermclean/Documents/Cpp-Aircraft-Simulation/gps_nav_messages_Adeline5.txt";
-const bool readGPSFile        = true;
+const bool readGPSFile        = false;
 const std::string eeprom_file = "/Users/alexandermclean/Documents/Cpp-Aircraft-Simulation/eeprom.txt";
 
 
 // Initial States
 const double velNED_init[3]  = {0, 0, 0};
 const double posLLH_init[3] = {28.5997222, -81.3394444, 0.32808}; // deg, deg, ft above ground
-const double eulerAngles_init[3] = {0.0, 0.0, 60.0}; // relative to ground elevation
+const double eulerAngles_init[3] = {0.0, 0.0, 45.0}; // relative to ground elevation
 const double bodyRates_init[3]   = {0, 0, 0};
 const double actuators_init[4]   = {0.0, 0.0, 0.0, 0.0}; //{de,da,dr,dT}
 const int inputMode_init = 0; // 0 - external, 1 - keyboard, 2 - table

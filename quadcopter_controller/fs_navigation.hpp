@@ -16,11 +16,11 @@
 #define FILTERTEST
 
 // Types
-enum NavState {Calibration, INS, AccelUpdate, GPSUpdate, GPSUpdate2D, BaroUpdate, GroundAlign, NNAVSTATES};
+enum NavState {Nav_Startup, Calibration, INS, AccelUpdate, GPSUpdate, GPSUpdate2D, BaroUpdate, GroundAlign, NNAVSTATES};
 enum StateType {ROLL, PITCH, YAW, VN, VE, VD, N, E, ALT, GBIAS_X, GBIAS_Y, GBIAS_Z, ABIAS_X, ABIAS_Y, ABIAS_Z, GRAVITY, NSTATES};
 enum VECTORTYPE {X, Y, Z};
 enum AccelUpdateType {ACCEL_ROLL, ACCEL_PITCH, NACCELSTATES};
-enum GroundMeasurementType {GROUND_VN, GROUND_VE, GROUND_VD, GROUND_YAW, NGROUNDSTATES};
+enum GroundMeasurementType {GROUND_N, GROUND_E, GROUND_ALT, GROUND_VN, GROUND_VE, GROUND_VD, NGROUNDSTATES};
 enum GPSMeasurementType {GPS_N, GPS_E, GPS_ALT, GPS_VN, GPS_VE, GPS_VD, NGPSSTATES};
 enum GPS2DMeasurementType {GPS2D_N, GPS2D_E, GPS2D_VN, GPS2D_VE, N2DGPSSTATES};
 enum BAROMeasurementType {BARO_ALT, NBAROSTATES};
@@ -55,6 +55,7 @@ struct NavType {
     double position[3]; // North, East, Altitude
     double velNED[3];
     bool   initNED;
+    bool   allowLoadIMUCal;
     double eulerAngles[3];
     double q_B_NED[4]; // Quaternion of Body relative to NED
     double accBias[3];
@@ -82,12 +83,13 @@ struct NavType {
     
     NavType()
     {
-        state = Calibration;
+        state = Nav_Startup;
         timestamp = 0.0;
         gravity = (double) (Gravity);
         altitude_msl = 0.0;
         geoidCorrection = 0.0;
         initNED = false;
+        allowLoadIMUCal = false;
         
         accel_pitch = 0.0;
         accel_roll  = 0.0;
@@ -116,7 +118,7 @@ struct NavType {
 };
 
 // Setup
-void FsNavigation_setupNavigation(double *initialPosition, double initialHeading);
+void FsNavigation_setupNavigation(double *initialPosition, double initialHeading, bool loadIMUCalibration);
 
 // Perform
 void FsNavigation_performNavigation( double &navDt );
@@ -132,7 +134,7 @@ void applyCorrections();
 
 // Filter Updates
 void filterUpdate(double* residual, double* R, double* H, double* K, int nMeas);
-void FsNavigation_performAccelerometerUpdate();
+void FsNavigation_performAccelerometerUpdate(bool performUpdate);
 void FsNavigation_performGPSUpdate(GpsType* gpsData);
 void FsNavigation_performBarometerUpdate(BarometerType* baroData);
 void FsNavigation_groundAlign();
@@ -153,18 +155,23 @@ double*  FsNavigation_getBaroKalmanGain();
 double*  FsNavigation_getBaroResidual();
 double*  FsNavigation_getGPSMeasVariance();
 double*  FsNavigation_getGPSResidual();
+unsigned int* FsNavigation_getGPSFilterError();
 double*  FsNavigation_getAccelMeasVariance();
+double* FsNavigation_getGroundResidual();
 
 // Setters
 void FsNavigation_setIMUdata(IMUtype* pIMUdataIn);
 void FsNavigation_setNED(double* LLA, double* velNED, double heading, bool bypassInit = false);
+void FsNavigation_setGroundFlag(bool flag);
 #ifdef SIMULATION
     void FsNavigation_setSimulationModels(ModelMap* pMap);
+    void FsNavigation_setTruthTransitionMatrix();
 #endif
 
 // Support
 #ifdef SIMULATION
-    void updateTruth();
+   void updateTruth();
+   void computeTruthErrors();
 #endif
 
 inline void FsNavigation_bodyToNED(double* vNED, double* vB);

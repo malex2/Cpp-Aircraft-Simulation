@@ -411,6 +411,8 @@ double errorToVariance(double maxError)
     
     // max error is 3 standard deviations
     std = maxError / 3.0;
+    //std = maxError;
+    
     // variance = std^2
     variance = std*std;
     
@@ -422,12 +424,12 @@ double varianceToError(double variance)
     double std;
     double error;
     
-    //std = sqrt(variance)
+    if (variance<0.0) { variance = -1.0*variance; }
     std = sqrt(variance);
     
     // max error is 3 std
-    
     error = 3.0*std;
+    //error = std;
     
     return error;
 }
