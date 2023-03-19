@@ -46,6 +46,11 @@ double maxRPM;
 unsigned short altHoldLatchCounter;
 unsigned short groundCount;
 
+SensorErrorType accelError[3];
+SensorErrorType gyroError[3];
+const SensorErrorType* nav_gyroError;
+const SensorErrorType* nav_accelError;
+
 // Gains
 // Position Channels
 double wn_h = 0.5 * hz2rps;
@@ -105,6 +110,9 @@ void FsControls_setup()
     }
     accelZ = 0.0;
 
+    nav_gyroError = 0;
+    nav_accelError = 0;
+    
     // Control Gains
     altHoldLatchCounter = 0;
     groundCount = 0;
@@ -147,6 +155,25 @@ void FsControls_setup()
 void FsControls_groundDetection()
 {
 #ifdef GROUND_DETECTION
+    if (nav_gyroError && nav_accelError)
+    {
+        double dGyro;
+        double dAccel;
+        controlData.movingDetection = false;
+        for (int i=0; i<3; i++)
+        {
+            gyroError[i].compute();
+            accelError[i].compute();
+        
+            dGyro = fabs(gyroError[i].std - nav_gyroError[i].std);
+            dAccel = fabs(accelError[i].std - nav_accelError[i].std);
+        
+            //display(i); display(") ["); display(gyroError[i].std); display(", "); display(accelError[i].std); display("]\n");
+            
+            controlData.movingDetection = controlData.movingDetection | (dGyro > 0.1) | (dAccel > 0.1);
+        }
+    }
+    
     if (controlData.onGround)
     {
         // Detect take off command
@@ -158,10 +185,14 @@ void FsControls_groundDetection()
         
         // Detect crash landings
         if (!controlData.takeOff &&
-            (fabs(eulerAngles[0]) > 15.0*degree2radian || fabs(eulerAngles[1]) > 15.0*degree2radian) &&
-            (sqrt(bodyRates[0]*bodyRates[0] + bodyRates[1]*bodyRates[1]) > 5.0*degree2radian))
+            (fabs(eulerAngles[0]) > 45.0*degree2radian || fabs(eulerAngles[1]) > 45.0*degree2radian) &&
+            (sqrt(bodyRates[0]*bodyRates[0] + bodyRates[1]*bodyRates[1]) > 100*degree2radian))
         {
             controlData.crashLand = true;
+            display("Crash landing detected! [roll, pitch, rate]: [");
+            display(fabs(eulerAngles[0])*radian2degree); display(", ");
+            display(fabs(eulerAngles[1])*radian2degree); display(", ");
+            display(sqrt(bodyRates[0]*bodyRates[0] + bodyRates[1]*bodyRates[1])*radian2degree); display("]\n");
         }
         
         // Detect off ground
@@ -171,9 +202,25 @@ void FsControls_groundDetection()
         }
     }
     // Check for ground contact
+    else if (controlData.VLLzCmd >= 0 && (controlData.VLLzCmd - velLL[2]) > AltHoldVelEnter && controlData.dT == controlData.dTmin && fabs(accelZ) < 0.5 && fabs(velLL[2]) < 0.5)
+    {
+        groundCount++;
+        if (groundCount > 50)
+        {
+            display("Fs_Constrols on ground. ");
+            display("Accel: ");
+            display(accelZ);
+            display(" groundCount: ");
+            display(groundCount);
+            display("\n");
+            controlData.onGround = true;
+            controlData.takeOff  = false;
+        }
+    }
     else if (accelZ < -2.0*Gravity)
     {
         groundCount++;
+        display("Ground count: "); display(groundCount); display(", "); display(accelZ); display("\n");
         if (groundCount > 1)
         {
             display("Fs_Constrols on ground. ");
@@ -200,7 +247,7 @@ void FsControls_performControls(double &ctrlDt)
     // Not initialization for controls
     if ( (controlData.mode == NoControl) ||
         (!controls_setup) ||
-        (FsNavigation_getNavState() == Calibration)
+        (FsNavigation_getNavState() <= Calibration)
         )
     {
         return;
@@ -386,7 +433,7 @@ void setMotors()
 
 void FsControls_setMode(ControlMode mode) { controlData.mode = mode; }
 
-void FsControls_setPWMCommands(int* pwmIn)
+void FsControls_setPWMCommands(const int* pwmIn)
 {
     for (int iCh = THROTTLE_CHANNEL; iCh != nChannels; iCh++)
     {
@@ -404,16 +451,35 @@ void FsControls_setSimulationModels(ModelMap* pMap)
 }
 #endif
 
-void FsControls_setControlsData(IMUtype* pIMUdataIn, NavType* pNavDataIn)
+void FsControls_setControlsData(const IMUtype* pIMUdataIn, const NavType* pNavDataIn)
 {
     for (int i=0; i<3; i++)
     {
         bodyRates[i]   = pIMUdataIn->gyro[i] - pNavDataIn->gyroBias[i];
         eulerAngles[i] = pNavDataIn->eulerAngles[i];
         position[i]    = pNavDataIn->position[i];
+        
+        gyroError[i].update(pIMUdataIn->gyro[i]);
+        accelError[i].update(pIMUdataIn->accel[i]);
     }
     FsNavigation_bodyToLL(velLL, pNavDataIn->velBody);
     accelZ = pNavDataIn->accelBody[2];
+}
+
+void FsControls_setIMUStatistics(const SensorErrorType* calGyroError, const SensorErrorType* calAccelError)
+{
+    if (nav_gyroError && nav_accelError) { return; }
+    nav_gyroError = calGyroError;
+    nav_accelError = calAccelError;
+}
+
+void FsControls_resetMovingDetection()
+{
+    for (int i=0; i<3; i++)
+    {
+        gyroError[i].reset();
+        accelError[i].reset();
+    }
 }
 
 ControlType* FsControls_getControlData()

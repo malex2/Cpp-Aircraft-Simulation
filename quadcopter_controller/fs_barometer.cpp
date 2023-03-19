@@ -7,6 +7,7 @@
 //
 
 #include "fs_barometer.hpp"
+#include "fs_controls.hpp"
 
 // Barometer Data
 BarometerType baroData;
@@ -24,8 +25,8 @@ bool   stateSetup;
 // Calibration
 double c5, c6, mc, md, x0, x1, x2, py0, py1, py2, p0, p1, p2;
 byte pressureResolution;
-double refPressure;
 double altitudeRMS;
+SensorErrorType pressureError;
 
 void FsBarometer_setupBarometer()
 {
@@ -51,6 +52,7 @@ void FsBarometer_setupBarometer()
     pressDelay = 5.0 / 1000.0;
     tempDelay = 5.0 / 1000.0;
     altitudeRMS = 0.5;
+    pressureError.reset();
     
     // Calibrate
     AC1 = readCalVal(AC1_ADDR);
@@ -198,9 +200,15 @@ void FsBarometer_performBarometer()
     {
         readPres();
         
-        if (!pressureInit)
+        // Average reference pressure
+        if (FsControls_onGround() && !pressureInit)
         {
-            refPressure = baroData.pressure;
+            pressureError.update(baroData.pressure);
+            pressureError.compute();
+            baroData.refPressure = pressureError.mean;
+        }
+        else if (!FsControls_onGround() && !pressureInit)
+        {
             pressureInit = true;
         }
         
@@ -273,7 +281,7 @@ void readPres()
 
 void computeAltitude()
 {
-    baroData.altitude = 44330.0 * ( 1.0 - pow(baroData.pressure / refPressure, 1.0 / 5.255) );
+    baroData.altitude = 44330.0 * ( 1.0 - pow(baroData.pressure / baroData.refPressure, 1.0 / 5.255) );
 }
 
 bool FsBarometer_startBarometerMeasurement()

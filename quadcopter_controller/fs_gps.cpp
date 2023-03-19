@@ -20,6 +20,9 @@ bool first3DFix   = true;
 bool allow2DFix   = false;
 int gpsFix_init   = 0;
 
+SensorErrorType ecefError[3];
+SensorErrorType llhError[3];
+
 double d_posECEF[3];
 double ref_slon;
 double ref_clon;
@@ -145,14 +148,29 @@ void FsGPS_performGPS()
             
             if (!positionInit)
             {
-                GpsData.ref_posECEF[0] = GpsData.posECEF[0];
-                GpsData.ref_posECEF[1] = GpsData.posECEF[1];
-                GpsData.ref_posECEF[2] = GpsData.posECEF[2];
-                ref_slat = sin(GpsData.posLLH[0]*degree2radian);
-                ref_clat = cos(GpsData.posLLH[0]*degree2radian);
-                ref_clon = cos(GpsData.posLLH[1]*degree2radian);
-                ref_slon = sin(GpsData.posLLH[1]*degree2radian);
+                // Average reference position
+                for (int i=0; i<3; i++)
+                {
+                    ecefError[i].update(GpsData.posECEF[i]);
+                    llhError[i].update(GpsData.posLLH[i]);
+                    
+                    ecefError[i].compute();
+                    llhError[i].compute();
+                }
+                
+                GpsData.ref_posECEF[0] = ecefError[0].mean;
+                GpsData.ref_posECEF[1] = ecefError[1].mean;
+                GpsData.ref_posECEF[2] = ecefError[2].mean;
+                ref_slat = sin(llhError[0].mean*degree2radian);
+                ref_clat = cos(llhError[0].mean*degree2radian);
+                ref_clon = cos(llhError[1].mean*degree2radian);
+                ref_slon = sin(llhError[1].mean*degree2radian);
                 gpsFix_init = GpsData.gpsFix;
+                
+                if (!FsControls_onGround()) { positionInit = true; }
+            }
+            else if (!FsControls_onGround() && !positionInit)
+            {
                 positionInit = true;
             }
             

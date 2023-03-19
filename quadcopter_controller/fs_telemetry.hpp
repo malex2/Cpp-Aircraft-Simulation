@@ -60,8 +60,8 @@ void FsTelemetry_performSerialIO();
 void FsTelemetry_sendTelemetry();
 void finishSendingTelemetry(double &tmDt);
 
-void FsTelemetry_setTelemetryData(IMUtype* pIMUIn, BarometerType* pBaroIn, GpsType* pGPSIn, NavType* pNavIn, ControlType* pCtrlIn);
-void FsTelemetry_setTimingPointer(double* pTiming);
+void FsTelemetry_setTelemetryData(const IMUtype* pIMUIn, const BarometerType* pBaroIn, const GpsType* pGPSIn, const NavType* pNavIn, const ControlType* pCtrlIn);
+void FsTelemetry_setTimingPointer(const double* pTiming);
 
 #ifdef SIMULATION
    void FsTelemetry_setSimulationModels(ModelMap* pMap);

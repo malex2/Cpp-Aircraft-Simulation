@@ -20,7 +20,7 @@ class GenericForceModel;
 // Typedef's
 typedef std::map<std::string, GenericModel*>::iterator iModel;
 typedef std::map<std::string, GenericForceModel*>::iterator iForceModel;
-typedef std::map<int, double*>::iterator iLog;
+typedef std::map<int, const double*>::iterator iLog;
 
 typedef enum mapType {genericModel, forceModel, printVar, saveVar, plotVar} mapType;
 
@@ -40,7 +40,7 @@ public :
     
     // Add class pointer to map
     void addModel(std::string key, GenericModel *pModel, mapType curMap = genericModel);
-    void addLogVar(std::string name, double *var, const mapType *mappings, int nMappings);
+    void addLogVar(std::string name, const double *var, const mapType *mappings, int nMappings);
     
     // Get pointer from key
     GenericModel*      getModel(std::string key);
@@ -49,7 +49,7 @@ public :
     // Get pointer from itr
     GenericModel*      getModel(iModel itr);
     GenericForceModel* getForceModel(iForceModel itr);
-    double*            getLogVar(iLog itr);
+    const double*      getLogVar(iLog itr);
     
     // Get first key in model
     iModel      getFirstModel(void)           { return modelMapping.begin(); }
@@ -72,9 +72,9 @@ private :
     
     std::map<std::string, GenericModel*> modelMapping;
     std::map<std::string, GenericForceModel*> forceModels;
-    std::map<int, double*> printMapping;
-    std::map<int, double*> saveMapping;
-    std::map<int, double*> plotMapping;
+    std::map<int, const double*> printMapping;
+    std::map<int, const double*> saveMapping;
+    std::map<int, const double*> plotMapping;
     
     std::vector<std::string> printNames;
     std::vector<std::string> saveNames;

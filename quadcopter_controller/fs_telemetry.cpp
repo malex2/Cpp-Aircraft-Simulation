@@ -13,12 +13,12 @@
 #include "fs_navigation.hpp"
 #include "fs_controls.hpp"
 
-IMUtype* pIMU = 0;
-BarometerType* pBaro = 0;
-GpsType* pGPS = 0;
-NavType* pNav = 0;
-ControlType* pCtrl = 0;
-double* pFSTiming = 0;
+const IMUtype* pIMU = 0;
+const BarometerType* pBaro = 0;
+const GpsType* pGPS = 0;
+const NavType* pNav = 0;
+const ControlType* pCtrl = 0;
+const double* pFSTiming = 0;
 
 FS_Telemetry_Type TM;
 FS_FIFO* pPrintFIFO = 0;
@@ -268,7 +268,7 @@ void FsTelemetry_performSerialIO()
 #endif
 }
 
-void FsTelemetry_setTelemetryData(IMUtype* pIMUIn, BarometerType* pBaroIn, GpsType* pGPSIn, NavType* pNavIn, ControlType* pCtrlIn)
+void FsTelemetry_setTelemetryData(const IMUtype* pIMUIn, const BarometerType* pBaroIn, const GpsType* pGPSIn, const NavType* pNavIn, const ControlType* pCtrlIn)
 {
     pIMU  = pIMUIn;
     pBaro = pBaroIn;
@@ -277,7 +277,7 @@ void FsTelemetry_setTelemetryData(IMUtype* pIMUIn, BarometerType* pBaroIn, GpsTy
     pCtrl = pCtrlIn;
 }
 
-void FsTelemetry_setTimingPointer(double* pTiming)
+void FsTelemetry_setTimingPointer(const double* pTiming)
 {
     pFSTiming = pTiming;
 }

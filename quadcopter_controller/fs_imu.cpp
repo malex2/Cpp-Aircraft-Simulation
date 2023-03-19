@@ -39,8 +39,8 @@ short rawTemp;
 
 float toBody[3] = {1.0, -1.0, -1.0};
 
-double accelSumSqr = 0.0;
-double gyroSumSqr = 0.0;
+//double accelSumSqr = 0.0;
+//double gyroSumSqr = 0.0;
 
 // Simulation
 #ifdef SIMULATION
@@ -119,8 +119,8 @@ void readIMU()
     }
     
     // Convert to Units
-    accelSumSqr = 0.0;
-    gyroSumSqr  = 0.0;
+    //accelSumSqr = 0.0;
+    //gyroSumSqr  = 0.0;
     for (int i=0; i<3; i++)
     {
 #ifdef SIMULATION
@@ -140,19 +140,17 @@ void readIMU()
             IMUdata.gyro[i]  = toBody[i]*pIMUmodel->getGyroscopeDps()[i] * degree2radian;
         }
 #endif
-        
-        accelSumSqr = accelSumSqr + IMUdata.accel[i]*IMUdata.accel[i];
-        gyroSumSqr  = gyroSumSqr  + IMUdata.gyro[i]*IMUdata.gyro[i];
+        //accelSumSqr = accelSumSqr + IMUdata.accel[i]*IMUdata.accel[i];
+        //gyroSumSqr  = gyroSumSqr  + IMUdata.gyro[i]*IMUdata.gyro[i];
     }
-    accelSumSqr = sqrt(accelSumSqr);
-    gyroSumSqr  = sqrt(gyroSumSqr);
+    //accelSumSqr = sqrt(accelSumSqr);
+    //gyroSumSqr  = sqrt(gyroSumSqr);
     
-    if ((gyroSumSqr > highRate)  || (accelSumSqr > highAccel))
-    {
-        IMUdata.highDynamics = true;
-        
-    }
-    else { IMUdata.highDynamics = false; }
+    //if ((gyroSumSqr > highRate)  || (accelSumSqr > highAccel))
+    //{
+    //    IMUdata.highDynamics = true;
+    //}
+    //else { IMUdata.highDynamics = false; }
 }
 
 void updateDelta( double &imuDt )

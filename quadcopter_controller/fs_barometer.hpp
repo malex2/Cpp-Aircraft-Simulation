@@ -15,6 +15,7 @@
 enum baroStateType {startSequence, requestTemperature, readTemperature, requestPressure, readPressure, baroReady, baroStandby, nBaroStates};
 
 struct BarometerType {
+    double refPressure;
     double pressure;
     double temperature;
     double altitude;
@@ -26,6 +27,7 @@ struct BarometerType {
     double pu, tu;
     BarometerType()
     {
+        refPressure = 0.0;
         pressure    = 0.0;
         temperature = 0.0;
         altitude    = 0.0;

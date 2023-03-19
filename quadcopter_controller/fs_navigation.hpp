@@ -20,22 +20,10 @@ enum NavState {Nav_Startup, Calibration, INS, AccelUpdate, GPSUpdate, GPSUpdate2
 enum StateType {ROLL, PITCH, YAW, VN, VE, VD, N, E, ALT, GBIAS_X, GBIAS_Y, GBIAS_Z, ABIAS_X, ABIAS_Y, ABIAS_Z, GRAVITY, NSTATES};
 enum VECTORTYPE {X, Y, Z};
 enum AccelUpdateType {ACCEL_ROLL, ACCEL_PITCH, NACCELSTATES};
-enum GroundMeasurementType {GROUND_N, GROUND_E, GROUND_ALT, GROUND_VN, GROUND_VE, GROUND_VD, NGROUNDSTATES};
+enum GroundMeasurementType {GROUND_N, GROUND_E, GROUND_ALT, GROUND_VN, GROUND_VE, GROUND_VD, GROUND_YAW, NGROUNDSTATES};
 enum GPSMeasurementType {GPS_N, GPS_E, GPS_ALT, GPS_VN, GPS_VE, GPS_VD, NGPSSTATES};
 enum GPS2DMeasurementType {GPS2D_N, GPS2D_E, GPS2D_VN, GPS2D_VE, N2DGPSSTATES};
 enum BAROMeasurementType {BARO_ALT, NBAROSTATES};
-
-struct SensorErrorType {
-    double sum;
-    double mean;
-    double max;
-    double min;
-    double std;
-    double sumSqr;
-    double variance;
-    
-    SensorErrorType() : sum(0.0), mean(0.0), max(-999999.0), min(999999.0), std(0.0), sumSqr(0.0), variance(0.0) {}
-};
 
 struct StateInputType {
     double dTheta[3];
@@ -60,6 +48,7 @@ struct NavType {
     double q_B_NED[4]; // Quaternion of Body relative to NED
     double accBias[3];
     double gyroBias[3];
+    double gravityBias;
     double altitude_msl;
     double geoidCorrection;
     double gravity;
@@ -72,6 +61,7 @@ struct NavType {
     double accel_pitch;
     double accel_roll;
     double accel_mag;
+    double rates_mag;
     
     NavState     state;
     double       timestamp;
@@ -94,7 +84,8 @@ struct NavType {
         accel_pitch = 0.0;
         accel_roll  = 0.0;
         accel_mag   = 0.0;
-        
+        rates_mag   = 0.0;
+        gravityBias = 0.0;
         for (int i=0; i<3; i++)
         {
             position[i]    = 0.0;
@@ -135,34 +126,37 @@ void applyCorrections();
 // Filter Updates
 void filterUpdate(double* residual, double* R, double* H, double* K, int nMeas);
 void FsNavigation_performAccelerometerUpdate(bool performUpdate);
-void FsNavigation_performGPSUpdate(GpsType* gpsData);
-void FsNavigation_performBarometerUpdate(BarometerType* baroData);
+void FsNavigation_performGPSUpdate(const GpsType* gpsData);
+void FsNavigation_performBarometerUpdate(const BarometerType* baroData);
 void FsNavigation_groundAlign();
 
 // Calibration
 void FsNavigation_calibrateIMU();
 
 // Getters
-NavType* FsNavigation_getNavData(bool useTruth = false);
+const NavType* FsNavigation_getNavData(bool useTruth = false);
 double   FsNavigation_getNavAlt();
-NavType* FsNavigation_getNavError();
+const NavType* FsNavigation_getNavError();
 NavState FsNavigation_getNavState();
-double*  FsNavigation_getCovariance();
-double*  FsNavigation_getProcessNoise();
-double*  FsNavigation_getStateError();
-double*  FsNavigation_getCovarianceCorrection();
-double*  FsNavigation_getBaroKalmanGain();
-double*  FsNavigation_getBaroResidual();
-double*  FsNavigation_getGPSMeasVariance();
-double*  FsNavigation_getGPSResidual();
-unsigned int* FsNavigation_getGPSFilterError();
-double*  FsNavigation_getAccelMeasVariance();
-double* FsNavigation_getGroundResidual();
+const double*  FsNavigation_getCovariance();
+const double*  FsNavigation_getProcessNoise();
+const double*  FsNavigation_getStateError();
+const double*  FsNavigation_getCovarianceCorrection();
+const double*  FsNavigation_getBaroKalmanGain();
+const double*  FsNavigation_getBaroResidual();
+const double*  FsNavigation_getGPSMeasVariance();
+const double*  FsNavigation_getGPSResidual();
+const unsigned int* FsNavigation_getGPSFilterError();
+const double*  FsNavigation_getAccelMeasVariance();
+const double* FsNavigation_getGroundResidual();
+
+const SensorErrorType* FsNavigation_getGyroStatistics();
+const SensorErrorType* FsNavigation_getAccelStatistics();
 
 // Setters
-void FsNavigation_setIMUdata(IMUtype* pIMUdataIn);
+void FsNavigation_setIMUdata(const IMUtype* pIMUdataIn);
 void FsNavigation_setNED(double* LLA, double* velNED, double heading, bool bypassInit = false);
-void FsNavigation_setGroundFlag(bool flag);
+void FsNavigation_setGroundFlags(bool onGround, bool movingDetection);
 #ifdef SIMULATION
     void FsNavigation_setSimulationModels(ModelMap* pMap);
     void FsNavigation_setTruthTransitionMatrix();
@@ -174,9 +168,9 @@ void FsNavigation_setGroundFlag(bool flag);
    void computeTruthErrors();
 #endif
 
-inline void FsNavigation_bodyToNED(double* vNED, double* vB);
-inline void FsNavigation_NEDToBody(double* vB, double* vNED);
-void FsNavigation_bodyToLL(double* vLL, double* vBody);
+inline void FsNavigation_bodyToNED(double* vNED, const double* vB);
+inline void FsNavigation_NEDToBody(double* vB, const double* vNED);
+void FsNavigation_bodyToLL(double* vLL, const double* vBody);
 inline void quaternionProduct(double *product, double *q1, double *q2);
 inline void updateEulerAngles();
 inline void updateQuaternions();

@@ -13,13 +13,13 @@
 #include <math.h>
 
 // MACROS
-//#define SIMULATION
+#define SIMULATION
 #define IMU
 #define GPS
 #define BAROMETER
-//#define PWM
-//#define CONTROLS
-//#define GROUND_DETECTION
+#define PWM
+#define CONTROLS
+#define GROUND_DETECTION
 #define NAVIGATION
 //#define TELEMETRY
 //#define PRINT
@@ -264,6 +264,69 @@ const double dtPad = 1e-10;
 #define UBX_MSG_LENGTH_SIZE       2
 #define UBX_MSG_CHECKSUM_SIZE     2
 
+// Printing
+void display(const char* val, int printMode = DEC);
+template<typename TempType>
+void display(TempType val, int printMode = DEC);
+void display(I2C_Error_Code val, int printMode = DEC);
+
+struct SensorErrorType {
+    double sum;
+    double mean;
+    double max;
+    double min;
+    double std;
+    double sumSqr;
+    double variance;
+    unsigned int count;
+    
+    SensorErrorType() { reset(); }
+    
+    void reset()
+    {
+        sum = 0.0;
+        sumSqr = 0.0;
+        mean = 0.0;
+        max = -999999.0;
+        min = 999999.0;
+        std = 0.0;
+        variance = 0.0;
+        count = 0;
+    }
+    
+    void update(double x)
+    {
+        sum += x;
+        sumSqr += x*x;
+        
+        if (x > max) { max =  x; }
+        if (x < min) { min =  x; }
+        
+        count++;
+    }
+    
+    void compute()
+    {
+        mean     = sum/count;
+        variance = sumSqr/count - mean*mean;
+        std      = sqrt(variance);
+    }
+    
+    void print()
+    {
+        display("[sum, sumSqr, mean, std, variance, min, max, count] = [");
+        display(sum); display(", ");
+        display(sumSqr); display(", ");
+        display(mean); display(", ");
+        display(std); display(", ");
+        display(variance); display(", ");
+        display(min); display(", ");
+        display(max); display(", ");
+        display(count); display("]\n");
+        
+    }
+};
+
 // Serial Fifo
 #define MAX_SERIAL_FIFO_SIZE 800
 #define NRF24L01_BUFFER_SIZE 32
@@ -349,11 +412,7 @@ double errorToVariance(double maxError);
 double varianceToError(double variance);
 void crossProduct(double *cross, double *a, double *b);
 
-// Printing
-void display(const char* val, int printMode = DEC);
-template<typename TempType>
-void display(TempType val, int printMode = DEC);
-void display(I2C_Error_Code val, int printMode = DEC);
+// FIFO
 FS_FIFO* get_print_fifo();
 unsigned int sizeof_char(const char* str);
 void FsCommon_performSerialIO();

@@ -58,6 +58,7 @@ struct ControlType {
     bool onGround;
     bool takeOff;
     bool crashLand;
+    bool movingDetection;
     
     bool controlAltitude;
     ControlMode mode;
@@ -96,6 +97,7 @@ struct ControlType {
         takeOff    = false;
         crashLand  = false;
         onGround   = true;
+        movingDetection = false;
         
         controlAltitude = false;
         mode = NoControl;
@@ -107,11 +109,14 @@ struct ControlType {
 void FsControls_setup();
 void FsControls_groundDetection();
 void FsControls_performControls(double &ctrlDt);
+void FsControls_resetMovingDetection();
 
 // Setters
 void FsControls_setMode(ControlMode mode);
-void FsControls_setPWMCommands(int* pwmIn);
-void FsControls_setControlsData(IMUtype* pIMUdataIn, NavType* pNavDataIn);
+void FsControls_setPWMCommands(const int* pwmIn);
+void FsControls_setControlsData(const IMUtype* pIMUdataIn, const NavType* pNavDataIn);
+void FsControls_setIMUStatistics(const SensorErrorType* calGyroError, const SensorErrorType* calAccelError);
+
 #ifdef SIMULATION
     void FsControls_setSimulationModels(ModelMap* pMap);
 #endif
