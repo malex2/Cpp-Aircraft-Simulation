@@ -165,7 +165,11 @@ const double dtPad = 1e-10;
 #define MAXTHROTTLE  0.85*dMAX
 #define minPWMIncr   5.0
 
+// Velocity accuracy for velocity control
 #define VELSTDLIM 0.1
+
+// Yaw accuracy for ground align
+#define YAWSTDLIM 5.0 * degree2radian
 
 // Thrust Constants
 #define        MAXTHRUST   4.22

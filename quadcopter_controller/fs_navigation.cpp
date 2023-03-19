@@ -61,6 +61,7 @@ double groundResidual[NGROUNDSTATES];
 
 double position_ground_latch[3];
 double yaw_ground_latch;
+double yaw_var_ground_latch;
 
 // Accelerometer Correction
 double R_ACCEL[NACCELSTATES][NACCELSTATES];
@@ -175,7 +176,7 @@ void FsNavigation_setupNavigation(double *initialPosition, double initialHeading
     H_GROUND[GROUND_VN][VN]   = 1.0;
     H_GROUND[GROUND_VE][VE]   = 1.0;
     H_GROUND[GROUND_VD][VD]   = 1.0;
-    H_GROUND[GROUND_YAW][YAW] = 1.0;
+    H_GROUND[GROUND_YAW][YAW] = 0.0;
     
     H_ACCEL[ACCEL_ROLL][ROLL]   = 1.0;
     H_ACCEL[ACCEL_PITCH][PITCH] = 1.0;
@@ -212,6 +213,7 @@ void FsNavigation_setupNavigation(double *initialPosition, double initialHeading
     P[ABIAS_Z][ABIAS_Z] = errorToVariance(0.08*Gravity);
     P[GRAVITY][GRAVITY] = errorToVariance(0.0);
 
+    yaw_var_ground_latch = P[YAW][YAW];
 #ifdef FILTERTEST
     linNavStates[ROLL]  = NavData.eulerAngles[0];
     linNavStates[PITCH] = NavData.eulerAngles[1];
@@ -841,7 +843,7 @@ void FsNavigation_groundAlign()
     R_GROUND[GROUND_VN][GROUND_VN]   = errorToVariance(0.1);
     R_GROUND[GROUND_VE][GROUND_VE]   = errorToVariance(0.1);
     R_GROUND[GROUND_VD][GROUND_VD]   = errorToVariance(0.1);
-    R_GROUND[GROUND_YAW][GROUND_YAW] = errorToVariance(1.0*degree2radian);
+    R_GROUND[GROUND_YAW][GROUND_YAW] = yaw_var_ground_latch;
     
     groundResidual[GROUND_N]   = position_ground_latch[0] - NavData.position[0];
     groundResidual[GROUND_E]   = position_ground_latch[1] - NavData.position[1];
@@ -1108,7 +1110,13 @@ void FsNavigation_setGroundFlags(bool onGround, bool movingDetection)
         position_ground_latch[0] = NavData.position[0];
         position_ground_latch[1] = NavData.position[1];
         position_ground_latch[2] = NavData.position[2];
+        
+        yaw_var_ground_latch = P[YAW][YAW];
         yaw_ground_latch = NavData.eulerAngles[2];
+        if (yaw_var_ground_latch*yaw_var_ground_latch < YAWSTDLIM)
+        {
+            H_GROUND[GROUND_YAW][YAW] = 1.0;
+        }
     }
     groundFlag = onGround;
     movementFlag = movingDetection;

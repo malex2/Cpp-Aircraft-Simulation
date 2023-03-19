@@ -838,8 +838,8 @@ void setPrintVariables()
     pMap->addLogVar("VN Stdev"    , &navStd[VN][VN], savePlot, 2);
     pMap->addLogVar("VE Stdev"    , &navStd[VE][VE], savePlot, 2);
     pMap->addLogVar("VD Stdev"    , &navStd[VD][VD], savePlot, 2);
-    pMap->addLogVar("Accel Bias X Stdev"    , &navStd[ABIAS_X][ABIAS_X], savePlot, 2);
-    pMap->addLogVar("Accel Bias Y Stdev"    , &navStd[ABIAS_Y][ABIAS_Y], savePlot, 2);
+    //pMap->addLogVar("Accel Bias X Stdev"    , &navStd[ABIAS_X][ABIAS_X], savePlot, 2);
+    //pMap->addLogVar("Accel Bias Y Stdev"    , &navStd[ABIAS_Y][ABIAS_Y], savePlot, 2);
     //pMap->addLogVar("Accel Bias Z Stdev"    , &navStd[ABIAS_Z][ABIAS_Z], savePlot, 2);
     //pMap->addLogVar("VN AX Stdev"    , &navStd[VN][ABIAS_X], savePlot, 2);
     //pMap->addLogVar("AX VN Stdev"    , &navStd[ABIAS_X][VN], savePlot, 2);
@@ -876,12 +876,12 @@ void setPrintVariables()
     
     //pMap->addLogVar("baroResidual[BAR_ALT]", &barometerResidual[BARO_ALT], savePlot, 2);
     
-    pMap->addLogVar("GPSResidual[GPS_N]", &GPSResidual[GPS_N], savePlot, 2);
-    pMap->addLogVar("GPSResidual[GPS_E]", &GPSResidual[GPS_E], savePlot, 2);
-    pMap->addLogVar("GPSResidual[GPS_ALT]", &GPSResidual[GPS_ALT], savePlot, 2);
-    pMap->addLogVar("GPSResidual[GPS_VN]", &GPSResidual[GPS_VN], savePlot, 2);
-    pMap->addLogVar("GPSResidual[GPS_VE]", &GPSResidual[GPS_VE], savePlot, 2);
-    pMap->addLogVar("GPSResidual[GPS_VD]", &GPSResidual[GPS_VD], savePlot, 2);
+    //pMap->addLogVar("GPSResidual[GPS_N]", &GPSResidual[GPS_N], savePlot, 2);
+    //pMap->addLogVar("GPSResidual[GPS_E]", &GPSResidual[GPS_E], savePlot, 2);
+    //pMap->addLogVar("GPSResidual[GPS_ALT]", &GPSResidual[GPS_ALT], savePlot, 2);
+    //pMap->addLogVar("GPSResidual[GPS_VN]", &GPSResidual[GPS_VN], savePlot, 2);
+    //pMap->addLogVar("GPSResidual[GPS_VE]", &GPSResidual[GPS_VE], savePlot, 2);
+    //pMap->addLogVar("GPSResidual[GPS_VD]", &GPSResidual[GPS_VD], savePlot, 2);
     
     //pMap->addLogVar("GPSFilterError[GPS_N]", &GPSFilterError[GPS_N], savePlot, 2);
     //pMap->addLogVar("GPSFilterError[GPS_E]", &GPSFilterError[GPS_E], savePlot, 2);
@@ -905,7 +905,7 @@ void setPrintVariables()
     //pMap->addLogVar("stdGPS[GPS_VD][GPS_VD]"  , &stdGPS[GPS_VD][GPS_VD], savePlot, 2);
     
     // Controls
-    pMap->addLogVar("control mode", &ctrlMode, savePlot, 2);
+    //pMap->addLogVar("control mode", &ctrlMode, savePlot, 2);
     
     //pMap->addLogVar("dT"          , &pControlData->dT     , savePlot, 2);
     //pMap->addLogVar("dTmin"       , &pControlData->dTmin  , savePlot, 2);
@@ -934,15 +934,15 @@ void setPrintVariables()
     //pMap->addLogVar("Ctrl Vy int err", &pControlData->vy_int_error, savePlot, 2);
     //pMap->addLogVar("Ctrl Vz int err", &pControlData->vz_int_error, savePlot, 2);
     //pMap->addLogVar("Ctrl yawRateCmd", &yawRateCmd, savePlot, 2);
-    pMap->addLogVar("Ctrl VLLxCmd", &pControlData->VLLxCmd, savePlot, 2);
-    pMap->addLogVar("Ctrl VLLyCmd", &pControlData->VLLyCmd, savePlot, 2);
+    //pMap->addLogVar("Ctrl VLLxCmd", &pControlData->VLLxCmd, savePlot, 2);
+    //pMap->addLogVar("Ctrl VLLyCmd", &pControlData->VLLyCmd, savePlot, 2);
     //pMap->addLogVar("Ctrl VLLzCmd", &pControlData->VLLzCmd, printSavePlot, 3);
     //pMap->addLogVar("Ctrl hCmd", &pControlData->hCmd, savePlot, 2);
     //pMap->addLogVar("controlAltitude", &controlAltitude, savePlot, 2);
-    pMap->addLogVar("takeOff", &takeOff, printSavePlot, 3);
-    pMap->addLogVar("crashLand", &crashLand, savePlot, 2);
-    pMap->addLogVar("onGround", &onGround, savePlot, 2);
-    pMap->addLogVar("movingDetection", &movingDetection, savePlot, 2);
+    //pMap->addLogVar("takeOff", &takeOff, printSavePlot, 3);
+    //pMap->addLogVar("crashLand", &crashLand, savePlot, 2);
+    //pMap->addLogVar("onGround", &onGround, savePlot, 2);
+    //pMap->addLogVar("movingDetection", &movingDetection, savePlot, 2);
 }
 #endif
 
