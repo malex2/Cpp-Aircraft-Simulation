@@ -9,7 +9,6 @@
 #include "fs_controls.hpp"
 #include "fs_imu.hpp"
 #include "fs_navigation.hpp"
-#include "fs_pwmin.hpp"
 
 #ifndef SIMULATION
     #include "Servo.h"
@@ -217,7 +216,7 @@ void FsControls_groundDetection()
             controlData.takeOff  = false;
         }
     }
-    else if (accelZ < -2.0*Gravity)
+    else if (accelZ < -2.0*Gravity && velLL[2] > 0.5)
     {
         groundCount++;
         display("Ground count: "); display(groundCount); display(", "); display(accelZ); display("\n");
@@ -315,6 +314,10 @@ void performControls(double &ctrlDt)
         controlData.da = 0.0;
         controlData.de = 0.0;
         controlData.dr = 0.0;
+        
+        controlData.vx_int_error = 0.0;
+        controlData.vy_int_error = 0.0;
+        controlData.vz_int_error = 0.0;
     }
     else if (controlData.mode == ThrottleControl)
     {
@@ -342,9 +345,28 @@ void performControls(double &ctrlDt)
         minAttitudeThrottle();
         
         // Integral Errors
-        if (controlData.pitchCmd > -MAXPITCH && controlData.pitchCmd < MAXPITCH) { controlData.vx_int_error += (controlData.VLLxCmd - velLL[0])*ctrlDt; }
-        if (controlData.rollCmd > -MAXROLL && controlData.rollCmd < MAXROLL)     { controlData.vy_int_error += (controlData.VLLyCmd - velLL[1])*ctrlDt; }
-        if (controlData.dT > minThrottle && controlData.dT < maxThrottle)        { controlData.vz_int_error += (controlData.VLLzCmd - velLL[2])*ctrlDt; }
+        if (controlData.pitchCmd > -MAXPITCH && controlData.pitchCmd < MAXPITCH && controlData.mode == VelocityControl)
+        {
+            controlData.vx_int_error += (controlData.VLLxCmd - velLL[0])*ctrlDt;
+        }
+        else if (controlData.mode != VelocityControl)
+        {
+            controlData.vx_int_error = 0.0;
+        }
+        
+        if (controlData.rollCmd > -MAXROLL && controlData.rollCmd < MAXROLL && controlData.mode == VelocityControl)
+        {
+            controlData.vy_int_error += (controlData.VLLyCmd - velLL[1])*ctrlDt;
+        }
+        else if (controlData.mode != VelocityControl)
+        {
+            controlData.vy_int_error = 0.0;
+        }
+        
+        if (controlData.dT > minThrottle && controlData.dT < maxThrottle)
+        {
+            controlData.vz_int_error += (controlData.VLLzCmd - velLL[2])*ctrlDt;
+        }
     }
     
     // Limit Commands
@@ -431,7 +453,19 @@ void setMotors()
     T4esc.writeMicroseconds( static_cast<int> (controlData.TPWM[3]) );
 }
 
-void FsControls_setMode(ControlMode mode) { controlData.mode = mode; }
+void FsControls_setMode(ControlMode mode)
+{
+    if (mode != controlData.mode)
+    {
+        display("FsControls mode change. ");
+        display((int) controlData.mode);
+        display(" -> ");
+        display((int) mode);
+        display("\n");
+    }
+    controlData.mode = mode;
+    
+}
 
 void FsControls_setPWMCommands(const int* pwmIn)
 {
@@ -482,7 +516,7 @@ void FsControls_resetMovingDetection()
     }
 }
 
-ControlType* FsControls_getControlData()
+const ControlType* FsControls_getControlData()
 {
     return &controlData;
 }

@@ -27,6 +27,7 @@ void setupIO();
 bool mainFlightSoftware();
 
 // Functions
+void controlsModing();
 void performSerialIO();
 
 // Setters

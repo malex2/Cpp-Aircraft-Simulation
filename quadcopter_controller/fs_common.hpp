@@ -165,6 +165,8 @@ const double dtPad = 1e-10;
 #define MAXTHROTTLE  0.85*dMAX
 #define minPWMIncr   5.0
 
+#define VELSTDLIM 0.1
+
 // Thrust Constants
 #define        MAXTHRUST   4.22
 #define        TorqueRatio 0.003

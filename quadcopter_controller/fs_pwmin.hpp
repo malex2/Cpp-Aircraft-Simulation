@@ -31,6 +31,7 @@ public:
     int getPwm();
     
     static unsigned long getValidReadCount() { return validReadCount; }
+    
 private:
     // Functions
     int mapToPwm(double value, double valueMin, double valueMax, int pwmMin, int pwmMax);

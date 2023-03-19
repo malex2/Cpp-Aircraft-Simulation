@@ -122,8 +122,8 @@ void FsControls_setIMUStatistics(const SensorErrorType* calGyroError, const Sens
 #endif
 
 // Getters
-ControlType* FsControls_getControlData();
-bool         FsControls_onGround();
+const ControlType* FsControls_getControlData();
+bool               FsControls_onGround();
 
 // Internal Access
 void discretizeCommands();

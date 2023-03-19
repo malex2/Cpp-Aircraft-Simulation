@@ -213,18 +213,18 @@ private:
     LookupTable<int> GPSFixLookup;
     
     static const int HorizAccLength = 3;
-    double HorizAccTimes[HorizAccLength]  = {0.0, 5.0, 9.0};
-    double HorizAccValues[HorizAccLength] = {10.0, 10.0, 1.0};
+    double HorizAccTimes[HorizAccLength]  = {0.0, 5.0, 300.0};
+    double HorizAccValues[HorizAccLength] = {10.0, 10.0, 10.0};
     LookupTable<double> HorizAccLookup;
     
     static const int VertAccLength = 3;
-    double VertAccTimes[VertAccLength]  = {0.0, 5.0, 9.0};
-    double VertAccValues[VertAccLength] = {10.0, 10.0, 1.0};
+    double VertAccTimes[VertAccLength]  = {0.0, 5.0, 300.0};
+    double VertAccValues[VertAccLength] = {10.0, 10.0, 10.0};
     LookupTable<double> VertAccLookup;
     
     static const int VelAccLength = 3;
-    double VelAccTimes[VelAccLength]  = {0.0, 5.0, 9.0};
-    double VelAccValues[VelAccLength] = {1.0, 1.0 , 0.1};
+    double VelAccTimes[VelAccLength]  = {0.0, 5.0, 300.0};
+    double VelAccValues[VelAccLength] = {2.0, 2.0 , 0.1};
     LookupTable<double> VelAccLookup;
     
     virtual void updatePositionError();

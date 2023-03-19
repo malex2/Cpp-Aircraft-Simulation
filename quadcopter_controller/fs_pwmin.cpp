@@ -90,30 +90,6 @@ PwmIn::PwmIn()
     maxValues[PITCH_CHANNEL]    = MAXVELOCITY;
     maxValues[YAW_CHANNEL]      = MAXYAWRATE;
     
-    /*
-     //Attitude Control
-     minValues[THROTTLE_CHANNEL] = -MAXVELOCITY;
-     minValues[ROLL_CHANNEL]     = -MAXROLL;
-     minValues[PITCH_CHANNEL]    = -MAXPITCH;
-     minValues[YAW_CHANNEL]      = -MAXYAWRATE;
-     
-     maxValues[THROTTLE_CHANNEL] = MAXVELOCITY;
-     maxValues[ROLL_CHANNEL]     = MAXROLL;
-     maxValues[PITCH_CHANNEL]    = MAXPITCH;
-     maxValues[YAW_CHANNEL]      = MAXYAWRATE;
-    */
-    /*
-     //(Legacy) Attitude Control
-    minValues[THROTTLE_CHANNEL] = 0.0;
-    minValues[ROLL_CHANNEL]     = -MAXROLL;
-    minValues[PITCH_CHANNEL]    = -MAXPITCH;
-    minValues[YAW_CHANNEL]      = -MAXYAWRATE;
-    
-    maxValues[THROTTLE_CHANNEL] = 100.0;
-    maxValues[ROLL_CHANNEL]     = MAXROLL;
-    maxValues[PITCH_CHANNEL]    = MAXPITCH;
-    maxValues[YAW_CHANNEL]      = MAXYAWRATE;
-    */
     // Initialize Variables
     channel  = THROTTLE_CHANNEL;
     pwm      = PWMMIN;
@@ -124,10 +100,8 @@ PwmIn::PwmIn()
     foundChannel = false;
     
     // Table To Radians
-    //for (int iCh = ROLL_CHANNEL; iCh != nChannels; iCh++)
     for (int iCh = YAW_CHANNEL; iCh != nChannels; iCh++)
     {
-        // Attitude Control
         for (int col = 0; col < lengthTable; col++)
         {
             signalValues[iCh][col] *= degree2radian;
@@ -175,38 +149,15 @@ int PwmIn::getPwm()
     
     for (int i=0; i<pTable->tableLength; i++)
     {
-        /*
-        if (channel == THROTTLE_CHANNEL)
-        {
-          display("("); display(i); display(") ");
-          display("Time: ");
-          display( getTime() );
-          display(" Table Time: ");
-          display( pTable->pTableTimes[i] );
-          display(" Table Value: ");
-          display( pTable->pTableValues[i] );
-          display("\n");
-        }
-        */
         if( getTime() >= pTable->pTableTimes[i] )
         {
             value = pTable->pTableValues[i];
-            //if (channel == THROTTLE_CHANNEL) { display("      Value:" ); display(value); display("\n");}
         }
     }
     
     pwm = mapToPwm(value, minValue, maxValue, PWMMIN, PWMMAX);
     
     if (channel == YAW_CHANNEL) { validReadCount++; }
-    /*
-    display("Channel: ");
-    display((int) channel);
-    display(", Value: ");
-    display(value);
-    display(", PWM: ");
-    display(pwm);
-    display("\n");
-    */
     return pwm;
 }
 
