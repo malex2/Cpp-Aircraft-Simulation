@@ -41,6 +41,7 @@ void TWO_BYTE_DATA::swap()
 void TWO_BYTE_DATA::clear()
 {
     memset(data, 0, 2);
+    index = 0;
 #ifdef DEBUG_PRINT
     if (debug_print)
     {
@@ -49,7 +50,6 @@ void TWO_BYTE_DATA::clear()
         display(+data[1], HEX);
         display("\n");
     }
-    index = 0;
 #endif
 }
 
@@ -278,9 +278,9 @@ unsigned short FS_FIFO::write(byte write_val)
     }
 }
 
-unsigned short FS_FIFO::write(byte* write_val, unsigned long length)
+unsigned short FS_FIFO::write(const byte* write_val, unsigned long length)
 {
-    int tx_count = 0;
+    unsigned short tx_count = 0;
     for (int i = 0; i < length; i++)
     {
         tx_count += write(write_val[i]);
@@ -396,13 +396,6 @@ void read_eeprom(unsigned int address, byte* val, unsigned int size)
     }
 }
 
-#ifdef SIMULATION
-void delay(int ms_delay)
-{
-    // do nothing
-}
-#endif
-
 // Errors
 double errorToVariance(double maxError)
 {
@@ -457,7 +450,7 @@ void LEDoff()
 FS_FIFO FS_print_fifo;
 void display(const char* val, int printMode)
 {
-#ifdef TELEMETRY
+#ifdef TM_PRINT
     FS_print_fifo.write((byte*) val, sizeof_char(val));
 #else
 #ifdef SIMULATION
@@ -471,7 +464,7 @@ void display(const char* val, int printMode)
 template<typename TempType>
 void display(TempType val, int printMode)
 {
-#ifdef TELEMETRY
+#ifdef TM_PRINT
     String str;
    // Turn into character array
    #ifdef SIMULATION
@@ -506,31 +499,31 @@ void display(I2C_Error_Code val, int printMode)
 #else
     if (val == I2C_0_SUCCESS)
     {
-        display("0 - success.\n");
+        display("0 - success.");
     }
     else if (val == I2C_1_DATA_TOO_LONG)
     {
-        display("1 - data too long to fit in transmit buffer.\n");
+        display("1 - data too long to fit in transmit buffer.");
     }
     else if (val == I2C_2_NACK_ADDRESS)
     {
-        display("2 - received NACK on transmit of data.\n");
+        display("2 - received NACK on transmit of data.");
     }
     else if (val == I2C_3_NACK_DATA)
     {
-        display("3 - received NACK on transmit of data.\n");
+        display("3 - received NACK on transmit of data.");
     }
     else if (val == I2C_4_OTHER)
     {
-        display("4 - other error.\n");
+        display("4 - other error.");
     }
     else if (val == I2C_5_TIMEOUT)
     {
-        display("5 - timeout.\n");
+        display("5 - timeout.");
     }
     else
     {
-        display("unkown error.\n");
+        display("unkown error.");
     }
 #endif
 }

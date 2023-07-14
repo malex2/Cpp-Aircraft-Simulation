@@ -65,7 +65,7 @@ void FsPwmIn_performPwmIn()
 #endif
 }
 
-int* FsPwmIn_getPWM() { return pwmIn; }
+const int* FsPwmIn_getPWM() { return pwmIn; }
 bool FsPwmIn_valid()  { return pwmValid; }
 
 #ifdef SIMULATION

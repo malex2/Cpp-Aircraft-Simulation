@@ -25,6 +25,8 @@ struct IMUtype {
     double accelQuantizationError_g;
     bool highDynamics;
     
+    bool IMUgood;
+    
     I2C_Error_Code errorCodeIMU;
     
     IMUtype()
@@ -41,7 +43,8 @@ struct IMUtype {
         gyroQuantizationError_dps = 0.0;
         accelQuantizationError_g  = 0.0;
         highDynamics = false;
-        errorCodeIMU = I2C_0_SUCCESS;
+        errorCodeIMU = I2C_4_OTHER;
+        IMUgood = false;
     }
 };
 
@@ -51,8 +54,9 @@ enum gyroSensitivityType {gyroSensitivity_250dps, gyroSensitivity_500dps, gyroSe
 // External Functions
 void FsImu_performIMU( double &imuDt );
 void FsImu_setupIMU(accSensitivityType accSensitivity, gyroSensitivityType gyroSensitivity);
-IMUtype* FsImu_getIMUdata();
+const IMUtype* FsImu_getIMUdata();
 void FsImu_zeroDelta();
+bool FsImu_IMUGood();
 
 // Internal Functions
 void readIMU();

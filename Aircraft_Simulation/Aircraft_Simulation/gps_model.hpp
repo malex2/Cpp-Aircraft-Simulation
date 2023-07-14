@@ -224,7 +224,7 @@ private:
     
     static const int VelAccLength = 3;
     double VelAccTimes[VelAccLength]  = {0.0, 5.0, 300.0};
-    double VelAccValues[VelAccLength] = {2.0, 2.0 , 0.1};
+    double VelAccValues[VelAccLength] = {5.0, 5.0 , 0.1};
     LookupTable<double> VelAccLookup;
     
     virtual void updatePositionError();

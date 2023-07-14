@@ -20,18 +20,17 @@ const NavType* pNav = 0;
 const ControlType* pCtrl = 0;
 const double* pFSTiming = 0;
 
+TMType TMData;
 FS_Telemetry_Type TM;
 FS_FIFO* pPrintFIFO = 0;
 #define tmIO Serial2 // [RX,TX] = [7,8]
 FS_FIFO telemetryFIFO(&tmIO);
 
-telemetryStateType tmState;
+double configStateTime;
+bool configStateSetup;
+
 byte temp_TM_buffer[MAX_SERIAL_FIFO_SIZE];
 unsigned int temp_buffer_size;
-unsigned long tm_timeout_count;
-unsigned long tm_failed_write_count;
-double tm_start_time;
-double max_tm_rate;
 TM_Message_Info TM_info;
 TM_Message_Info print_info;
 TM_Message_Info* pSendInfo = 0;
@@ -43,14 +42,21 @@ void FsTelemetry_setupTelemetry(int baud_rate)
     pPrintFIFO = get_print_fifo();
     
     temp_buffer_size = 0;
-    tm_failed_write_count = 0;
-    tm_timeout_count = 0;
-    tm_start_time = 0.0;
-    max_tm_rate = 0.0;
     memset(print_buffer_copy, 0, MAX_SERIAL_FIFO_SIZE);
     memset(temp_TM_buffer, 0, MAX_SERIAL_FIFO_SIZE);
     
-    tmState = doneSendingTM;
+    TMData.tmState = doneSendingTM;
+    TMData.configState = doneConfiguringTM;
+    
+    configStateTime = 0.0;
+    configStateSetup = false;
+    
+#ifndef SIMULATION
+    pinMode(TM_ENPIN, OUTPUT);
+    pinMode(TM_SETPIN, OUTPUT);
+#endif
+    APC220_SetAwake();
+    APC220_SetRunningMode();
     
     // Begin telemetry port
     telemetryFIFO.begin(baud_rate);
@@ -60,25 +66,103 @@ void FsTelemetry_setupTelemetry(int baud_rate)
 void FsTelemetry_sendTelemetry()
 {
 #ifdef TELEMETRY
-    if (tmState == doneSendingTM)
+    if (TMData.tmState == doneSendingTM)
     {
-        tmState = commandSend;
-    }
-    else
-    {
-        tm_timeout_count++;
-        display("TM timeout count: ");
-        display(tm_timeout_count);
+        display("Start TM: ");
+        display(getTime());
         display("\n");
+        TMData.tmState = commandSend;
     }
+    else if (TMData.tmState != configureTM)
+    {
+        TMData.tm_timeout_count++;
+    }
+#endif
+}
+
+void FsTelemetry_configureTelemetry()
+{
+#ifdef TELEMETRY
+    TMData.tmState = configureTM;
+    TMData.configState = commandConfig;
+    display("Configure telemetry commanded\n");
 #endif
 }
 
 void FsTelemetry_performTelemetry(double &tmDt)
 {
 #ifdef TELEMETRY
-    if (tmState == commandSend)
+    if (telemetryFIFO.get_write_buffer_overflow_count() > 0)
     {
+        display("TM write overflow: ");
+        display(telemetryFIFO.get_write_buffer_overflow_count());
+        display("\n");
+    }
+    TMData.tm_write_byte_count = telemetryFIFO.get_write_count();
+    TMData.tm_rcv_byte_count = telemetryFIFO.get_read_count();
+    
+    APC220_configProcessing();
+    telemetryProcessing(tmDt);
+#endif
+}
+
+void APC220_configProcessing()
+{
+    if (TMData.tmState != configureTM) { return; }
+    
+    if (TMData.configState == commandConfig)
+    {
+        if (!configStateSetup)
+        {
+            display("Preparing TM Config\n");
+            APC220_SetSettingMode();
+            configStateTime = getTime();
+            configStateSetup = true;
+        }
+        
+        if (getTime() - configStateTime > APC220_SETTING_DELAY)
+        {
+            configStateSetup = false;
+            TMData.configState = configuringTM;
+        }
+    }
+    
+    if (TMData.configState == configuringTM)
+    {
+        
+        if (!configStateSetup)
+        {
+            display("Sending TM Config\n");
+            Serial.write(FsTelemetry_APC220_CONFIG, APC220_CONFIG_SIZE);
+            telemetryFIFO.write(FsTelemetry_APC220_CONFIG, APC220_CONFIG_SIZE);
+            configStateTime = getTime();
+            configStateSetup = true;
+        }
+        
+        static int TM_config_rsp_count = 0;
+        if (telemetryFIFO.available())
+        {
+            Serial.write(telemetryFIFO.read());
+            TM_config_rsp_count++;
+        }
+
+        if (TM_config_rsp_count == 21 || getTime() - configStateTime > (double) APC220_SETTING_TIMEOUT)
+        {
+            APC220_SetRunningMode();
+            configStateSetup = false;
+            TMData.configState = doneConfiguringTM;
+            TMData.tmState = doneSendingTM;
+            TM_config_rsp_count = 0;
+            display("TM Config Set!\n");
+        }
+    }
+}
+
+void telemetryProcessing(double &tmDt)
+{
+    if (TMData.tmState == commandSend)
+    {
+        //display("Command Send\n");
         // Set telemetry
         TM.data.fs_time = getTime() / TM.scale.fs_time;
         
@@ -162,17 +246,14 @@ void FsTelemetry_performTelemetry(double &tmDt)
         TM.data.takeOff = pCtrl->takeOff / TM.scale.takeOff;
         TM.data.crashLand = pCtrl->crashLand / TM.scale.crashLand;
         
-        TM.data.max_tm_rate = max_tm_rate / TM.scale.max_tm_rate;
-        TM.data.tm_timeout_count = tm_timeout_count / TM.scale.tm_timeout_count;
+        TM.data.max_tm_rate = TMData.max_tm_rate / TM.scale.max_tm_rate;
+        TM.data.tm_timeout_count = TMData.tm_timeout_count / TM.scale.tm_timeout_count;
         TM.data.hz1_avg_rate = (1.0/pFSTiming[hz1]) / TM.scale.hz1_avg_rate;
         TM.data.hz50_avg_rate = (1.0/pFSTiming[hz50]) / TM.scale.hz50_avg_rate;
         TM.data.hz100_avg_rate = (1.0/pFSTiming[hz100]) / TM.scale.hz100_avg_rate;
         TM.data.hz200_avg_rate = (1.0/pFSTiming[hz200]) / TM.scale.hz200_avg_rate;
         TM.data.hz800_avg_rate = (1.0/pFSTiming[hz800]) / TM.scale.hz800_avg_rate;
-        
-        //std::cout << std::dec << "FS TM" << std::endl;
-        //TM.print();
-        
+
         // Prepare for sending telemetry
         TM_info.reset();
         TM_info.size = sizeof(TM.data);
@@ -190,11 +271,11 @@ void FsTelemetry_performTelemetry(double &tmDt)
         memset(temp_TM_buffer, 0, MAX_SERIAL_FIFO_SIZE);
         pSendInfo = &TM_info;
         
-        tm_start_time = getTime();
-        tmState = sendingTM;
+        TMData.tm_start_time = getTime();
+        TMData.tmState = sendingTM;
     }
     
-    if (tmState == sendingTM)
+    if (TMData.tmState == sendingTM)
     {
         // Write buffer empty and ready for more data
         if (pSendInfo && !telemetryFIFO.write_fifo_full())
@@ -209,7 +290,7 @@ void FsTelemetry_performTelemetry(double &tmDt)
             if (!pSendInfo->header_sent)
             {
                 //pSendInfo->print();
-                header_tail_size = FS_TM_LENGTH_SIZE + FS_TM_HEADER_SIZE;
+                header_tail_size = FS_TM_HEADER_SIZE + FS_TM_LENGTH_SIZE;
                 if (temp_buffer_size + header_tail_size > available_fifo_size) { temp_buffer_size = available_fifo_size - header_tail_size; }
                 
                 memcpy(temp_TM_buffer, &pSendInfo->header, FS_TM_HEADER_SIZE);
@@ -237,11 +318,14 @@ void FsTelemetry_performTelemetry(double &tmDt)
             unsigned int sent_bytes = telemetryFIFO.write(temp_TM_buffer, temp_buffer_size+header_tail_size);
             if(sent_bytes != temp_buffer_size+header_tail_size)
             {
-                tm_failed_write_count++;
+                TMData.tm_failed_write_count++;
             }
             memset(temp_TM_buffer, 0, MAX_SERIAL_FIFO_SIZE);
         }
-        
+        else
+        {
+            TMData.tm_write_fifo_full_count++;
+        }
         // Manually manage what telemetry to send
         if (TM_info.done && !print_info.done)
         {
@@ -250,15 +334,51 @@ void FsTelemetry_performTelemetry(double &tmDt)
         }
         else if (print_info.done) { finishSendingTelemetry(tmDt); }
     }
-#endif
 }
 
 void finishSendingTelemetry(double &tmDt)
 {
     pSendInfo = 0;
-    tmState = doneSendingTM;
-    if (getTime() == tm_start_time) { max_tm_rate = 1.0/tmDt; }
-    else { max_tm_rate = 1.0/(getTime() - tm_start_time); }
+    TMData.tmState = doneSendingTM;
+    TMData.tm_write_msg_count++;
+    if (getTime() == TMData.tm_start_time) { TMData.max_tm_rate = 1.0/tmDt; }
+    else { TMData.max_tm_rate = 1.0/(getTime() - TMData.tm_start_time); }
+    
+    display("Start/End/Rate TM: ");
+    display(TMData.tm_start_time);
+    display("/");
+    display(getTime());
+    display("/");
+    display(TMData.max_tm_rate);
+    display("\n");
+}
+
+void APC220_SetAwake()
+{
+#ifndef SIMULATION
+    digitalWrite(TM_ENPIN, HIGH);
+#endif
+}
+
+void APC220_SetSleep()
+{
+#ifndef SIMULATION
+    digitalWrite(TM_ENPIN, LOW);
+#endif
+}
+
+void APC220_SetSettingMode()
+{
+#ifndef SIMULATION
+    digitalWrite(TM_SETPIN, LOW);
+#endif
+}
+
+void APC220_SetRunningMode()
+{
+#ifndef SIMULATION
+    digitalWrite(TM_SETPIN, HIGH);
+#endif
 }
 
 void FsTelemetry_performSerialIO()
@@ -280,6 +400,11 @@ void FsTelemetry_setTelemetryData(const IMUtype* pIMUIn, const BarometerType* pB
 void FsTelemetry_setTimingPointer(const double* pTiming)
 {
     pFSTiming = pTiming;
+}
+
+const TMType* FsTelemetry_getTMdata()
+{
+    return &TMData;
 }
 
 #ifdef SIMULATION

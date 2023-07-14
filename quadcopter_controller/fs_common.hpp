@@ -14,16 +14,17 @@
 
 // MACROS
 #define SIMULATION
-#define IMU
-#define GPS
-#define BAROMETER
-#define PWM
-#define CONTROLS
-#define GROUND_DETECTION
-#define NAVIGATION
-//#define TELEMETRY
-//#define PRINT
+//#define IMU
+//#define GPS
+//#define BAROMETER
+//#define PWM
+//#define CONTROLS
+//#define GROUND_DETECTION
+//#define NAVIGATION
+#define TELEMETRY
+#define PRINT
 //#define UBX_PRINT
+//#define TM_PRINT
 
 #ifdef SIMULATION
     #include "model_mapping.hpp"
@@ -73,7 +74,8 @@ struct ControlType;
 enum I2C_Error_Code {I2C_0_SUCCESS, I2C_1_DATA_TOO_LONG, I2C_2_NACK_ADDRESS, I2C_3_NACK_DATA, I2C_4_OTHER, I2C_5_TIMEOUT};
 enum FS_Timing_Type {hz1, hz50, hz100, hz200, hz800, printRoutine, nRoutines};
 enum FS_TM_READ_STATE {FS_TM_HEADER, TM_TYPE_HEADER, READ_TM_LENGTH, READ_TM_BUFFER, CALC_TM_CHECKSUM, TM_READ_COMPLETE};
-enum TM_MSG_TYPE {FS_TM, FS_PRINT};
+enum TM_MSG_TYPE {FS_TM_IMU, FS_TM_BARO, FS_TM_GPS, FS_TM_NAV, FS_TM_CTRLS, FS_TM_STATUS, FS_PRINT, N_TM_MSGS};
+
 enum channelType {THROTTLE_CHANNEL, ROLL_CHANNEL, PITCH_CHANNEL, YAW_CHANNEL, nChannels};
 
 struct TWO_BYTE_DATA
@@ -118,13 +120,13 @@ struct TWO_BYTE_DATA
 #define EARTH_e2 1.0 - (EARTH_b2)/(EARTH_a2)
 const double dtPad = 1e-10;
 
-// Pulse In Pins
+// Pulse In Pins - TODO
 #define THROTTLEPIN  7  // CH3
 #define ROLLPIN      8  // CH4
 #define PITCHPIN     12 // CH5
 #define YAWPIN       13 // CH6
 
-// Pulse Out Pins
+// Pulse Out Pins - TODO
 #define T1PIN  6
 #define T2PIN  9
 #define T3PIN  10
@@ -134,13 +136,13 @@ const double dtPad = 1e-10;
 #define highRate  5.0*degree2radian
 #define highAccel 12.0
 
-// GPS Pins
-#define GPSRXPIN 2 // Rcv GPS msgs, connect to GPS TX
-#define GPSTXPIN 3 // Txmit GPS msgs, connect to GPS RX
-
-// IMU Pins
-#define IMUSDAPIN A4
-#define IMUSCLPIN A5
+// Telemetry Pins
+#define      TM_ENPIN  5 // APC220 - Set high to enable
+#define      TM_SETPIN 6 // APC220 - Set low to go into settings mode
+#define      APC220_CONFIG_SIZE 19
+const double        APC220_SETTING_DELAY   = 2.0/1000.0; // 1ms + 1ms buffer
+const double        APC220_SETTING_TIMEOUT = 300.0/1000.0; // 200ms expected + 100ms buffer
+const unsigned char FsTelemetry_APC220_CONFIG[APC220_CONFIG_SIZE] = {'W','R',' ','4','3','4','0','0','0',' ','3',' ','9',' ','0',' ', '0', '\r', '\n'};
 
 // PWM
 #define PWMMIN    1000
@@ -359,7 +361,7 @@ public:
     
     // Flight Software to Serial IO
     unsigned short write(byte val);
-    unsigned short write(byte* val, unsigned long length);
+    unsigned short write(const byte* val, unsigned long length);
     bool           write_available();
     unsigned short get_write_count() { return write_byte_count; };
     unsigned short  get_write_buffer_length() { return write_buffer_length; }
@@ -402,9 +404,6 @@ private:
 
 // Time
 double getTime();
-#ifdef SIMULATION
-    void delay(int ms_delay);
-#endif
 
 // Memory
 void write_eeprom(unsigned int address, byte val);
@@ -446,7 +445,6 @@ bool FsCommon_checkChecksum(uint16_t buffer_checksum, const void* data, unsigned
 #define FS_TM_LENGTH_SIZE 2
 #define FS_TM_CHECKSUM_SIZE 2
 
-#define TM_PRINT
 struct FS_Telemetry_Type
 {
     FS_Telemetry_Type() { clear(); disable_all_printing(); }

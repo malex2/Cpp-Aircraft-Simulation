@@ -154,6 +154,8 @@ void FsControls_setup()
 void FsControls_groundDetection()
 {
 #ifdef GROUND_DETECTION
+    if (!FsImu_IMUGood()) { return; }
+    
     if (nav_gyroError && nav_accelError)
     {
         double dGyro;
@@ -246,7 +248,8 @@ void FsControls_performControls(double &ctrlDt)
     // Not initialization for controls
     if ( (controlData.mode == NoControl) ||
         (!controls_setup) ||
-        (FsNavigation_getNavState() <= Calibration)
+        (FsNavigation_getNavState() <= Calibration) ||
+        (!FsImu_IMUGood())
         )
     {
         return;

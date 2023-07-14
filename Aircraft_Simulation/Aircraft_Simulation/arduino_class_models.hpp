@@ -354,6 +354,7 @@ private:
 };
 
 void pinMode(int pin, pinMode mode);
+void delay(int timeMS);
 
 #define RF24 SimulationNRF24L01
 #define SoftwareSerial ArduinoSerial

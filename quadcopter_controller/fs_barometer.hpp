@@ -22,6 +22,7 @@ struct BarometerType {
     baroStateType state;
     double timestamp;
     I2C_Error_Code errorCodeBaro;
+    bool baroGood;
     
     // temp vars
     double pu, tu;
@@ -34,6 +35,7 @@ struct BarometerType {
         state       = baroStandby;
         timestamp   = 0.0;
         errorCodeBaro = I2C_0_SUCCESS;
+        baroGood = false;
     }
 };
 
@@ -57,7 +59,7 @@ void FsBarometer_setStandby();
 void FsBarometer_setPressureResolution(byte pressureResolutionIn);
 
 // Getters
-BarometerType* FsBarometer_getBaroData();
+const BarometerType* FsBarometer_getBaroData();
 baroStateType FsBarometer_getBaroState();
 double FsBarometer_getAltitudeVariance();
 #endif /* fs_barometer_hpp */

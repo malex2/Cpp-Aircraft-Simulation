@@ -15,6 +15,8 @@ BarometerType baroData;
 // Bools
 bool barometerSetup = false;
 bool pressureInit   = false;
+bool temp_valid = false;
+bool pressure_valid = false;
 
 // State machine 
 double stateTime;
@@ -200,8 +202,11 @@ void FsBarometer_performBarometer()
     {
         readPres();
         
+        
+        baroData.baroGood = (baroData.errorCodeBaro == I2C_0_SUCCESS) & temp_valid & pressure_valid;
+        
         // Average reference pressure
-        if (FsControls_onGround() && !pressureInit)
+        if (baroData.baroGood && FsControls_onGround() && !pressureInit)
         {
             pressureError.update(baroData.pressure);
             pressureError.compute();
@@ -212,7 +217,10 @@ void FsBarometer_performBarometer()
             pressureInit = true;
         }
         
-        computeAltitude();
+        if (baroData.baroGood)
+        {
+           computeAltitude();
+        }
         
         baroData.timestamp = getTime();
         
@@ -245,6 +253,7 @@ void readTemp()
     
     baroData.tu = tu;
     baroData.temperature = a + (mc / (a + md));
+    temp_valid = tu != 0;
 }
 
 void requestPres()
@@ -277,6 +286,7 @@ void readPres()
     
     baroData.pu = pu;
     baroData.pressure = (p2 * z * z) + (p1 * z) + p0;
+    pressure_valid = pu != 0;
 }
 
 void computeAltitude()
@@ -308,7 +318,7 @@ void FsBarometer_setStandby()
     baroData.state = baroStandby;
 }
 
-BarometerType* FsBarometer_getBaroData() { return &baroData; }
+const BarometerType* FsBarometer_getBaroData() { return &baroData; }
 
 baroStateType FsBarometer_getBaroState() { return baroData.state; }
 

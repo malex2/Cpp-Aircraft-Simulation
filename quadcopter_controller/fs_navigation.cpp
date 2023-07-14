@@ -242,7 +242,7 @@ void FsNavigation_setupNavigation(double *initialPosition, double initialHeading
 void FsNavigation_performNavigation( double &navDt )
 {
 #ifdef NAVIGATION
-    if (!navSetup) { return; }
+    if (!navSetup || !nav_pIMUdata || !nav_pIMUdata->IMUgood) { return; }
     
     // Apply sensor updates
     if (NavData.state != Nav_Startup && NavData.state != INS && NavData.state != Calibration)
@@ -650,7 +650,7 @@ void filterUpdate(double* residual, double* R, double* H, double* K, int nMeas)
 
 void FsNavigation_performAccelerometerUpdate(bool performUpdate)
 {
-    if (!navSetup) { return; }
+    if (!navSetup || !nav_pIMUdata || !nav_pIMUdata->IMUgood) { return; }
     
     if(NavData.state != Nav_Startup && NavData.state != Calibration && NavData.state != INS)
     {
@@ -821,11 +821,14 @@ void FsNavigation_performBarometerUpdate(const BarometerType* baroData)
         return;
     }
     
-    R_BARO[BARO_ALT][BARO_ALT] = FsBarometer_getAltitudeVariance();
-    baroResidual[BARO_ALT]     = baroData->altitude + baroRefAltitude - NavData.position[2];
+    if (baroData->baroGood)
+    {
+        R_BARO[BARO_ALT][BARO_ALT] = FsBarometer_getAltitudeVariance();
+        baroResidual[BARO_ALT]     = baroData->altitude + baroRefAltitude - NavData.position[2];
 
-    NavData.state = BaroUpdate;
-    NavData.sensorTimestamp[NavData.state] = baroData->timestamp;
+        NavData.state = BaroUpdate;
+        NavData.sensorTimestamp[NavData.state] = baroData->timestamp;
+    }
 }
 
 void FsNavigation_groundAlign()
@@ -863,7 +866,7 @@ void FsNavigation_calibrateIMU()
     static double gravity_body[3];
     static double g_error_est[3];
     
-    if (NavData.state != Calibration) { return; }
+    if (NavData.state != Calibration || !nav_pIMUdata || !nav_pIMUdata->IMUgood) { return; }
     
     if (firstTime)
     {
@@ -930,9 +933,9 @@ void FsNavigation_calibrateIMU()
         P[ABIAS_Y][ABIAS_Y] = errorToVariance(g_error_est[1]);
         P[ABIAS_Z][ABIAS_Z] = errorToVariance(g_error_est[2]);
         
-        P[GBIAS_X][GBIAS_X] = 0.0;
-        P[GBIAS_Y][GBIAS_Y] = 0.0;
-        P[GBIAS_Z][GBIAS_Z] = 0.0;
+        //P[GBIAS_X][GBIAS_X] = 0.0;
+        //P[GBIAS_Y][GBIAS_Y] = 0.0;
+        //P[GBIAS_Z][GBIAS_Z] = 0.0;
         
         if (NavData.allowLoadIMUCal)
         {

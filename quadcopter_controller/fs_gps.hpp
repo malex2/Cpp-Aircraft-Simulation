@@ -177,7 +177,7 @@ void LLHtoECEF(double* ECEF, double* LLH);
 bool FsGPS_GPSgood();
 void FsGPS_resetPositionValid();
 void FsGPS_resetVelocityValid();
-GpsType* FsGPS_getGPSdata();
+const GpsType* FsGPS_getGPSdata();
 
 #ifdef SIMULATION
     void FsGPS_setSimulationModels(ModelMap* pMap);

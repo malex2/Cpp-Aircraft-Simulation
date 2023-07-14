@@ -1083,6 +1083,7 @@ void SimulationNRF24L01::print_writing_map()
 }
 
 void pinMode(int pin, enum pinMode mode) { }
+void delay(int timeMS) { }
 
 SimulationSerial Serial = SimulationSerial();
 HardwareSerial Serial1 = HardwareSerial(0,1);

@@ -87,7 +87,7 @@ namespace UBX_MSG_TYPES {
             display("\n");
             
             display("UBX_MSG_NAV_POSLLH (bytes) "); display(sizeof(data)); display(": ");
-            for (int i=0; i < sizeof(data); i++)
+            for (unsigned int i=0; i < sizeof(data); i++)
             {
                 display( +((char*)&data)[i], HEX);
                 //std::cout << std::hex << std::setfill('0') << std::setw(2) << +((char*)&data)[i];
@@ -144,7 +144,7 @@ namespace UBX_MSG_TYPES {
             display("\n");
             
             display("UBX_MSG_NAV_VELNED (bytes) "); display(sizeof(data)); display(": ");
-            for (int i=0; i < sizeof(data); i++)
+            for (unsigned int i=0; i < sizeof(data); i++)
             {
                 display( +((char*)&data)[i], HEX);
                 //std::cout << std::hex << std::setfill('0') << std::setw(2) << +((char*)&data)[i];
@@ -195,7 +195,7 @@ namespace UBX_MSG_TYPES {
             display("\n");
             
             display("UBX_MSG_NAV_STATUS (bytes) "); display(sizeof(data)); display(": ");
-            for (int i=0; i < sizeof(data); i++)
+            for (unsigned int i=0; i < sizeof(data); i++)
             {
                 display( +((char*)&data)[i], HEX);
                 //std::cout << std::hex << std::setfill('0') << std::setw(2) << +((char*)&data)[i];
@@ -248,7 +248,7 @@ namespace UBX_MSG_TYPES {
             display("\n");
             
             display("UBX_MSG_NAV_DOP (bytes) "); display(sizeof(data)); display(": ");
-            for (int i=0; i < sizeof(data); i++)
+            for (unsigned int i=0; i < sizeof(data); i++)
             {
                 display( +((char*)&data)[i], HEX);
                 //std::cout << std::hex << std::setfill('0') << std::setw(2) << +((char*)&data)[i];
@@ -327,7 +327,7 @@ namespace UBX_MSG_TYPES {
             display("\n");
             
             display("UBX_MSG_NAV_SOL (bytes) "); display(sizeof(data)); display(": ");
-            for (int i=0; i < sizeof(data); i++)
+            for (unsigned int i=0; i < sizeof(data); i++)
             {
                 display( +((char*)&data)[i], HEX);
                 //std::cout << std::hex << std::setfill('0') << std::setw(2) << +((char*)&data)[i];
@@ -507,7 +507,7 @@ namespace UBX_MSG_TYPES {
         void print()
         {
             display("UBX_MSG_AID_INI (bytes) "); display(sizeof(data)); display(": ");
-            for (int i=0; i<sizeof(data); i++)
+            for (unsigned int i=0; i<sizeof(data); i++)
             {
                 display( +((char*)&data)[i], HEX);
             }
@@ -571,7 +571,7 @@ namespace UBX_MSG_TYPES {
         void print()
         {
             display("UBX_MSG_AID_ALM (bytes) "); display(sizeof(data)); display(": ");
-            for (int i=0; i<sizeof(data); i++)
+            for (unsigned int i=0; i<sizeof(data); i++)
             {
                 display( +((char*)&data)[i], HEX);
             }
@@ -639,7 +639,7 @@ namespace UBX_MSG_TYPES {
         void print()
         {
             display("UBX_MSG_AID_EPH (bytes) "); display(sizeof(data)); display(": ");
-            for (int i=0; i<sizeof(data); i++)
+            for (unsigned int i=0; i<sizeof(data); i++)
             {
                 display( +((char*)&data)[i], HEX);
             }
@@ -714,7 +714,7 @@ namespace UBX_MSG_TYPES {
             display("\n");
             
             display("UBX_MSG_AID_HUI (bytes) "); display(sizeof(data)); display(": ");
-            for (int i=0; i < sizeof(data); i++)
+            for (unsigned int i=0; i < sizeof(data); i++)
             {
                 display( +((char*)&data)[i], HEX);
             }

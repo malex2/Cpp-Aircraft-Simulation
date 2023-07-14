@@ -16,7 +16,7 @@ void FsPwmIn_setup();
 void FsPwmIn_performPwmIn();
 
 // Getters
-int* FsPwmIn_getPWM();
+const int* FsPwmIn_getPWM();
 bool FsPwmIn_valid();
 
 class PwmIn {

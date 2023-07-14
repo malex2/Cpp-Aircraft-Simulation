@@ -16,16 +16,20 @@ byte test_msg_length[2];
 byte ble_init_key[2];
 
 bool GS_initialized = false;
-bool bluetooth_ack;
 
 // Telemetry
 int GS_TMBaudRate;
 SoftwareSerial GS_tmIO(TELEMETRY_RADIO_RXPIN, TELEMETRY_RADIO_TXPIN);
 double prevWriteTime_TM;
 double baudDt_TM;
+bool GS_configure_TM;
+bool TM_setting_sent;
+const unsigned char APC220_CONFIG[19] = {'W','R',' ','4','3','4','0','0','0',' ','3',' ','9',' ','0',' ', '0', '\r', '\n'};
+unsigned int TM_config_rsp_count;
 
 // Bluetooth
 int GS_Bluetooth_Baudrate;
+bool bluetooth_ack;
 #ifdef BLUETOOTH
    SoftwareSerial bluetoothIO(BLUETOOTH_RXPIN, BLUETOOTH_TXPIN);
 #else
@@ -47,19 +51,35 @@ void GS_initialize()
     GS_TMBaudRate    = 9600;
     baudDt_TM        = 1.0/GS_TMBaudRate;
     prevWriteTime_TM = 0.0;
+    GS_APC220_SetAwake();
+    GS_APC220_SetRunningMode();
+    GS_configure_TM = false;
+    TM_setting_sent = false;
+    TM_config_rsp_count = 0;
+#ifndef GROUND_STATION_SIMULATION
+    pinMode(TELEMETRY_RADIO_ENPIN, OUTPUT);
+    pinMode(TELEMETRY_RADIO_SETPIN, OUTPUT);
+#endif
     
     // Bluetooth Settings
     GS_Bluetooth_Baudrate = 9600;
     baudDt_BLE            = 1.0/GS_Bluetooth_Baudrate;
     prevWriteTime_BLE     = 0.0;
     
+#ifndef GROUND_STATION_SIMULATION
+    pinMode(TELEMETRY_RADIO_RXPIN, INPUT);
+    pinMode(TELEMETRY_RADIO_TXPIN, OUTPUT);
+    #ifdef BLUETOOTH
+       pinMode(BLUETOOTH_RXPIN, INPUT);
+       pinMode(BLUETOOTH_TXPIN, OUTPUT);
+    #endif
+#endif
+    
     // Begin Serial
     GS_tmIO.begin(GS_TMBaudRate);
     bluetoothIO.begin(GS_Bluetooth_Baudrate);
-    
-#ifdef BLUETOOTH
     bluetooth_ack = false;
-#else
+#ifdef PRINT_BLUETOOTH
     bluetooth_ack = true;
 #endif
     
@@ -79,47 +99,88 @@ void mainGroundStation()
         GS_initialize();
         GS_initialized = true;
     }
+    
+    // Handle Telemetry
+    GS_PerformTelemetry();
+    
+    // Handle Bluetooth
+    GS_PerformBluetooth();
+}
 
+void GS_PerformTelemetry()
+{
 #ifdef TEST_MODE
-    if (GS_getTime()-prevWriteTime > 2.0)
+    if (GS_getTime()-prevWriteTime_BLE > 2.0)
     {
         bluetoothIO.write(TM_HEADER);
         bluetoothIO.write(TM_PRINT_HEADER);
         bluetoothIO.write(test_msg_length, 2);
         bluetoothIO.write(test_msg, sizeof(test_msg));
         bluetoothIO.write(test_msg_checksum, 2);
-        prevWriteTime = GS_getTime();
+        prevWriteTime_BLE = GS_getTime();
     }
 #else
+    if (GS_configure_TM && !TM_setting_sent)
+    {
+        GS_APC220_SetSettingMode();
+        delay(2);
+        Serial.println("Sending TM Config");
+        Serial.write(APC220_CONFIG, 19);
+        GS_tmIO.write(APC220_CONFIG, 19);
+        TM_setting_sent = true;
+    }
+    
     if (GS_tmIO.available() && (GS_getTime()-prevWriteTime_BLE) >= baudDt_BLE)
     {
-        if (bluetooth_ack)
+        if (GS_configure_TM && TM_setting_sent)
         {
-            bluetoothIO.write(GS_tmIO.read());
+           Serial.write(GS_tmIO.read());
+           TM_config_rsp_count++;
+        }
+        else if (bluetooth_ack)
+        {
+            bluetoothIO.println(GS_tmIO.read());
+            //bluetoothIO.write(GS_tmIO.read());
         }
         else
         {
-            GS_tmIO.read();
+            Serial.print("Dumping: ");
+            Serial.println(GS_tmIO.read());
         }
         
         prevWriteTime_BLE = GS_getTime();
+        
+        if (GS_configure_TM && TM_setting_sent && TM_config_rsp_count == 21)
+        {
+            Serial.println("TM Config Set!");
+            GS_APC220_SetRunningMode();
+            TM_config_rsp_count = 0;
+            GS_configure_TM = false;
+            TM_setting_sent = false;
+        }
     }
 #endif
+}
+
+void GS_PerformBluetooth()
+{
     if (bluetoothIO.available() && (GS_getTime()-prevWriteTime_TM) >= baudDt_TM)
     {
+        byte tm_byte = bluetoothIO.read();
         if (bluetooth_ack)
         {
-            GS_tmIO.write(bluetoothIO.read());
+            GS_tmIO.write(tm_byte);
+            prevWriteTime_TM = GS_getTime();
         }
         else
         {
-            if (!ble_init_key[0])
+            if (!ble_init_key[0] && tm_byte == BLUETOOTH_ACKNOWLEDGE_KEYa)
             {
-                ble_init_key[0] = bluetoothIO.read();
+                ble_init_key[0] = tm_byte;
             }
-            else if (ble_init_key[0] && ! ble_init_key[1])
+            else if (ble_init_key[0] && !ble_init_key[1] && tm_byte == BLUETOOTH_ACKNOWLEDGE_KEYb)
             {
-                ble_init_key[1] = bluetoothIO.read();
+                ble_init_key[1] = tm_byte;
             }
             if (ble_init_key[0] && ble_init_key[1])
             {
@@ -130,8 +191,6 @@ void mainGroundStation()
                 memset(ble_init_key, 0, 2);
             }
         }
-        
-        prevWriteTime_TM = GS_getTime();
     }
 }
 
@@ -170,6 +229,43 @@ double GS_getTime()
 #else
     return micros() / 1000000.0;
 #endif
+}
+
+// APC220 Telemetry
+//#define TELEMETRY_RADIO_ENPIN  7 // APC220 - Set high to enable
+//#define TELEMETRY_RADIO_SETPIN 8 // APC220 - Set low to go into settings mode
+void GS_APC220_SetAwake()
+{
+#ifndef GROUND_STATION_SIMULATION
+    digitalWrite(TELEMETRY_RADIO_ENPIN, HIGH);
+#endif
+}
+
+void GS_APC220_SetSleep()
+{
+#ifndef GROUND_STATION_SIMULATION
+    digitalWrite(TELEMETRY_RADIO_ENPIN, LOW);
+#endif
+}
+
+void GS_APC220_SetSettingMode()
+{
+#ifndef GROUND_STATION_SIMULATION
+    digitalWrite(TELEMETRY_RADIO_SETPIN, LOW);
+#endif
+}
+
+void GS_APC220_SetRunningMode()
+{
+#ifndef GROUND_STATION_SIMULATION
+    digitalWrite(TELEMETRY_RADIO_SETPIN, HIGH);
+#endif
+}
+
+double GS_read_voltage(int analog)
+{
+    double V = 5.0*analog/1023.0;
+    return V;
 }
 
 #ifdef GROUND_STATION_SIMULATION

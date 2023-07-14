@@ -19,6 +19,8 @@ IMUtype IMUdata;
 bool imu_setup = false;
 bool printI2C  = false;
 bool startDelta = false;
+bool I2C_data_available = false;
+bool I2C_data_valid = false;
 # ifdef SIMULATION
     bool print_wire = false;
     bool directRawIMU  = false; // Use direct raw IMU and not I2C
@@ -93,8 +95,6 @@ void FsImu_performIMU( double &imuDt )
 
 void readIMU()
 {
-    static bool noI2Cprint = false;
-    
     // Get Raw Values
     Wire.beginTransmission(MPU_ADDR);
     Wire.write(ACC_OUT); // starting with register 0x3B (ACCEL_XOUT_H) [MPU-6000 and MPU-6050 Register Map and Descriptions Revision 4.2, p.40]
@@ -104,6 +104,15 @@ void readIMU()
     // "Wire.read()<<8 | Wire.read();" means two registers are read and stored in the same variable
     if ( Wire.available() )
     {
+        rawAccel[0]  = (((int16_t) Wire.read()) << 8) | Wire.read(); // reading registers: 0x3B (ACCEL_XOUT_H) and 0x3C (ACCEL_XOUT_L)
+        rawAccel[1]  = (((int16_t) Wire.read()) << 8) | Wire.read(); // reading registers: 0x3D (ACCEL_YOUT_H) and 0x3E (ACCEL_YOUT_L)
+        rawAccel[2]  = (((int16_t) Wire.read()) << 8) | Wire.read(); // reading registers: 0x3F (ACCEL_ZOUT_H) and 0x40 (ACCEL_ZOUT_L)
+        rawTemp      = (((int16_t) Wire.read()) << 8) | Wire.read(); // reading registers: 0x41 (TEMP_OUT_H) and 0x42 (TEMP_OUT_L)
+        rawGyro[0]   = (((int16_t) Wire.read()) << 8) | Wire.read(); // reading registers: 0x43 (GYRO_XOUT_H) and 0x44 (GYRO_XOUT_L)
+        rawGyro[1]   = (((int16_t) Wire.read()) << 8) | Wire.read(); // reading registers: 0x45 (GYRO_YOUT_H) and 0x46 (GYRO_YOUT_L)
+        rawGyro[2]   = (((int16_t) Wire.read()) << 8) | Wire.read(); // reading registers: 0x47 (GYRO_ZOUT_H) and 0x48 (GYRO_ZOUT_L)
+        
+        /*
         rawAccel[0]  = Wire.read() << 8 | Wire.read(); // reading registers: 0x3B (ACCEL_XOUT_H) and 0x3C (ACCEL_XOUT_L)
         rawAccel[1]  = Wire.read() << 8 | Wire.read(); // reading registers: 0x3D (ACCEL_YOUT_H) and 0x3E (ACCEL_YOUT_L)
         rawAccel[2]  = Wire.read() << 8 | Wire.read(); // reading registers: 0x3F (ACCEL_ZOUT_H) and 0x40 (ACCEL_ZOUT_L)
@@ -111,12 +120,17 @@ void readIMU()
         rawGyro[0]   = Wire.read() << 8 | Wire.read(); // reading registers: 0x43 (GYRO_XOUT_H) and 0x44 (GYRO_XOUT_L)
         rawGyro[1]   = Wire.read() << 8 | Wire.read(); // reading registers: 0x45 (GYRO_YOUT_H) and 0x46 (GYRO_YOUT_L)
         rawGyro[2]   = Wire.read() << 8 | Wire.read(); // reading registers: 0x47 (GYRO_ZOUT_H) and 0x48 (GYRO_ZOUT_L)
+        */
+        I2C_data_available = true;
+        I2C_data_valid = rawAccel[0] != 0 | rawAccel[1] != 0 | rawAccel[2] != 0 | rawGyro[0] != 0 | rawGyro[1] != 0 | rawGyro[2] != 0;
     }
-    else if (!noI2Cprint)
+    else
     {
-        display("No I2C.\n");
-        noI2Cprint = true;
+        I2C_data_available = false;
+        I2C_data_valid = false;
     }
+    
+    IMUdata.IMUgood = (IMUdata.errorCodeIMU == I2C_0_SUCCESS) & I2C_data_available & I2C_data_valid;
     
     // Convert to Units
     //accelSumSqr = 0.0;
@@ -170,7 +184,7 @@ void updateDelta( double &imuDt )
 #endif
 }
 
-IMUtype* FsImu_getIMUdata()
+const IMUtype* FsImu_getIMUdata()
 {
     return &IMUdata;
 }
@@ -191,6 +205,10 @@ void FsImu_zeroDelta()
 #endif
 }
 
+bool FsImu_IMUGood()
+{
+    return IMUdata.IMUgood;
+}
 void printI2CErrors(bool printBool)
 {
     printI2C = printBool;

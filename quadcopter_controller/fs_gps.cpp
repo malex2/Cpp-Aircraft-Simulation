@@ -446,7 +446,7 @@ bool FsGPS_GPSgood()
 void FsGPS_resetPositionValid() { GpsData.positionValid = false; }
 void FsGPS_resetVelocityValid() { GpsData.velocityValid = false; }
 
-GpsType* FsGPS_getGPSdata()
+const GpsType* FsGPS_getGPSdata()
 {
     return &GpsData;
 }
