@@ -98,6 +98,8 @@ ControlMode controlMode;
 const TMType* pTMData = 0;
 int TMBaudRate;
 bool configTM;
+float TM_MSG_Rates[N_TM_MSGS];
+unsigned int TM_MSG_Counts[N_TM_MSGS];
 
 // Print
 #ifdef SIMULATION
@@ -207,7 +209,7 @@ void initialize(void)
     initialPosition[1] = 0.0; // East     (m)
     initialPosition[2] = 0.0; // Altitude (m)
     initialHeading     = 0.0;
-    useAccelPitchRoll  = true;
+    useAccelPitchRoll  = false;
     groundAlign        = true;
     loadIMUCalibration = false;
     useTruthNav        = false;
@@ -222,15 +224,27 @@ void initialize(void)
     controlMode = AttitudeControl; //NoControl, ThrottleControl, AttitudeControl, VelocityControl
     
     // Telemetry
+    // Note: Rates must be divisible by 600
     TMBaudRate = 9600;
     configTM   = false;
+    
+    TM_MSG_Rates[FS_TM_IMU]          = 5.0;
+    TM_MSG_Rates[FS_TM_BARO]         = 1.0;
+    TM_MSG_Rates[FS_TM_GPS]          = 1.0;
+    TM_MSG_Rates[FS_TM_NAV_HIGHRATE] = 5.0;
+    TM_MSG_Rates[FS_TM_NAV_LOWRATE]  = 1.0;
+    TM_MSG_Rates[FS_TM_CONTROLS]     = 5.0;
+    TM_MSG_Rates[FS_TM_STATUS]       = 0.5;
+    TM_MSG_Rates[FS_PRINT]           = 0.0;
+    for (unsigned int tm_id = FS_TM_IMU; tm_id < N_TM_MSGS; tm_id++ )
+    { TM_MSG_Counts[tm_id] = 0;}
     
     // Timing Settings
     routineDelays[hz1]   = 1.0;
     routineDelays[hz50]  = 1.0/50.0;
     routineDelays[hz100] = 1.0/100.0;//1.0/100.0;
     routineDelays[hz200] = 1.0/200.0;//1.0/200.0;
-    routineDelays[hz800] = 1.0/600.0;//1.0/800.0;
+    routineDelays[hz600] = 1.0/600.0;//1.0/800.0;
     routineDelays[printRoutine] = 1.0;
     
     // Event Settings
@@ -240,6 +254,8 @@ void initialize(void)
     getModels();
     setupIO();
     initializeTime();
+    
+    LEDon();
 }
 
 // **********************************************************************
@@ -268,18 +284,31 @@ bool mainFlightSoftware(void)
     // Serial Routine
     performSerialIO();
     
-    // 800 routine
-    if (performRoutine[hz800])
+    // 600 routine
+    if (performRoutine[hz600])
     {
         // Timing info
-        actualDelays[hz800] = getTime() - prevTime[hz800];
-        prevTime[hz800] = getTime();
+        actualDelays[hz600] = getTime() - prevTime[hz600];
+        prevTime[hz600] = getTime();
         
         // Update IMU
-        FsImu_performIMU( actualDelays[hz800] );
+        FsImu_performIMU( actualDelays[hz600] );
         
         // Update Telemetry
-        FsTelemetry_performTelemetry( actualDelays[hz800] );
+        if (eventStarted[imuWarmup])
+        {
+            for (unsigned int tm_id = FS_TM_IMU; tm_id < N_TM_MSGS; tm_id++ )
+            {
+                TM_MSG_Counts[tm_id]++;
+                if (TM_MSG_Rates[tm_id] != 0 && TM_MSG_Counts[tm_id] >= 600/TM_MSG_Rates[tm_id])
+                {
+                    FsTelemetry_sendTelemetry((TM_MSG_TYPE) tm_id);
+                    TM_MSG_Counts[tm_id] = 0;
+                }
+            }
+        
+            FsTelemetry_performTelemetry( actualDelays[hz600] );
+        }
     }
     
     // Wait for IMU warmup
@@ -305,7 +334,6 @@ bool mainFlightSoftware(void)
         FsNavigation_setGroundFlags(pControlData->onGround, pControlData->movingDetection);
     }
     
-    static unsigned int count4hz = 0;
     if (performRoutine[hz100])
     {
         actualDelays[hz100] = getTime() - prevTime[hz100];
@@ -316,14 +344,6 @@ bool mainFlightSoftware(void)
         
         // Perform Velocity and Attitude Control
         FsControls_performControls( actualDelays[hz100] );
-        
-        count4hz++;
-        if (count4hz == 50)
-        {
-            // Send Telemetry
-            FsTelemetry_sendTelemetry();
-            count4hz = 0;
-        }
     }
     
     // 50 hz routine
@@ -450,7 +470,6 @@ bool mainFlightSoftware(void)
         }
     }
     
-    //nav_accelLL_error
     cpwmCmd = (double) pControlData->pwmCmd[THROTTLE_CHANNEL];
     rollCmd    = pControlData->rollCmd * radian2degree;
     pitchCmd   = pControlData->pitchCmd * radian2degree;
@@ -1029,7 +1048,7 @@ void setupIO(void)
     FsControls_setMode(controlMode);
     
     // Telemetry
-    FsTelemetry_setupTelemetry(TMBaudRate);
+    FsTelemetry_setupTelemetry(TMBaudRate, TM_MSG_Rates);
     FsTelemetry_setTimingPointer(actualDelays);
     if (configTM)
     {
@@ -1107,8 +1126,8 @@ void printData()
         display( 1.0/actualDelays[hz200] );
         display(", ");
         
-        display("800hz rate: ");
-        display( 1.0/actualDelays[hz800] );
+        display("600hz rate: ");
+        display( 1.0/actualDelays[hz600] );
         display("\n");
         
         anyPrint = true;
@@ -1162,8 +1181,6 @@ void printData()
         display(" ");
         display(pNavData->accBias[2]/Gravity);
         display("\n");
-        
-        //printCalibration = false;
         
         anyPrint = true;
     }
@@ -1412,7 +1429,7 @@ void printData()
         display(getTime());
         display(" ");
         
-        display("[INS Baro, GPS, Accel, Ground] Filter Count: [");
+        display("[INS, Baro, GPS, Accel, Ground] Filter Count: [");
         display(pNavData->updateCount[INS]);
         display(",");
         display(pNavData->updateCount[BaroUpdate]);
@@ -1508,16 +1525,36 @@ void printData()
         display(getTime());
         display(" ");
 
-        display("TM startTime/maxRate: ");
-        display(pTMData->tm_start_time);
-        display(" ");
-        display((int) pTMData->max_tm_rate);
-        display("\n");
+        display("TM startTime: [");
+        for (unsigned int tm_id = FS_TM_IMU; tm_id < N_TM_MSGS; tm_id++)
+        {
+            display(pTMData->tm_start_time[tm_id]);
+            if (tm_id < N_TM_MSGS-1) { display(", "); }
+            else { display("];\n"); }
+        }
         
-        display("TM rcvdByte/writeByte: ");
+        display("TM writeMsgCount: [");
+        for (unsigned int tm_id = FS_TM_IMU; tm_id < N_TM_MSGS; tm_id++)
+        {
+            display(pTMData->tm_write_msg_count[tm_id]);
+            if (tm_id < N_TM_MSGS-1) { display(", "); }
+            else { display("];\n"); }
+        }
+        
+        display("TM maxRate: [");
+        for (unsigned int tm_id = FS_TM_IMU; tm_id < N_TM_MSGS; tm_id++)
+        {
+            display(pTMData->max_tm_rate[tm_id]);
+            if (tm_id < N_TM_MSGS-1) { display(", "); }
+            else { display("];\n"); }
+        }
+        
+        display("TM rcvdByte/writeByte/maxWriteByte: ");
         display((int) pTMData->tm_rcv_byte_count);
         display(" ");
         display((int) pTMData->tm_write_byte_count);
+        display(" ");
+        display((int) pTMData->tm_max_write_byte_count);
         display("\n");
         
         display("TM timeout/failedWrite/fifoFull: ");
@@ -1527,6 +1564,9 @@ void printData()
         display(" ");
         display((int) pTMData->tm_write_fifo_full_count);
         display("\n");
+        
+        FsTelemetry_resetMaxWriteCounter();
+        
         anyPrint = true;
     }
     

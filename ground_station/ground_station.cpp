@@ -24,8 +24,10 @@ double prevWriteTime_TM;
 double baudDt_TM;
 bool GS_configure_TM;
 bool TM_setting_sent;
-const unsigned char APC220_CONFIG[19] = {'W','R',' ','4','3','4','0','0','0',' ','3',' ','9',' ','0',' ', '0', '\r', '\n'};
+const unsigned char APC220_CONFIG[19] = {'W','R',' ','4','3','4','0','0','0',' ','3',' ','9',' ','3',' ', '0', '\r', '\n'};
 unsigned int TM_config_rsp_count;
+unsigned long TM_rcvd_count;
+unsigned long TM_sent_count;
 
 // Bluetooth
 int GS_Bluetooth_Baudrate;
@@ -37,6 +39,8 @@ bool bluetooth_ack;
 #endif
 double prevWriteTime_BLE;
 double baudDt_BLE;
+unsigned long BLE_rcvd_count;
+unsigned long BLE_sent_count;
 
 #ifdef GROUND_STATION_SIMULATION
     class Time* GS_pTime = 0;
@@ -56,6 +60,9 @@ void GS_initialize()
     GS_configure_TM = false;
     TM_setting_sent = false;
     TM_config_rsp_count = 0;
+    TM_rcvd_count = 0;
+    TM_sent_count = 0;
+    
 #ifndef GROUND_STATION_SIMULATION
     pinMode(TELEMETRY_RADIO_ENPIN, OUTPUT);
     pinMode(TELEMETRY_RADIO_SETPIN, OUTPUT);
@@ -65,6 +72,8 @@ void GS_initialize()
     GS_Bluetooth_Baudrate = 9600;
     baudDt_BLE            = 1.0/GS_Bluetooth_Baudrate;
     prevWriteTime_BLE     = 0.0;
+    BLE_rcvd_count        = 0;
+    BLE_sent_count        = 0;
     
 #ifndef GROUND_STATION_SIMULATION
     pinMode(TELEMETRY_RADIO_RXPIN, INPUT);
@@ -105,6 +114,43 @@ void mainGroundStation()
     
     // Handle Bluetooth
     GS_PerformBluetooth();
+    
+#ifdef PRINT_ANALOG0
+    static double prev_A0 = GS_getTime();
+    double volt_A0 = GS_read_voltage(A0);
+    if (GS_getTime() - prev_A0 > 1.0)
+    {
+        Serial.print("A0: ");
+        Serial.println(volt_A0);
+        prev_A0 = GS_getTime();
+    }
+#endif
+    
+#ifdef PRINT_ANALOG1
+    static double prev_A1 = GS_getTime();
+    double volt_A1 = GS_read_voltage(A1);
+    if (GS_getTime() - prev_A1 > 1.0)
+    {
+        Serial.print("A1: ");
+        Serial.println(volt_A1);
+        prev_A1 = GS_getTime();
+    }
+#endif
+    
+#ifdef PRINT_IO_STATUS
+    static double prev_status = GS_getTime();
+    if (GS_getTime() - prev_status > 1.0)
+    {
+        Serial.print("[TM_rcvd, TM_write, BLE_rvcd, BLE_write] = [");
+        Serial.print(TM_rcvd_count); Serial.print(", ");
+        Serial.print(TM_sent_count); Serial.print(", ");
+        Serial.print(BLE_rcvd_count); Serial.print(", ");
+        Serial.print(BLE_sent_count); Serial.println("]");
+        
+        prev_status = GS_getTime();
+    }
+    
+#endif
 }
 
 void GS_PerformTelemetry()
@@ -112,11 +158,11 @@ void GS_PerformTelemetry()
 #ifdef TEST_MODE
     if (GS_getTime()-prevWriteTime_BLE > 2.0)
     {
-        bluetoothIO.write(TM_HEADER);
-        bluetoothIO.write(TM_PRINT_HEADER);
-        bluetoothIO.write(test_msg_length, 2);
-        bluetoothIO.write(test_msg, sizeof(test_msg));
-        bluetoothIO.write(test_msg_checksum, 2);
+        BLE_sent_count += bluetoothIO.write(TM_HEADER);
+        BLE_sent_count += bluetoothIO.write(TM_PRINT_HEADER);
+        BLE_sent_count += bluetoothIO.write(test_msg_length, 2);
+        BLE_sent_count += bluetoothIO.write(test_msg, sizeof(test_msg));
+        BLE_sent_count += bluetoothIO.write(test_msg_checksum, 2);
         prevWriteTime_BLE = GS_getTime();
     }
 #else
@@ -130,22 +176,29 @@ void GS_PerformTelemetry()
         TM_setting_sent = true;
     }
     
-    if (GS_tmIO.available() && (GS_getTime()-prevWriteTime_BLE) >= baudDt_BLE)
+    //if (GS_tmIO.available() && (GS_getTime()-prevWriteTime_BLE) >= baudDt_BLE)
+    while(GS_tmIO.available())
     {
         if (GS_configure_TM && TM_setting_sent)
         {
            Serial.write(GS_tmIO.read());
            TM_config_rsp_count++;
+           TM_rcvd_count++;
         }
         else if (bluetooth_ack)
         {
-            bluetoothIO.println(GS_tmIO.read());
-            //bluetoothIO.write(GS_tmIO.read());
+            BLE_sent_count += bluetoothIO.write(GS_tmIO.read());
+            TM_rcvd_count++;
         }
         else
         {
+#ifdef DUMP_TM
             Serial.print("Dumping: ");
             Serial.println(GS_tmIO.read());
+#else
+            GS_tmIO.read();
+#endif
+            TM_rcvd_count++;
         }
         
         prevWriteTime_BLE = GS_getTime();
@@ -164,12 +217,14 @@ void GS_PerformTelemetry()
 
 void GS_PerformBluetooth()
 {
-    if (bluetoothIO.available() && (GS_getTime()-prevWriteTime_TM) >= baudDt_TM)
+    //if (bluetoothIO.available() && (GS_getTime()-prevWriteTime_TM) >= baudDt_TM)
+    while (bluetoothIO.available())
     {
         byte tm_byte = bluetoothIO.read();
+        BLE_rcvd_count++;
         if (bluetooth_ack)
         {
-            GS_tmIO.write(tm_byte);
+            TM_sent_count += GS_tmIO.write(tm_byte);
             prevWriteTime_TM = GS_getTime();
         }
         else
@@ -262,8 +317,9 @@ void GS_APC220_SetRunningMode()
 #endif
 }
 
-double GS_read_voltage(int analog)
+double GS_read_voltage(int pin)
 {
+    int analog = analogRead(pin);
     double V = 5.0*analog/1023.0;
     return V;
 }

@@ -112,6 +112,9 @@ void TelemetryMonitorBase::write_serialIO()
     }
 }
 
+const unsigned short QuadcopterTelemetry::TM_HEADERS[N_TM_MSGS] =
+{TM_IMU_HEADER, TM_BARO_HEADER, TM_GPS_HEADER, TM_NAV_HIGHRATE_HEADER, TM_NAV_LOWRATE_HEADER, TM_CONTROL_HEADER, TM_STATUS_HEADER, TM_PRINT_HEADER};
+
 QuadcopterTelemetry::QuadcopterTelemetry(ModelMap *pMapInit, bool debugFlagIn)  : TelemetryMonitorBase(pMapInit, debugFlagIn)
 {
     
@@ -143,14 +146,8 @@ void QuadcopterTelemetry::process_inputs()
                 break;
                 
             case SerialBuffer::HEADER2 :
-                if (read_byte == (byte) TM_TM_HEADER)
+                if (set_msg_type(read_byte))
                 {
-                    FS_msg_type = FS_TM;
-                    read_buffer.state = SerialBuffer::READ_LENGTH;
-                }
-                else if (read_byte == (byte) TM_PRINT_HEADER)
-                {
-                    FS_msg_type = FS_PRINT;
                     read_buffer.state = SerialBuffer::READ_LENGTH;
                 }
                 else
@@ -196,14 +193,13 @@ void QuadcopterTelemetry::process_inputs()
                 break;
                 
             case SerialBuffer::READ_COMPLETE :
-                if (FS_msg_type == FS_TM)
-                {
-                    memcpy(&TM.data, read_buffer.get_buffer(), tm_buffer_length.value());
-                    //TM.print();
-                }
-                else if (FS_msg_type == FS_PRINT)
+                if (FS_msg_type == FS_PRINT)
                 {
                     print_to_screen(read_buffer.get_buffer(), read_buffer.buffer_size());
+                }
+                else
+                {
+                    update_TM_data();
                 }
                 
                 clear_read_buffers();
@@ -212,6 +208,53 @@ void QuadcopterTelemetry::process_inputs()
                 // do nothing
                 break;
         }
+    }
+}
+
+bool QuadcopterTelemetry::set_msg_type(byte read_byte)
+{
+    for (unsigned int tm_id = FS_TM_IMU; tm_id < N_TM_MSGS; tm_id++)
+    {
+        if (read_byte == (byte) TM_HEADERS[tm_id])
+        {
+            FS_msg_type = (TM_MSG_TYPE) tm_id;
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+void QuadcopterTelemetry::update_TM_data()
+{
+    bool valid = false;
+    
+    if(FS_msg_type == FS_TM_IMU && tm_buffer_length.value() == sizeof(TM.imu_data))
+    { memcpy(&TM.imu_data, read_buffer.get_buffer(), tm_buffer_length.value()); valid = true; }
+    
+    else if (FS_msg_type == FS_TM_BARO && tm_buffer_length.value() == sizeof(TM.baro_data))
+    { memcpy(&TM.baro_data, read_buffer.get_buffer(), tm_buffer_length.value()); valid = true; }
+    
+    else if (FS_msg_type == FS_TM_GPS && tm_buffer_length.value() == sizeof(TM.gps_data))
+    { memcpy(&TM.gps_data, read_buffer.get_buffer(), tm_buffer_length.value()); valid = true; }
+    
+    else if (FS_msg_type == FS_TM_NAV_HIGHRATE && tm_buffer_length.value() == sizeof(TM.nav_highrate_data))
+    { memcpy(&TM.nav_highrate_data, read_buffer.get_buffer(), tm_buffer_length.value()); valid = true; }
+    
+    else if (FS_msg_type == FS_TM_NAV_LOWRATE && tm_buffer_length.value() == sizeof(TM.nav_lowrate_data))
+    { memcpy(&TM.nav_lowrate_data, read_buffer.get_buffer(), tm_buffer_length.value()); valid = true; }
+    
+    else if (FS_msg_type == FS_TM_CONTROLS && tm_buffer_length.value() == sizeof(TM.control_data))
+    { memcpy(&TM.control_data, read_buffer.get_buffer(), tm_buffer_length.value()); valid = true; }
+    
+    else if (FS_msg_type == FS_TM_STATUS && tm_buffer_length.value() == sizeof(TM.status_data))
+    { memcpy(&TM.status_data, read_buffer.get_buffer(), tm_buffer_length.value()); valid = true; }
+    
+    if (valid)
+    {
+        TM.disable_all_printing();
+        TM.enable_printing(FS_msg_type);
+        TM.print();
     }
 }
 

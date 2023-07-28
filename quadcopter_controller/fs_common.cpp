@@ -162,7 +162,8 @@ void FS_FIFO::update_fifo()
         }
     
         // Write to SerialIO
-        if (write_available() &&  getTime() - prevWriteTime >= baud_dt)
+        //if (write_available() &&  getTime() - prevWriteTime >= baud_dt)
+        while (write_available() && serialIO->availableForWrite())
         {
             int n_write = serialIO->write(write_buffer[write_buffer_index]);
             write_buffer_index++;

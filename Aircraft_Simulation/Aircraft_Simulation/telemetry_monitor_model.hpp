@@ -57,9 +57,12 @@ public:
     
 private:
     typedef TelemetryMonitorBase Base;
+    static const unsigned short TM_HEADERS[N_TM_MSGS];
     
     virtual void process_inputs();
     virtual void process_outputs();
+    bool set_msg_type(byte read_byte);
+    void update_TM_data();
     void print_to_screen(const byte* buffer, unsigned int length);
     void clear_read_buffers();
     

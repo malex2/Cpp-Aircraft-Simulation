@@ -50,6 +50,7 @@ struct TM_Message_Info {
                 display(+buffer[i]);
             }
             display(+checksum);
+            display("\n");
         }
     }
 };
@@ -58,45 +59,61 @@ struct TMType {
     unsigned long tm_timeout_count;
     unsigned long tm_failed_write_count;
     unsigned long tm_write_fifo_full_count;
-    unsigned long tm_write_msg_count;
+    unsigned long tm_write_msg_count[N_TM_MSGS];
     unsigned long tm_write_byte_count;
+    unsigned long tm_max_write_byte_count;
     unsigned long tm_rcv_msg_count;
     unsigned long tm_rcv_byte_count;
-    double tm_start_time;
-    double max_tm_rate;
-    telemetryStateType tmState;
+    double tm_start_time[N_TM_MSGS];
+    double max_tm_rate[N_TM_MSGS];
+    telemetryStateType tmState[N_TM_MSGS];
     configStateType configState;
     
     TMType() {
         tm_timeout_count = 0;
         tm_failed_write_count = 0;
         tm_write_fifo_full_count = 0;
-        tm_write_msg_count = 0;
         tm_rcv_msg_count = 0;
         tm_write_byte_count = 0;
+        tm_max_write_byte_count = 0;
         tm_rcv_byte_count = 0;
-        tm_start_time = 0.0;
-        max_tm_rate = 0.0;
-        tmState = doneSendingTM;
         configState = doneConfiguringTM;
+        
+        for (unsigned int tm_id = FS_TM_IMU; tm_id < N_TM_MSGS; tm_id++)
+        {
+            tm_write_msg_count[tm_id] = 0;
+            tm_start_time[tm_id] = 0.0;
+            max_tm_rate[tm_id] = 0.0;
+            tmState[tm_id] = doneSendingTM;
+        }
     }
 };
 
-void FsTelemetry_setupTelemetry(int baud_rate);
-void FsTelemetry_sendTelemetry();
+void FsTelemetry_setupTelemetry(int baud_rate, float* msg_rates = NULL);
+void FsTelemetry_sendTelemetry(TM_MSG_TYPE tm_msg_id);
 void FsTelemetry_configureTelemetry();
 void FsTelemetry_performTelemetry(double &tmDt);
 void FsTelemetry_performSerialIO();
 
+void checkPacketSizes(int baud_rate, float* msg_rates);
 void APC220_configProcessing();
 void telemetryProcessing(double &tmDt);
-void finishSendingTelemetry(double &tmDt);
+void finishSendingTelemetry(unsigned int tm_msg_id, double &tmDt);
 
+void updateIMUTM(TM_Message_Info* pTMMSG);
+void updateBaroTM(TM_Message_Info* pTMMSG);
+void updateGPSTM(TM_Message_Info* pTMMSG);
+void updateNavHighrateTM(TM_Message_Info* pTMMSG);
+void updateNavLowrateTM(TM_Message_Info* pTMMSG);
+void updateControlTM(TM_Message_Info* pTMMSG);
+void updateStatusTM(TM_Message_Info* pTMMSG);
+void updatePrintTM(TM_Message_Info* pTMMSG);
 void APC220_SetAwake();
 void APC220_SetSleep();
 void APC220_SetSettingMode();
 void APC220_SetRunningMode();
 
+void FsTelemetry_resetMaxWriteCounter();
 void FsTelemetry_setTelemetryData(const IMUtype* pIMUIn, const BarometerType* pBaroIn, const GpsType* pGPSIn, const NavType* pNavIn, const ControlType* pCtrlIn);
 void FsTelemetry_setTimingPointer(const double* pTiming);
 const TMType* FsTelemetry_getTMdata();

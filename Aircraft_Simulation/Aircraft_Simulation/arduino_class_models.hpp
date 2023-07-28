@@ -171,7 +171,8 @@ protected:
     
     static const int max_arduino_buffer_size = 64;
     static const int max_teensy3_series_buffer_size = 8;
-    static const int max_teensy4_series_buffer_size = 4;
+    //static const int max_teensy4_series_buffer_size = 4;
+    static const int max_teensy4_series_buffer_size = 64; //HardwareSerial1.cpp
     static const int max_gps_neo6m_buffer_size = 720;
     static const int max_HC05Bluetooth_buffer_size = 100;
     static const int max_APC220Radio_buffer_size = 256;
