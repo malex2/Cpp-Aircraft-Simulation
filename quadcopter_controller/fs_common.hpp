@@ -39,6 +39,10 @@
    class ModelMap;
    class Utilities;
 
+   static Teensy4Pins FS_pins;
+   #define pinMode FS_pins.pinMode
+   #define digitalWrite FS_pins.digitalWrite
+
    #define DEBUG_PRINT
 #else
     #include "arduino.h"
@@ -47,20 +51,15 @@
         #undef max
         #undef min
     #endif
-    //#define LEDPIN LED_BUILTIN
       #define LEDPIN 13
-    //#ifdef TEENSYDUINO
+
       #define FS_Serial HardwareSerial
-      #define DEBUG_PRINT
       #include "Wire.h"
 
-      #include <SPI.h>
+      #define DEBUG_PRINT
+      //#include <SPI.h>
       #include <nRF24L01.h>
       #include <RF24.h>
-    //#else //ARDUINO
-    //  #include <SoftwareSerial.h>
-    //  #define FS_Serial SoftwareSerial
-    //#endif
 #endif
 
 // Forward References
@@ -140,10 +139,10 @@ const double dtPad = 1e-10;
 #define      TM_ENPIN  5 // APC220 - Set high to enable
 #define      TM_SETPIN 6 // APC220 - Set low to go into settings mode
 #define      APC220_CONFIG_SIZE 19
-const double        APC220_SETTING_DELAY   = 2.0/1000.0; // 1ms + 1ms buffer
-const double        APC220_SETTING_TIMEOUT = 300.0/1000.0; // 200ms expected + 100ms buffer
-const unsigned char FsTelemetry_APC220_CONFIG[APC220_CONFIG_SIZE] =
-{'W','R',' ','4','3','4','0','0','0',' ','3',' ','9',' ','3',' ', '0', '\r', '\n'};
+#define      APC220_GSFK_RATE 10
+#define      APC220_BAUD_RATE 14
+const double APC220_SETTING_DELAY   = 2.0/1000.0; // 1ms + 1ms buffer
+const double APC220_SETTING_TIMEOUT = 300.0/1000.0; // 200ms expected + 100ms buffer
 
 // PWM
 #define PWMMIN    1000
@@ -349,6 +348,7 @@ public:
     ~FS_FIFO();
     
     void begin(uint32_t baud_rate);
+    void end();
     
     // Update
     void update_fifo();
@@ -358,18 +358,18 @@ public:
     unsigned short available();
     unsigned short get_read_count() { return read_byte_count; }
     unsigned short get_max_read_buffer_length()   { return max_read_buffer_length; }
-    unsigned short get_read_fifo_overflow_count() { return read_fifo_overflow_count; }
+    unsigned long  get_read_fifo_overflow_count() { return read_fifo_overflow_count; }
     
     // Flight Software to Serial IO
     unsigned short write(byte val);
     unsigned short write(const byte* val, unsigned long length);
     bool           write_available();
-    unsigned short get_write_count() { return write_byte_count; };
-    unsigned short  get_write_buffer_length() { return write_buffer_length; }
-    unsigned short  get_max_write_buffer_length() { return max_write_buffer_length; }
-    unsigned short get_write_fifo_overflow_count()   { return write_fifo_overflow_count; }
-    unsigned short get_write_buffer_overflow_count() { return write_buffer_overflow_count; }
-    
+    unsigned long  get_write_count() { return write_byte_count; };
+    unsigned short get_write_buffer_length() { return write_buffer_length; }
+    unsigned short get_max_write_buffer_length() { return max_write_buffer_length; }
+    unsigned long  get_write_fifo_overflow_count()   { return write_fifo_overflow_count; }
+    unsigned long  get_write_buffer_overflow_count() { return write_buffer_overflow_count; }
+
     bool read_fifo_full();
     bool write_fifo_full();
     
@@ -377,23 +377,25 @@ public:
     void display_read_buffer();
     void display_write_buffer();
 private:
+    bool baud_begin;
+    
     byte read_val;
     byte read_buffer[MAX_SERIAL_FIFO_SIZE];
     unsigned short read_buffer_index;
     unsigned short read_buffer_length;
-    unsigned short read_byte_count;
+    unsigned long read_byte_count;
     unsigned short max_read_buffer_length;
-    unsigned short read_fifo_overflow_count;
+    unsigned long read_fifo_overflow_count;
     
     byte write_buffer[MAX_SERIAL_FIFO_SIZE];
     unsigned short  write_buffer_index;
     unsigned short  write_buffer_length;
-    unsigned short write_byte_count;
+    unsigned long write_byte_count;
     unsigned short  max_write_buffer_length;
     double baud_dt;
     double prevWriteTime;
-    unsigned short write_fifo_overflow_count;
-    unsigned short write_buffer_overflow_count;
+    unsigned long write_fifo_overflow_count;
+    unsigned long write_buffer_overflow_count;
     
     byte temp_nrf24L01_buffer[NRF24L01_BUFFER_SIZE];
     FS_Serial* serialIO;

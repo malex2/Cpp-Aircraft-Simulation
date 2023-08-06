@@ -15,7 +15,8 @@
 #include "model_mapping.hpp"
 #include "barometer_model.hpp"
 
-enum pinMode {INPUT, OUTPUT};
+enum pinModeType {INPUT, OUTPUT};
+enum pinStateType {LOW, HIGH};
 enum PrintMode {BIN, OCT, DEC, HEX};
 const unsigned int LEDPIN = 0;
 
@@ -132,12 +133,14 @@ private:
     double mapToValue(unsigned long pwm, unsigned long pwmMin, unsigned long pwmMax, double valueMin, double valueMax);
 };
 
+class SimulationPins;
 class SimulationSerial {
 public:
     SimulationSerial(int rx_pin=0, int tx_pin=0);
     ~SimulationSerial();
     
     void begin(int baud);
+    void end();
     byte read();
     int write(byte val);
     int write(const byte* val, int length);
@@ -148,6 +151,10 @@ public:
     void print(TempType val, PrintMode printMode = DEC);
     template<typename TempType>
     void println(TempType val, PrintMode printMode = DEC);
+    
+    // Software Serial
+    void listen() {};
+    bool isListening() { return true; }
     
     // slave read/write
     byte slave_read();
@@ -165,7 +172,13 @@ public:
     
     void serial_setSimulationModels(ModelMap* pMap, std::string model, bool print = false);
     void serial_setTwoHardwareSerialModels(ModelMap* pMap, std::string model, std::string serialType, bool print = false);
+    
+    void serial_setEnablePin(SimulationPins* HW_Pins, int pin, pinStateType activeState);
+    void serial_setConfigPin(SimulationPins* HW_Pins, int pin, pinStateType activeState);
+    void serial_setPeriphialEnablePin(ModelMap* pMap, std::string model, SimulationPins* HW_Pins, int pin, pinStateType activeState);
+    void serial_setPeriphialConfigPin(ModelMap* pMap, std::string model, SimulationPins* HW_Pins, int pin, pinStateType activeState);
 protected:
+    virtual int handleConfig(byte val);
     void reset_rx_buffer();
     void reset_tx_buffer();
     
@@ -191,6 +204,27 @@ protected:
     int tx_buffer_length;
     int tx_pin;
   
+    struct SerialPinType {
+        SimulationPins* HW_Pins;
+        unsigned int pin;
+        pinStateType activeState;
+        bool default_InMode;
+        SerialPinType(bool default_mode){
+            HW_Pins = 0;
+            pin = -1;
+            activeState = HIGH;
+            default_InMode = default_mode;
+        }
+        
+        bool InMode();
+    };
+    
+    SerialPinType enable_pin; // defualt return true
+    SerialPinType config_pin; // default return false
+    
+    bool IsEnabled();
+    bool IsInConfig();
+    
     GenericSensorModel* pModel;
     bool print_serial;
 };
@@ -246,7 +280,20 @@ public:
     {
         serial_type = "APC220Radio";
         max_buffer_size = max_APC220Radio_buffer_size;
+        
+        config_count = 0;
+        config_rsp[0] = 'P';
+        config_rsp[1] = 'A';
+        config_rsp[2] = 'R';
+        config_rsp[3] = 'A';
+        
     }
+    
+    virtual int handleConfig(byte val);
+private:
+    unsigned short config_count;
+    unsigned char config_rsp[21];
+    unsigned char temp_buffer[19];
 };
 
 class TwoHardwareSerial : public GenericSensorModel {
@@ -256,6 +303,7 @@ public:
     virtual void initialize();
     virtual bool update();
     virtual void setSerialIO(SimulationSerial* pSerial, std::string periphialType);
+    SimulationSerial* GetPeriphial();
 private:
     class Time* pTime;
     
@@ -273,6 +321,8 @@ private:
         
         void set(SimulationSerial* pSerial, std::string periphialType);
         void update(MCUIO &otherMCU);
+        
+        SimulationSerial* GetPeriphial() { return pMCUperiphial; }
     };
     
     MCUIO MCU1;
@@ -295,6 +345,64 @@ private:
     std::fstream memoryfile;
     
     void reset_eeprom();
+};
+
+class SimulationPins {
+public:
+    SimulationPins();
+    ~SimulationPins();
+    
+    pinStateType digitalRead(unsigned int pin);
+    void digitalWrite(unsigned int pin, pinStateType state);
+    void pinMode(unsigned int pin, pinModeType mode);
+    
+    // Periphial Functions
+    void periphialDigitalWrite(unsigned int pin, pinStateType state);
+    pinStateType periphialDigitalRead(unsigned int pin);
+    
+    std::string serial_type = "unknown";
+protected:
+    struct DigitalPinType {
+        pinModeType  pin_mode;
+        pinStateType pin_state;
+        
+        DigitalPinType()
+        {
+            pin_mode  = INPUT;
+            pin_state = LOW;
+        }
+    };
+    
+    DigitalPinType* digitalPins;
+    
+    static const int max_arduino_digital_pins = 20;
+    static const int max_teensy4_digital_pins = 24;
+    
+    static const int max_arduino_analog_pins = 8;
+    static const int max_teensy4_analog_pins = 10;
+    
+    int max_digital_pins = max_arduino_digital_pins;
+    int max_analog_pins  = max_arduino_analog_pins;
+};
+
+class ArduinoPins : public SimulationPins {
+public:
+    ArduinoPins() : SimulationPins()
+    {
+        serial_type = "Arduino_Nano";
+        max_digital_pins = max_arduino_digital_pins;
+        max_analog_pins  = max_arduino_analog_pins;
+    }
+};
+
+class Teensy4Pins : public SimulationPins {
+public:
+    Teensy4Pins() : SimulationPins()
+    {
+        serial_type = "Teensy4_series";
+        max_digital_pins = max_teensy4_digital_pins;
+        max_analog_pins  = max_teensy4_analog_pins;
+    }
 };
 
 typedef enum { RF24_1MBPS, RF24_2MBPS, RF24_250KBPS } rf24_datarate_e;
@@ -354,7 +462,6 @@ private:
     void print_writing_map();
 };
 
-void pinMode(int pin, pinMode mode);
 void delay(int timeMS);
 
 #define RF24 SimulationNRF24L01

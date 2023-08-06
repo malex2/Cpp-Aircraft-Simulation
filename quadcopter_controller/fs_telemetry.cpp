@@ -28,9 +28,11 @@ FS_Telemetry_Type TM;
 FS_FIFO* pPrintFIFO = 0;
 #define tmIO Serial2 // [RX,TX] = [7,8]
 FS_FIFO telemetryFIFO(&tmIO);
-
+int TM_baud_rate;
 double configStateTime;
 bool configStateSetup;
+unsigned char FsTelemetry_APC220_CONFIG[APC220_CONFIG_SIZE] =
+{'W','R',' ','4','3','4','0','0','0',' ','3',' ','9',' ','3',' ', '0', '\r', '\n'};
 
 byte temp_TM_buffer[MAX_SERIAL_FIFO_SIZE];
 unsigned int temp_buffer_size;
@@ -42,6 +44,7 @@ byte print_buffer_copy[MAX_SERIAL_FIFO_SIZE];
 TM_Message_Info TM_MSGS[N_TM_MSGS];
 void (*updateTM[N_TM_MSGS])(TM_Message_Info* pTMMSG) =
 {updateIMUTM, updateBaroTM, updateGPSTM, updateNavHighrateTM, updateNavLowrateTM, updateControlTM, updateStatusTM, updatePrintTM};
+
 
 void FsTelemetry_setupTelemetry(int baud_rate, float* msg_rates)
 {
@@ -56,17 +59,17 @@ void FsTelemetry_setupTelemetry(int baud_rate, float* msg_rates)
     configStateTime = 0.0;
     configStateSetup = false;
     
-    checkPacketSizes(baud_rate, msg_rates);
+    TM_baud_rate = baud_rate;
+    checkPacketSizes(TM_baud_rate, msg_rates);
     
-#ifndef SIMULATION
     pinMode(TM_ENPIN, OUTPUT);
     pinMode(TM_SETPIN, OUTPUT);
-#endif
+
     APC220_SetAwake();
     APC220_SetRunningMode();
     
     // Begin telemetry port
-    telemetryFIFO.begin(baud_rate);
+    telemetryFIFO.begin(TM_baud_rate);
 #endif
 }
 
@@ -79,13 +82,13 @@ void checkPacketSizes(int baud_rate, float* msg_rates)
         for (unsigned int tm_id=0; tm_id<N_TM_MSGS; tm_id++)
         {
             int bytes_per_msg = 0;
-            if (tm_id == FS_TM_IMU) { bytes_per_msg = sizeof(TM.imu_data); }
-            else if (tm_id == FS_TM_BARO) { bytes_per_msg = sizeof(TM.baro_data); }
-            else if (tm_id == FS_TM_GPS) { bytes_per_msg = sizeof(TM.gps_data); }
+            if (tm_id == FS_TM_IMU)               { bytes_per_msg = sizeof(TM.imu_data); }
+            else if (tm_id == FS_TM_BARO)         { bytes_per_msg = sizeof(TM.baro_data); }
+            else if (tm_id == FS_TM_GPS)          { bytes_per_msg = sizeof(TM.gps_data); }
             else if (tm_id == FS_TM_NAV_HIGHRATE) { bytes_per_msg = sizeof(TM.nav_highrate_data); }
-            else if (tm_id == FS_TM_NAV_LOWRATE) { bytes_per_msg = sizeof(TM.nav_lowrate_data); }
-            else if (tm_id == FS_TM_CONTROLS) { bytes_per_msg = sizeof(TM.control_data); }
-            else if (tm_id == FS_TM_STATUS) { bytes_per_msg = sizeof(TM.status_data); }
+            else if (tm_id == FS_TM_NAV_LOWRATE)  { bytes_per_msg = sizeof(TM.nav_lowrate_data); }
+            else if (tm_id == FS_TM_CONTROLS)     { bytes_per_msg = sizeof(TM.control_data); }
+            else if (tm_id == FS_TM_STATUS)       { bytes_per_msg = sizeof(TM.status_data); }
             
             int bits_per_msg = bytes_per_msg * 8 * msg_rates[tm_id];
             bits_per_second += bits_per_msg  + bits_per_msg * uart_protocal_bits;
@@ -119,6 +122,9 @@ void FsTelemetry_configureTelemetry()
 {
 #ifdef TELEMETRY
     TMData.configState = commandConfig;
+    APC220_UpdateConfig();
+    telemetryFIFO.end();
+    telemetryFIFO.begin(9600);
     display("Configure telemetry commanded\n");
 #endif
 }
@@ -189,11 +195,14 @@ void APC220_configProcessing()
 
         if (TM_config_rsp_count == 21 || getTime() - configStateTime > (double) APC220_SETTING_TIMEOUT)
         {
+            telemetryFIFO.end();
+            telemetryFIFO.begin(TM_baud_rate);
             APC220_SetRunningMode();
             configStateSetup = false;
             TMData.configState = doneConfiguringTM;
+            if (TM_config_rsp_count < 21) { display("TM Config Timeout!\n"); }
+            else { display("TM Config Set!\n"); }
             TM_config_rsp_count = 0;
-            display("TM Config Set!\n");
         }
     }
 }
@@ -462,32 +471,44 @@ void updatePrintTM(TM_Message_Info* pTMMSG)
     pTMMSG->checksum = FsCommon_computeChecksum(pTMMSG->buffer, pTMMSG->size);
 }
 
+void APC220_UpdateConfig()
+{
+    unsigned char gsfk_val = '3';
+    unsigned char baud_val = '3';
+    
+    switch (TM_baud_rate) {
+        case 1200:  { baud_val='0'; gsfk_val='1'; break; }
+        case 2400:  { baud_val='1'; gsfk_val='1'; break; }
+        case 4800:  { baud_val='2'; gsfk_val='2'; break; }
+        case 9600:  { baud_val='3'; gsfk_val='3'; break; }
+        case 19200: { baud_val='4'; gsfk_val='4'; break; }
+        case 38400: { baud_val='5'; gsfk_val='4'; break; }
+        case 57600: { baud_val='6'; gsfk_val='4'; break; }
+        default:    { baud_val='3'; gsfk_val='3'; break; }
+    }
+
+    FsTelemetry_APC220_CONFIG[APC220_BAUD_RATE] = baud_val;
+    FsTelemetry_APC220_CONFIG[APC220_GSFK_RATE] = gsfk_val;
+}
+
 void APC220_SetAwake()
 {
-#ifndef SIMULATION
     digitalWrite(TM_ENPIN, HIGH);
-#endif
 }
 
 void APC220_SetSleep()
 {
-#ifndef SIMULATION
     digitalWrite(TM_ENPIN, LOW);
-#endif
 }
 
 void APC220_SetSettingMode()
 {
-#ifndef SIMULATION
     digitalWrite(TM_SETPIN, LOW);
-#endif
 }
 
 void APC220_SetRunningMode()
 {
-#ifndef SIMULATION
     digitalWrite(TM_SETPIN, HIGH);
-#endif
 }
 
 void FsTelemetry_performSerialIO()
@@ -546,9 +567,14 @@ const TMType* FsTelemetry_getTMdata()
 #ifdef SIMULATION
 void FsTelemetry_setSimulationModels(ModelMap* pMap)
 {
+#ifdef TELEMETRY
     if (pMap)
     {
         tmIO.serial_setTwoHardwareSerialModels(pMap, "FS_GS_Interface", "APC220Radio");
     }
+
+    tmIO.serial_setPeriphialEnablePin(pMap, "FS_GS_Interface", &FS_pins, TM_ENPIN, HIGH);
+    tmIO.serial_setPeriphialConfigPin(pMap, "FS_GS_Interface", &FS_pins, TM_SETPIN, LOW);
+#endif
 }
 #endif

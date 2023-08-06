@@ -124,7 +124,7 @@ void FsControls_setIMUStatistics(const SensorErrorType* calGyroError, const Sens
 // Getters
 const ControlType* FsControls_getControlData();
 bool               FsControls_onGround();
-
+bool               FsControls_movingDetection();
 // Internal Access
 void discretizeCommands();
 int discretize(int desiredCommand, int command, int minCmd, int maxCmd, int deltaPwm);

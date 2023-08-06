@@ -64,6 +64,7 @@ FS_FIFO::FS_FIFO()
 {
     serialIO = nullptr;
     nrf24L01 = nullptr;
+    baud_begin = false;
     read_byte_count  = 0.0;
     write_byte_count = 0.0;
     prevWriteTime = 0.0;
@@ -82,6 +83,7 @@ FS_FIFO::FS_FIFO(FS_Serial* serialIO)
 {
     this->serialIO  = serialIO;
     nrf24L01 = nullptr;
+    baud_begin = false;
     read_byte_count  = 0.0;
     write_byte_count = 0.0;
     prevWriteTime = 0.0;
@@ -100,6 +102,7 @@ FS_FIFO::FS_FIFO(RF24* tmIO)
 {
     serialIO = nullptr;
     nrf24L01 = tmIO;
+    baud_begin = false;
     read_byte_count  = 0.0;
     write_byte_count = 0.0;
     prevWriteTime = 0.0;
@@ -116,8 +119,7 @@ FS_FIFO::FS_FIFO(RF24* tmIO)
 
 FS_FIFO::~FS_FIFO()
 {
-    reset_read_buffer();
-    reset_write_buffer();
+    end();
 }
 
 void FS_FIFO::begin(uint32_t baud_rate)
@@ -132,10 +134,23 @@ void FS_FIFO::begin(uint32_t baud_rate)
     }
     this->baud_dt = 1.0/baud_rate;
     prevWriteTime = getTime();
+    baud_begin = true;
+}
+
+void FS_FIFO::end()
+{
+    reset_read_buffer();
+    reset_write_buffer();
+    memset(temp_nrf24L01_buffer, 0, NRF24L01_BUFFER_SIZE);
+    baud_dt = 0.0;
+    baud_begin = false;
+    if (serialIO) { serialIO->end(); }
 }
 
 void FS_FIFO::update_fifo()
 {
+    if (!baud_begin) { return; }
+    
     if (baud_dt == 0.0)
     {
         // Copy write buffer into read buffer
@@ -480,8 +495,9 @@ void display(TempType val, int printMode)
 #ifdef SIMULATION
     if (printMode == HEX)
     {
-        std::cout << std::hex << std::setfill('0') << std::setw(2) << val;
-        std::cout << std::dec;
+        std::cout << val;
+        //std::cout << std::hex << std::setfill('0') << std::setw(2) << val;
+        //std::cout << std::dec;
     }
     else
     {

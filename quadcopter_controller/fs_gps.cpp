@@ -167,7 +167,7 @@ void FsGPS_performGPS()
                 ref_slon = sin(llhError[1].mean*degree2radian);
                 gpsFix_init = GpsData.gpsFix;
                 
-                if (!FsControls_onGround()) { positionInit = true; }
+                if (!FsControls_onGround() || FsControls_movingDetection()) { positionInit = true; }
             }
             else if (!FsControls_onGround() && !positionInit)
             {

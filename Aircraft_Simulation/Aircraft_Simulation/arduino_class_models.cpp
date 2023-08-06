@@ -440,11 +440,11 @@ void Servo::servo_setSimulationModels(ModelMap* pMap)
     }
 }
 
-SimulationSerial::SimulationSerial(int rx_pin, int tx_pin)
+SimulationSerial::SimulationSerial(int rx_pin, int tx_pin) : enable_pin(true), config_pin(false)
 {
     baud_rate  = 0;
     baud_begin = false;
-    this->rx_pin  = rx_pin;
+    this->rx_pin = rx_pin;
     this->tx_pin = tx_pin;
     pModel = 0;
     print_serial = false;
@@ -452,8 +452,7 @@ SimulationSerial::SimulationSerial(int rx_pin, int tx_pin)
 
 SimulationSerial::~SimulationSerial()
 {
-    delete[] rx_buffer; rx_buffer = 0;
-    delete[] tx_buffer; tx_buffer = 0;
+    end();
 }
 
 void SimulationSerial::begin(int baud)
@@ -466,6 +465,24 @@ void SimulationSerial::begin(int baud)
     
     baud_rate = baud;
     baud_begin = true;
+}
+
+void SimulationSerial::end()
+{
+    if (rx_buffer)
+    {
+        reset_rx_buffer();
+        delete[] rx_buffer; rx_buffer = 0;
+    }
+    
+    if (tx_buffer)
+    {
+        reset_tx_buffer();
+        delete[] tx_buffer; tx_buffer = 0;
+    }
+    
+    baud_rate = 0;
+    baud_begin = false;
 }
 
 template<typename TempType>
@@ -492,15 +509,11 @@ void SimulationSerial::println(TempType val, PrintMode printMode)
 byte SimulationSerial::read()
 {
     byte val;
-    if (!baud_begin) { return 0; }
+    if (!IsEnabled()) { return 0; }
     
     if (available())
     {
         val = rx_buffer[rx_buffer_index];
-        //std::cout << serial_type << " (" << max_buffer_size << ") read(): rx_buffer[" << rx_buffer_index << "] = ";
-        //std::cout << std::hex << std::setfill('0') << std::setw(2) << +val;
-        //std::cout << std::dec << std::endl;
-        
         rx_buffer_index++;
         if (!available()) { reset_rx_buffer(); }
         return val;
@@ -514,15 +527,11 @@ byte SimulationSerial::read()
 byte SimulationSerial::slave_read()
 {
     byte val;
-    if (!baud_begin) { return 0; }
+    if (!IsEnabled()) { return 0; }
     
     if (slave_available())
     {
         val = tx_buffer[tx_buffer_index];
-        //std::cout << serial_type << " (" << max_buffer_size << ") slave_read(): tx_buffer[" << tx_buffer_index << "] = ";
-        //std::cout << std::hex << std::setfill('0') << std::setw(2) << +val;
-        //std::cout << std::dec << std::endl;
-        
         tx_buffer_index++;
         if (!slave_available()) { reset_tx_buffer(); }
         return val;
@@ -535,14 +544,26 @@ byte SimulationSerial::slave_read()
 
 int SimulationSerial::write(byte val)
 {
-    if (!baud_begin) { return 0; }
-        
-    if (tx_buffer_length < max_buffer_size)
+    if (!IsEnabled()) { return 0; }
+/*
+    if (config_pin.HW_Pins)
     {
-        //std::cout << serial_type << " (" << max_buffer_size << ") write(): tx_buffer[" << tx_buffer_length << "] = ";
-        //std::cout << std::hex << std::setfill('0') << std::setw(2) << +val;
-        //std::cout << std::dec << std::endl;
-        
+        std::cout << serial_type << " pin " << config_pin.pin << " (" << config_pin.HW_Pins->serial_type << ") ";
+        std::cout << config_pin.HW_Pins->periphialDigitalRead(config_pin.pin) << std::endl;
+    }
+    */
+    if (IsInConfig())
+    {
+        return handleConfig(val);
+    }
+    
+    if (rx_pin == 0 && tx_pin == 0)
+    {
+        std::cout << val;
+        return 1;
+    }
+    else if (tx_buffer_length < max_buffer_size)
+    {
         tx_buffer[tx_buffer_length] = val;
         tx_buffer_length++;
         return 1;
@@ -556,7 +577,7 @@ int SimulationSerial::write(byte val)
 int SimulationSerial::write(const byte* val, int length)
 {
     int tx_count;
-    if (!baud_begin) { return 0; }
+    if (!IsEnabled()) { return 0; }
     
     tx_count = 0;
     for (int i = 0; i < length; i++)
@@ -568,15 +589,11 @@ int SimulationSerial::write(const byte* val, int length)
 
 int SimulationSerial::slave_write(byte val)
 {
-    if (!baud_begin) { return 0; }
+    if (!IsEnabled()) { return 0; }
     
     if (rx_buffer_length < max_buffer_size)
     {
         rx_buffer[rx_buffer_length] = val;
-        //std::cout << serial_type << " (" << max_buffer_size << ") slave_write(): rx_buffer[" << rx_buffer_length << "] = ";
-        //std::cout << std::hex << std::setfill('0') << std::setw(2) << +val;
-        //std::cout << std::dec << std::endl;
-        
         rx_buffer_length++;
         return 1;
     }
@@ -589,7 +606,7 @@ int SimulationSerial::slave_write(byte val)
 int SimulationSerial::slave_write(const byte* val, int length)
 {
     int rx_count;
-    if (!baud_begin) { return 0; }
+    if (!IsEnabled()) { return 0; }
     
     rx_count = 0;
     for (int i = 0; i < length; i++)
@@ -601,26 +618,31 @@ int SimulationSerial::slave_write(const byte* val, int length)
 
 int SimulationSerial::available()
 {
-    if (!baud_begin) { return 0; }
+    if (!IsEnabled()) { return 0; }
     else { return (rx_buffer_length - rx_buffer_index); }
 }
 
 int SimulationSerial::availableForWrite()
 {
-    if (!baud_begin) { return 0; }
+    if (!IsEnabled()) { return 0; }
     else { return (max_buffer_size - tx_buffer_length); }
 }
 
 int SimulationSerial::slave_available()
 {
-    if (!baud_begin) { return 0; }
+    if (!IsEnabled()) { return 0; }
     else { return (tx_buffer_length - tx_buffer_index); }
 }
 
 int SimulationSerial::slave_availableForWrite()
 {
-    if (!baud_begin) { return 0; }
+    if (!IsEnabled()) { return 0; }
     return (max_buffer_size - rx_buffer_length);
+}
+
+int SimulationSerial::handleConfig(byte val)
+{
+    return 1;
 }
 
 void SimulationSerial::reset_rx_buffer()
@@ -697,6 +719,94 @@ void SimulationSerial::display_tx_buffer()
     std::cout << std::dec << std::endl;
 }
 
+void SimulationSerial::serial_setEnablePin(SimulationPins* HW_Pins, int pin, pinStateType activeState)
+{
+    enable_pin.HW_Pins = HW_Pins;
+    enable_pin.pin     = pin;
+    enable_pin.activeState = activeState;
+}
+
+void SimulationSerial::serial_setConfigPin(SimulationPins* HW_Pins, int pin, pinStateType activeState)
+{
+    config_pin.HW_Pins = HW_Pins;
+    config_pin.pin     = pin;
+    config_pin.activeState = activeState;
+}
+
+void SimulationSerial::serial_setPeriphialEnablePin(ModelMap* pMap, std::string model, SimulationPins* HW_Pins, int pin, pinStateType activeState)
+{
+    if (pMap)
+    {
+        pModel = (GenericSensorModel*) pMap->getModel(model);
+        if (pModel)
+        {
+            static_cast<TwoHardwareSerial*>(pModel)->GetPeriphial()->serial_setEnablePin(HW_Pins, pin, activeState);
+            pModel = 0;
+        }
+        else
+        {
+            std::cout << "SimulationSerial::serial_setPeriphialEnablePin: cannot find " << model << " model." << std::endl;
+        }
+    }
+}
+
+void SimulationSerial::serial_setPeriphialConfigPin(ModelMap* pMap, std::string model, SimulationPins* HW_Pins, int pin, pinStateType activeState)
+{
+    if (pMap)
+    {
+        pModel = (GenericSensorModel*) pMap->getModel(model);
+        if (pModel)
+        {
+            static_cast<TwoHardwareSerial*>(pModel)->GetPeriphial()->serial_setConfigPin(HW_Pins, pin, activeState);
+            pModel = 0;
+        }
+        else
+        {
+            std::cout << "SimulationSerial::serial_setPeriphialConfigPin: cannot find " << model << " model." << std::endl;
+        }
+    }
+}
+
+bool SimulationSerial::IsEnabled()
+{
+    return baud_begin && enable_pin.InMode();
+}
+
+bool SimulationSerial::IsInConfig()
+{
+    return config_pin.InMode();
+}
+
+bool SimulationSerial::SerialPinType::InMode()
+{
+    if (HW_Pins) { return HW_Pins->periphialDigitalRead(pin) == activeState; }
+    else { return default_InMode; }
+}
+
+int APC220RadioSerial::handleConfig(byte val)
+{
+    if (config_count > 1)
+    {
+        // config_count=2 -> config_rsp[4]
+        //{'W','R',' ','4','3','4','0','0','0',' ','3',' ','9',' ','3',' ', '0', '\r', '\n'} 19
+        //->
+        //{'P','A','R','A',' ','4','3','4','0','0','0',' ','3',' ','9',' ','3',' ', '0', '\r', '\n'} 21
+        config_rsp[config_count+2] = val;
+    }
+    
+    if (config_count == 18)
+    {
+        slave_write(config_rsp, 21);
+        config_count = 0;
+    }
+    else
+    {
+        config_count++;
+    }
+
+    return 1;
+}
+
 template void SimulationSerial::print(const char*, PrintMode printMode);
 template void SimulationSerial::print(char, PrintMode printMode);
 template void SimulationSerial::print(std::string, PrintMode printMode);
@@ -729,7 +839,7 @@ TwoHardwareSerial::TwoHardwareSerial(ModelMap *pMapInit, bool debugFlagIn)
 
 bool TwoHardwareSerial::update()
 {
-    if (!MCU1.init || !MCU2.init) { return false; }
+    if (!MCU1.init && !MCU2.init) { return false; }
 
     MCU1.update(MCU2);
     MCU2.update(MCU1);
@@ -742,6 +852,13 @@ void TwoHardwareSerial::setSerialIO(SimulationSerial* pSerial, std::string perip
     if      (!MCU1.init) { MCU1.set(pSerial, periphialType); }
     else if (!MCU2.init) { MCU2.set(pSerial, periphialType); }
     else    { std::cout << "TwoHardwareSerial - Attempt to set more than 2 MCU's!" << std::endl; }
+}
+
+SimulationSerial* TwoHardwareSerial::GetPeriphial()
+{
+    if (MCU2.init) { return MCU2.GetPeriphial(); }
+    else if (MCU1.init) { return MCU1.GetPeriphial(); }
+    else { return NULL; }
 }
 
 TwoHardwareSerial::MCUIO::MCUIO()
@@ -775,41 +892,56 @@ void TwoHardwareSerial::MCUIO::update(MCUIO &otherMCU)
     int n_write_attempt;
     int n_write;
     
-    // Read MCU into periphial buffer (MCU tx -> periph tx)
-    n_write_attempt = pMCUSerial->slave_available();
-    n_write = 0;
-    while (pMCUSerial->slave_available())
+    if (pMCUperiphial && pMCUSerial->getBaudRate() > 0)
     {
-        n_write += pMCUperiphial->write(pMCUSerial->slave_read());
-    }
-    if (n_write < n_write_attempt)
-    {
-        mcu_tx_fail_count++;
+        pMCUperiphial->begin(pMCUSerial->getBaudRate());
     }
     
-    // Read MCU periphial into otherMCU periphial (periph tx -> otherPeriph rx)
-    n_write_attempt = pMCUperiphial->slave_available();
-    n_write = 0;
-    while (pMCUperiphial->slave_available())
+    // Read MCU into periphial buffer (MCU tx -> periph tx)
+    if (init)
     {
-        n_write += otherMCU.pMCUperiphial->slave_write(pMCUperiphial->slave_read());
-    }
-    if (n_write < n_write_attempt)
-    {
-        periphial_tx_fail_count++;
-        otherMCU.periphial_rx_fail_count++;
+        n_write_attempt = pMCUSerial->slave_available();
+        n_write = 0;
+        while (pMCUSerial->slave_available())
+        {
+            n_write += pMCUperiphial->write(pMCUSerial->slave_read());
+        }
+        if (n_write < n_write_attempt)
+        {
+            mcu_tx_fail_count++;
+        }
+    
+        // Read MCU periphial into otherMCU periphial (periph tx -> otherPeriph rx)
+        n_write_attempt = pMCUperiphial->slave_available();
+        n_write = 0;
+        while (pMCUperiphial->slave_available())
+        {
+            if (otherMCU.init)
+            {
+                n_write += otherMCU.pMCUperiphial->slave_write(pMCUperiphial->slave_read());
+            }
+            else { pMCUperiphial->slave_read(); }
+        }
+        if (n_write < n_write_attempt)
+        {
+            periphial_tx_fail_count++;
+            otherMCU.periphial_rx_fail_count++;
+        }
     }
     
     // Read otherMCU periphial into otherMCU (otherPeriph rx -> otherMCU rx)
-    n_write_attempt = otherMCU.pMCUperiphial->available();
-    n_write = 0;
-    while (otherMCU.pMCUperiphial->available())
+    if (otherMCU.init)
     {
-        n_write += otherMCU.pMCUSerial->slave_write(otherMCU.pMCUperiphial->read());
-    }
-    if (n_write < n_write_attempt)
-    {
-        otherMCU.mcu_rx_fail_count++;
+        n_write_attempt = otherMCU.pMCUperiphial->available();
+        n_write = 0;
+        while (otherMCU.pMCUperiphial->available())
+        {
+            n_write += otherMCU.pMCUSerial->slave_write(otherMCU.pMCUperiphial->read());
+        }
+        if (n_write < n_write_attempt)
+        {
+            otherMCU.mcu_rx_fail_count++;
+        }
     }
 }
 
@@ -846,12 +978,6 @@ void TwoHardwareSerial::MCUIO::set(SimulationSerial* pSerial, std::string periph
         pMCUperiphial = new APC220RadioSerial(pMCUSerial->getTXPin(),pMCUSerial->getRXPin());
         init = true;
     }
-    
-    if (pMCUperiphial)
-    {
-        pMCUperiphial->begin(pMCUSerial->getBaudRate());
-    }
-        
 }
 
 ArduinoEEPROM::ArduinoEEPROM()
@@ -914,6 +1040,71 @@ void ArduinoEEPROM::reset_eeprom()
         memoryfile << val;
     }
     memoryfile.flush();
+}
+
+SimulationPins::SimulationPins()
+{
+    digitalPins = new DigitalPinType[max_digital_pins];
+}
+
+SimulationPins::~SimulationPins()
+{
+    if (digitalPins)  { delete[] digitalPins; digitalPins = 0; }
+}
+
+void SimulationPins::pinMode(unsigned int pin, pinModeType mode)
+{
+    digitalPins[pin].pin_mode = mode;
+}
+
+pinStateType SimulationPins::digitalRead(unsigned int pin)
+{
+    if (digitalPins[pin].pin_mode == INPUT)
+    {
+        return digitalPins[pin].pin_state;
+    }
+    else
+    {
+        std::cout << "SimulationPins(" << serial_type << ")::digitalRead - Unable to read from OUTPUT Pin " << pin << "!" << std::endl;
+        return LOW;
+    }
+}
+
+void SimulationPins::digitalWrite(unsigned int pin, pinStateType state)
+{
+    if (digitalPins[pin].pin_mode == OUTPUT)
+    {
+        digitalPins[pin].pin_state = state;
+    }
+    else
+    {
+        std::cout << "SimulationPins(" << serial_type << ")::digitalWrite - Unable to write to INPUT Pin " << pin << "!" << std::endl;
+    }
+}
+
+void SimulationPins::periphialDigitalWrite(unsigned int pin, pinStateType state)
+{
+    if (digitalPins[pin].pin_mode == INPUT)
+    {
+        digitalPins[pin].pin_state = state;
+    }
+    else
+    {
+        std::cout << "SimulationPins(" << serial_type << ")::periphialDigitalWrite - Unable to write to OUTPUT Pin " << pin << "!" << std::endl;
+    }
+}
+
+pinStateType SimulationPins::periphialDigitalRead(unsigned int pin)
+{
+    if (digitalPins[pin].pin_mode == OUTPUT)
+    {
+        return digitalPins[pin].pin_state;
+    }
+    else
+    {
+        std::cout << "SimulationPins(" << serial_type << ")::periphialDigitalRead - Unable to read from INPUT Pin " << pin << "!" << std::endl;
+        return LOW;
+    }
 }
 
 std::map<std::string, SimulationNRF24L01::buffer_type> SimulationNRF24L01::buffer_map;
@@ -1082,7 +1273,6 @@ void SimulationNRF24L01::print_writing_map()
     }
 }
 
-void pinMode(int pin, enum pinMode mode) { }
 void delay(int timeMS) { }
 
 SimulationSerial Serial = SimulationSerial();

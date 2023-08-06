@@ -41,6 +41,7 @@ bool intiailized = false;
     bool printPWMIn;
     bool printCommands;
     bool printMotorPWM;
+    bool printTakeOff;
     bool printTelemetry;
 #endif
 
@@ -178,7 +179,7 @@ void initialize(void)
     printCalibration   = false;
     printCalibratedIMU = false;
     printBarometer     = false;
-    printGPS           = false;
+    printGPS           = true;
     printGPS_DOP       = false;
     printNavInputs     = false;
     printAngles        = false;
@@ -190,6 +191,7 @@ void initialize(void)
     printPWMIn         = false;
     printCommands      = false;
     printMotorPWM      = false;
+    printTakeOff       = false;
     printTelemetry     = true;
 #endif
     
@@ -202,15 +204,15 @@ void initialize(void)
     
     // Barometer Settings
     bmp180Resolution = BMP180_COMMAND_PRESSURE3;
-    useBarometer     = true;
+    useBarometer     = false;
     
     // Navigation Settings
     initialPosition[0] = 0.0; // North    (m)
     initialPosition[1] = 0.0; // East     (m)
     initialPosition[2] = 0.0; // Altitude (m)
     initialHeading     = 0.0;
-    useAccelPitchRoll  = false;
-    groundAlign        = true;
+    useAccelPitchRoll  = true;
+    groundAlign        = false;
     loadIMUCalibration = false;
     useTruthNav        = false;
     useTruthStateTran  = false;
@@ -226,14 +228,14 @@ void initialize(void)
     // Telemetry
     // Note: Rates must be divisible by 600
     TMBaudRate = 9600;
-    configTM   = false;
+    configTM   = true;
     
-    TM_MSG_Rates[FS_TM_IMU]          = 5.0;
-    TM_MSG_Rates[FS_TM_BARO]         = 1.0;
+    TM_MSG_Rates[FS_TM_IMU]          = 0.0;
+    TM_MSG_Rates[FS_TM_BARO]         = 0.0;
     TM_MSG_Rates[FS_TM_GPS]          = 1.0;
-    TM_MSG_Rates[FS_TM_NAV_HIGHRATE] = 5.0;
-    TM_MSG_Rates[FS_TM_NAV_LOWRATE]  = 1.0;
-    TM_MSG_Rates[FS_TM_CONTROLS]     = 5.0;
+    TM_MSG_Rates[FS_TM_NAV_HIGHRATE] = 0.0;
+    TM_MSG_Rates[FS_TM_NAV_LOWRATE]  = 0.0;
+    TM_MSG_Rates[FS_TM_CONTROLS]     = 0.0;
     TM_MSG_Rates[FS_TM_STATUS]       = 0.5;
     TM_MSG_Rates[FS_PRINT]           = 0.0;
     for (unsigned int tm_id = FS_TM_IMU; tm_id < N_TM_MSGS; tm_id++ )
@@ -1516,6 +1518,21 @@ void printData()
         display(" ");
         display(pControlData->TPWM[3]);
         display("\n");
+        
+        anyPrint = true;
+    }
+    
+    if (printTakeOff)
+    {
+        display("[takeOff, onGround, movingDetection, crashLand]: [");
+        display((int) pControlData->takeOff);
+        display(", ");
+        display((int) pControlData->onGround);
+        display(", ");
+        display((int) pControlData->movingDetection);
+        display(", ");
+        display((int) pControlData->crashLand);
+        display("]\n");
         
         anyPrint = true;
     }

@@ -108,6 +108,7 @@ void updateNavLowrateTM(TM_Message_Info* pTMMSG);
 void updateControlTM(TM_Message_Info* pTMMSG);
 void updateStatusTM(TM_Message_Info* pTMMSG);
 void updatePrintTM(TM_Message_Info* pTMMSG);
+void APC220_UpdateConfig();
 void APC220_SetAwake();
 void APC220_SetSleep();
 void APC220_SetSettingMode();

@@ -206,15 +206,15 @@ void FsBarometer_performBarometer()
         baroData.baroGood = (baroData.errorCodeBaro == I2C_0_SUCCESS) & temp_valid & pressure_valid;
         
         // Average reference pressure
-        if (baroData.baroGood && FsControls_onGround() && !pressureInit)
+        if ( (!FsControls_onGround() || FsControls_movingDetection()) && !pressureInit)
+        {
+            pressureInit = true;
+        }
+        else if (baroData.baroGood && !pressureInit)
         {
             pressureError.update(baroData.pressure);
             pressureError.compute();
             baroData.refPressure = pressureError.mean;
-        }
-        else if (!FsControls_onGround() && !pressureInit)
-        {
-            pressureInit = true;
         }
         
         if (baroData.baroGood)

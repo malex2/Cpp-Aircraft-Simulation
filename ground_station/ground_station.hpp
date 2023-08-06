@@ -11,9 +11,8 @@
 
 //#define GROUND_STATION_SIMULATION
 //#define BLUETOOTH
-//#define PRINT_BLUETOOTH
-#define DUMP_TM
-//#define TEST_MODE
+//#define PRINT_TM
+
 //#define PRINT_ANALOG0
 //#define PRINT_ANALOG1
 #define PRINT_IO_STATUS
@@ -21,6 +20,13 @@
 #ifdef GROUND_STATION_SIMULATION
    #include "arduino_class_models.hpp"
    #include "time.hpp"
+
+   static ArduinoPins GS_pins;
+#ifndef pinMode
+   #define pinMode GS_pins.pinMode
+   #define digitalWrite GS_pins.digitalWrite
+#endif
+
 #else
    #include "arduino.h"
    #include <SoftwareSerial.h>
@@ -38,19 +44,21 @@
 #define BLUETOOTH_RXPIN 2 // Rcv Bluetooth msgs, connect to Bluetooth TX
 #define BLUETOOTH_TXPIN 3 // Txmit Bluetooth msgs, connect to Bluetooth RX
 
+// Telemetry Pins
 #define TELEMETRY_RADIO_RXPIN  4 // Rcv Bluetooth msgs, connect to Telemetry TX
 #define TELEMETRY_RADIO_TXPIN  5 // Txmit Bluetooth msgs, connect to Telemetry RX
 #define TELEMETRY_RADIO_ENPIN  7 // APC220 - Set high to enable
 #define TELEMETRY_RADIO_SETPIN 8 // APC220 - Set low to go into settings mode
 
-#define TM_HEADER              0xA0
-#define TM_PRINT_HEADER        0xA8
+// Telemetry Values
+#define APC220_GSFK_RATE 10
+#define APC220_BAUD_RATE 14
 
 void GS_initialize();
 void mainGroundStation();
 void GS_PerformTelemetry();
 void GS_PerformBluetooth();
-void GS_computeChecksum(byte* checksum, const void* data, unsigned int len);
+void GS_DebugPrints();
 
 #ifdef GROUND_STATION_SIMULATION
    class ModelMap;

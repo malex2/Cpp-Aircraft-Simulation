@@ -10,8 +10,8 @@
 
 # ifndef SIMULATION
 #ifdef PWM
-    #define EI_ARDUINO_INTERRUPTED_PIN
-    #include <EnableInterrupt.h>
+    //#define EI_ARDUINO_INTERRUPTED_PIN
+    //#include <EnableInterrupt.h>
 #endif
 #endif
 
@@ -194,7 +194,7 @@ void PwmIn::attach(int pinIn)
     {
         iPin = 0;
         tRise = 0;
-        enableInterrupt(pinArray[0], PwmIn::riseInterrupt, RISING);
+        attachInterrupt(pinArray[0], PwmIn::riseInterrupt, RISING);
     }
     
     // Increment Pins
@@ -212,30 +212,24 @@ int PwmIn::getPwm()
 void PwmIn::riseInterrupt()
 {
 #ifdef PWM
-    if (arduinoInterruptedPin == pinArray[iPin])
-    {
-        tRise = micros();
-        enableInterrupt(pinArray[iPin], PwmIn::fallInterrupt, FALLING);
-    }
+    tRise = micros();
+    attachInterrupt(pinArray[iPin], PwmIn::fallInterrupt, FALLING);
 #endif
 }
 
 void PwmIn::fallInterrupt()
 {
 #ifdef PWM
-    if (arduinoInterruptedPin == pinArray[iPin])
+    int tempPWM = micros() - tRise;
+    if (tempPWM >= minPWM && tempPWM <= maxPWM)
     {
-        int tempPWM = micros() - tRise;
-        if (tempPWM >= minPWM && tempPWM <= maxPWM)
-        {
-            pwm[iPin] = tempPWM;
-        }
-        disableInterrupt(pinArray[iPin]);
-        
-        iPin++;
-        if (iPin >= nPins) { iPin = 0; validReadCount++; }
-        enableInterrupt(pinArray[iPin], PwmIn::riseInterrupt, RISING);
+        pwm[iPin] = tempPWM;
     }
+    detachInterrupt(pinArray[iPin]);
+    
+    iPin++;
+    if (iPin >= nPins) { iPin = 0; validReadCount++; }
+    attachInterrupt(pinArray[iPin], PwmIn::riseInterrupt, RISING);
 #endif
 }
 #endif

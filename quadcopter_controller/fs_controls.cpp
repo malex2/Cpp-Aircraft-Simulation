@@ -529,6 +529,11 @@ bool FsControls_onGround()
     return controlData.onGround;
 }
 
+bool FsControls_movingDetection()
+{
+    return controlData.movingDetection;
+}
+
 int discretize(int desiredCommand, int command, int minCmd, int maxCmd, int deltaPwm)
 {
     bool increasing = false;
