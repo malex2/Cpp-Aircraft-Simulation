@@ -518,12 +518,66 @@ void propogateVariance( double &navDt )
     math_mtran(*PHItrans, *PHI, NSTATES, NSTATES);
     
     // Update Process Noise
+    /*
     Qc[ROLL][ROLL]   = gyroCov[X][X];
     Qc[PITCH][PITCH] = gyroCov[Y][Y];
     Qc[YAW][YAW]     = gyroCov[Z][Z];
     Qc[VN][VN]       = accelCov[X][X];
     Qc[VE][VE]       = accelCov[Y][Y];
     Qc[VD][VD]       = accelCov[Z][Z];
+    */
+    // w = f(ax, ay, az, gx, gy, gz)
+    // E{w} = Qc = L*Q*LT
+    // L = df/dg
+    // [dr/dt ]   [ 1.0   sr*tp   cr*tp     0.0        0.0              0.0        ]   [gx]
+    // [dp/dt ]   [ 0.0    cr      -sr      0.0        0.0              0.0        ]   [gy]
+    // [dy/dt ] = [ 0.0  sr*secp -cr*secp   0.0        0.0              0.0        ] * [gz]
+    // [dVN/dt]   [ 0.0    0.0     0.0     cp*cy   cy*sp*sr-cr*sy    cy*sp*cr+sr*sy]   [ax]
+    // [dVE/dt]   [ 0.0    0.0     0.0     cp*sy   cr*cy+sp*sr*sy   -sr*cy+sp*cr*sy]   [ay]
+    // [dVD/dt]   [ 0.0    0.0     0.0      -sp      cp*sr              cp*cr      ]   [az]
+    
+    double L[NSTATES][NSTATES]        = {0.0};
+    double Ltrans[NSTATES][NSTATES]   = {0.0};
+    double W_Ltrans[NSTATES][NSTATES] = {0.0};
+    double W[NSTATES][NSTATES]        = {0.0};
+    
+    W[ROLL][ROLL]   = gyroCov[X][X];
+    W[PITCH][PITCH] = gyroCov[Y][Y];
+    W[YAW][YAW]     = gyroCov[Z][Z];
+    W[VN][VN]       = accelCov[X][X];
+    W[VE][VE]       = accelCov[Y][Y];
+    W[VD][VD]       = accelCov[Z][Z];
+    
+    // Roll
+    L[ROLL][ROLL]  = 1.0;
+    L[ROLL][PITCH] = sr*tp;
+    L[ROLL][YAW]   = cr*tp;
+    // Pitch
+    L[PITCH][PITCH] = cr;
+    L[PITCH][YAW]   = -sr;
+    // Yaw
+    L[YAW][PITCH] = sr*secp;
+    L[YAW][YAW]   = -cr*secp;
+    // VN
+    L[VN][VN] = cp*cy;
+    L[VN][VE] = cy*sp*sr - cr*sy;
+    L[VN][VD] = cy*sp*cr + sr*sy;
+    // VE
+    L[VE][VN] = cp*sy;
+    L[VE][VE] = cr*cy + sp*sr*sy;
+    L[VE][VD] = -sr*cy + sp*cr*sy;
+    // VD
+    L[VD][VN] = -sp;
+    L[VD][VE] = cp*sr;
+    L[VD][VD] = cp*cr;
+    
+    math_mtran(*Ltrans, *L, NSTATES, NSTATES);
+
+    // w = f(ax, ay, az, gx, gy, gz)
+    // E{w} = Qc = L*W*LT
+    // L = df/dg
+    math_mmult(*W_Ltrans, *W, NSTATES, NSTATES, *Ltrans, NSTATES, NSTATES);
+    math_mmult(*Qc, *L, NSTATES, NSTATES, *W_Ltrans, NSTATES, NSTATES);
     
     //Q = PHI*Qc*PHI^T dt;
     math_mmult(*Qc_PHItrans, *Qc, NSTATES, NSTATES, *PHItrans, NSTATES, NSTATES);
