@@ -36,13 +36,17 @@ public:
     bool get_nav5_request()      { bool temp = request_nav5; request_nav5 = false; return temp; }
     bool get_aid_poll_request()  { bool temp = request_aid_poll; request_aid_poll = false; return temp; }
     
+    unsigned int get_n_config_msg_short() { return i_config_msg_short; }
+    unsigned int get_n_config_msg_long()  { return i_config_msg_long; }
+    void clear_config_msgs() { i_config_msg_short = 0; i_config_msg_long = 0; }
+    
     UBX_MSG_TYPES::UBX_MSG_NAV_POSLLH      get_posLLH()           { return posLLH; }
     UBX_MSG_TYPES::UBX_MSG_NAV_VELNED      get_velNED()           { return velNED; }
     UBX_MSG_TYPES::UBX_MSG_NAV_STATUS      get_navStatus()        { return navStatus; }
     UBX_MSG_TYPES::UBX_MSG_NAV_DOP         get_navDOP()           { return navDOP; }
     UBX_MSG_TYPES::UBX_MSG_NAV_SOL         get_navSol()           { return navSol; }
-    UBX_MSG_TYPES::UBX_MSG_CFG_MSG_SHORT   get_configMsgShort()   { return configMsgShort; }
-    UBX_MSG_TYPES::UBX_MSG_CFG_MSG_LONG    get_configMsgLong()    { return configMsgLong; }
+    UBX_MSG_TYPES::UBX_MSG_CFG_MSG_SHORT   get_configMsgShort(unsigned int i) { return configMsgShort[i]; }
+    UBX_MSG_TYPES::UBX_MSG_CFG_MSG_LONG    get_configMsgLong (unsigned int i) { return configMsgLong[i]; }
     UBX_MSG_TYPES::UBX_MSG_CFG_NAV5        get_configNav5()       { return configNav5; }
     UBX_MSG_TYPES:: UBX_MSG_ACK            get_ack()              { return ack; }
     UBX_MSG_TYPES::UBX_MSG_ACK             get_nak()              { return nak; }
@@ -104,13 +108,17 @@ private:
     MSG_PACKET input_msg;
     MSG_PACKET output_msg;
     
+    static const unsigned int max_config_msg = 30;
+    unsigned int i_config_msg_short;
+    unsigned int i_config_msg_long;
+    
     UBX_MSG_TYPES::UBX_MSG_NAV_POSLLH      posLLH;
     UBX_MSG_TYPES::UBX_MSG_NAV_VELNED      velNED;
     UBX_MSG_TYPES::UBX_MSG_NAV_STATUS      navStatus;
     UBX_MSG_TYPES::UBX_MSG_NAV_DOP         navDOP;
     UBX_MSG_TYPES::UBX_MSG_NAV_SOL         navSol;
-    UBX_MSG_TYPES::UBX_MSG_CFG_MSG_SHORT   configMsgShort;
-    UBX_MSG_TYPES::UBX_MSG_CFG_MSG_LONG    configMsgLong;
+    UBX_MSG_TYPES::UBX_MSG_CFG_MSG_SHORT   configMsgShort[max_config_msg];
+    UBX_MSG_TYPES::UBX_MSG_CFG_MSG_LONG    configMsgLong[max_config_msg];
     UBX_MSG_TYPES::UBX_MSG_CFG_NAV5        configNav5;
     UBX_MSG_TYPES::UBX_MSG_ACK             ack;
     UBX_MSG_TYPES::UBX_MSG_ACK             nak;

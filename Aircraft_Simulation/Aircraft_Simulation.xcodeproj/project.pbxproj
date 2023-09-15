@@ -15,7 +15,6 @@
 		1E3009FB259CC79000F8494A /* mass_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3009F9259CC79000F8494A /* mass_model.cpp */; };
 		1E3009FE259CE43D00F8494A /* flight_software.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3009FC259CE43D00F8494A /* flight_software.cpp */; };
 		1E3D1D5624951E240025A1CD /* model_mapping.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3D1D5424951E240025A1CD /* model_mapping.cpp */; };
-		1E565081248D4EE200EB0E51 /* time.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E565080248D4EE200EB0E51 /* time.cpp */; };
 		1E565084248D5FDE00EB0E51 /* utilities.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E565082248D5FDE00EB0E51 /* utilities.cpp */; };
 		1E565087248D600300EB0E51 /* rotate_frame.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E565086248D600300EB0E51 /* rotate_frame.cpp */; };
 		1E56508A248D819F00EB0E51 /* dynamics_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E565088248D819F00EB0E51 /* dynamics_model.cpp */; };
@@ -39,6 +38,7 @@
 		1EED09AD24A91A07007DC0C3 /* propulsion_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EED09AB24A91A07007DC0C3 /* propulsion_model.cpp */; };
 		1EED09B024A974DA007DC0C3 /* aero_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EED09AF24A974DA007DC0C3 /* aero_model.cpp */; };
 		1EFAAF41259A1A5D007AEE56 /* imu_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFAAF3F259A1A5D007AEE56 /* imu_model.cpp */; };
+		7D2DAC4C2A8025CA00E32FF1 /* time.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7D2DAC4B2A8025CA00E32FF1 /* time.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -72,7 +72,6 @@
 		1E3D1D5524951E240025A1CD /* model_mapping.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = model_mapping.hpp; sourceTree = "<group>"; };
 		1E56507C248D4DCE00EB0E51 /* initial_conditions.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = initial_conditions.hpp; sourceTree = "<group>"; };
 		1E56507D248D4E3A00EB0E51 /* time.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = time.hpp; sourceTree = "<group>"; };
-		1E565080248D4EE200EB0E51 /* time.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = time.cpp; path = "/Users/alexandermclean/Documents/Cpp-Aircraft-Simulation/Aircraft_Simulation/Aircraft_Simulation/time.cpp"; sourceTree = "<absolute>"; };
 		1E565082248D5FDE00EB0E51 /* utilities.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = utilities.cpp; sourceTree = "<group>"; };
 		1E565083248D5FDE00EB0E51 /* utilities.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = utilities.hpp; sourceTree = "<group>"; };
 		1E565085248D600300EB0E51 /* rotate_frame.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = rotate_frame.hpp; sourceTree = "<group>"; };
@@ -121,6 +120,7 @@
 		1EED09AF24A974DA007DC0C3 /* aero_model.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = aero_model.cpp; sourceTree = "<group>"; };
 		1EFAAF3F259A1A5D007AEE56 /* imu_model.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = imu_model.cpp; sourceTree = "<group>"; };
 		1EFAAF40259A1A5D007AEE56 /* imu_model.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = imu_model.hpp; sourceTree = "<group>"; };
+		7D2DAC4B2A8025CA00E32FF1 /* time.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = time.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -209,7 +209,7 @@
 				1E3D1D5524951E240025A1CD /* model_mapping.hpp */,
 				1E17D5602495989C00338B14 /* data_logger.cpp */,
 				1E17D55F2495989C00338B14 /* data_logger.hpp */,
-				1E565080248D4EE200EB0E51 /* time.cpp */,
+				7D2DAC4B2A8025CA00E32FF1 /* time.cpp */,
 				1E56507D248D4E3A00EB0E51 /* time.hpp */,
 				1E565082248D5FDE00EB0E51 /* utilities.cpp */,
 				1E565083248D5FDE00EB0E51 /* utilities.hpp */,
@@ -249,7 +249,7 @@
 		1E99A49722DFE684008BFEF8 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1010;
+				LastUpgradeCheck = 1420;
 				ORGANIZATIONNAME = "Alexander McLean";
 				TargetAttributes = {
 					1E99A49E22DFE684008BFEF8 = {
@@ -263,6 +263,7 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				Base,
 			);
 			mainGroup = 1E99A49622DFE684008BFEF8;
 			productRefGroup = 1E99A4A022DFE684008BFEF8 /* Products */;
@@ -297,7 +298,6 @@
 				1E6C2E5E25FEA448007B3C48 /* fs_controls.cpp in Sources */,
 				1E06A2762494733C00DD8972 /* generic_model.cpp in Sources */,
 				1EED09B024A974DA007DC0C3 /* aero_model.cpp in Sources */,
-				1E565081248D4EE200EB0E51 /* time.cpp in Sources */,
 				1E23B20126D932B400BF25DA /* barometer_model.cpp in Sources */,
 				1E3009FE259CE43D00F8494A /* flight_software.cpp in Sources */,
 				1ECCA32A249FA96D00820C69 /* ground_model.cpp in Sources */,
@@ -305,6 +305,7 @@
 				1E23C68B24B2AFC800EC4335 /* actuator_model.cpp in Sources */,
 				1EE8DFDE25E9E4100063C83F /* fs_imu.cpp in Sources */,
 				1E565087248D600300EB0E51 /* rotate_frame.cpp in Sources */,
+				7D2DAC4C2A8025CA00E32FF1 /* time.cpp in Sources */,
 				1E789C3C281F1836009E9A5F /* fs_gps_ubx_io.cpp in Sources */,
 				1EE8DFE125E9EE840063C83F /* fs_common.cpp in Sources */,
 				1E68C80A295E4E180056841D /* ground_station.cpp in Sources */,
@@ -343,6 +344,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -404,6 +406,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -434,7 +437,9 @@
 		1E99A4A722DFE684008BFEF8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -442,7 +447,9 @@
 		1E99A4A822DFE684008BFEF8 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;

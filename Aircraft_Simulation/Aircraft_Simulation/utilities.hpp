@@ -833,7 +833,7 @@ public:
         delete_buffer();
         buffer_length = size;
         buffer = new byte[buffer_length];
-        memset(buffer, buffer_length, 0);
+        memset(buffer, buffer_length, buffer_length);
     }
     
     void set_buffer(byte val)

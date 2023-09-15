@@ -9,13 +9,12 @@
 #ifndef ground_station_hpp
 #define ground_station_hpp
 
-//#define GROUND_STATION_SIMULATION
-//#define BLUETOOTH
+#define GROUND_STATION_SIMULATION
 //#define PRINT_TM
 
 //#define PRINT_ANALOG0
 //#define PRINT_ANALOG1
-#define PRINT_IO_STATUS
+//#define PRINT_IO_STATUS
 
 #ifdef GROUND_STATION_SIMULATION
    #include "arduino_class_models.hpp"

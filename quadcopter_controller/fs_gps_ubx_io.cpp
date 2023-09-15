@@ -441,14 +441,16 @@ int UBX_MSG::decode(int msg_class, int msg_id, byte* buffer, unsigned short buff
 #ifdef SIMULATION
     else if (msg_class == CFG && msg_id == CFG_MSG)
     {
-        if (buffer_length == sizeof(configMsgShort.data))
+        if (buffer_length == sizeof(configMsgShort[i_config_msg_short].data))
         {
-            memcpy(&configMsgShort.data, buffer, buffer_length);
+            memcpy(&configMsgShort[i_config_msg_short].data, buffer, buffer_length);
+            i_config_msg_short++;
             valid_decode = 1;
         }
-        else if (buffer_length == sizeof(configMsgLong.data))
+        else if (buffer_length == sizeof(configMsgLong[i_config_msg_long].data))
         {
-            memcpy(&configMsgLong.data, buffer, buffer_length);
+            memcpy(&configMsgLong[i_config_msg_long].data, buffer, buffer_length);
+            i_config_msg_long++;
             valid_decode = 1;
         }
     }

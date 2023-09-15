@@ -214,23 +214,24 @@ private:
     
     static const int HorizAccLength = 3;
     double HorizAccTimes[HorizAccLength]  = {0.0, 5.0, 300.0};
-    double HorizAccValues[HorizAccLength] = {10.0, 10.0, 10.0};
+    double HorizAccValues[HorizAccLength] = {10.0, 0.1, 0.1};
     LookupTable<double> HorizAccLookup;
     
     static const int VertAccLength = 3;
     double VertAccTimes[VertAccLength]  = {0.0, 5.0, 300.0};
-    double VertAccValues[VertAccLength] = {10.0, 10.0, 10.0};
+    double VertAccValues[VertAccLength] = {10.0, 0.5, 0.5};
     LookupTable<double> VertAccLookup;
     
     static const int VelAccLength = 3;
     double VelAccTimes[VelAccLength]  = {0.0, 5.0, 300.0};
-    double VelAccValues[VelAccLength] = {5.0, 5.0 , 0.1};
+    double VelAccValues[VelAccLength] = {5.0, 0.05 , 0.05};
     LookupTable<double> VelAccLookup;
     
     virtual void updatePositionError();
     virtual void updateVelocityError();
     virtual void readInputMessages();
     virtual void decodeInputMessages();
+    void processUBXconfig(byte msgClass, byte msgID, int rate);
     virtual void constructOutputMessages();
     int encodeOutputMessage(int gpsMsg, void* buffer, int buffer_length);
     

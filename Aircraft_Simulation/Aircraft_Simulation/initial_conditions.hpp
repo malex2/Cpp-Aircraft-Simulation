@@ -41,10 +41,10 @@ const int minute_init = 30;
 const int second_init = 00;
 
 // Print options
-const bool saveOutput  = false;
-const bool printOutput = false;
+const bool saveOutput  = true;
+const bool printOutput = true;
 const bool plotOutput  = false;
-const std::string savefile    = "output2.csv";
+const std::string savefile    = "output.csv";
 const std::string gps_file    = "/Users/alexandermclean/Documents/Cpp-Aircraft-Simulation/gps_nav_messages_Adeline5.txt";
 const bool readGPSFile        = false;
 const std::string eeprom_file = "/Users/alexandermclean/Documents/Cpp-Aircraft-Simulation/eeprom.txt";

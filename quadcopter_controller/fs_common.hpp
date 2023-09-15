@@ -13,16 +13,16 @@
 #include <math.h>
 
 // MACROS
-//#define SIMULATION
+#define SIMULATION
 #define IMU
 #define GPS
 #define BAROMETER
-//#define PWM
-//#define CONTROLS
+#define PWM
+#define CONTROLS
 #define GROUND_DETECTION
 #define NAVIGATION
-#define TELEMETRY
-#define PRINT
+//#define TELEMETRY
+//#define PRINT
 //#define UBX_PRINT
 //#define TM_PRINT
 
