@@ -28,10 +28,13 @@ public:
     
     // Update obejct states and forces
     virtual bool update(void);
-    
     virtual void updatePropulsorStates(void);
     
     const static int maxPropulsors = 10;
+    
+    // Getters
+    virtual class PropulsionTypeBase* getPropulsors(int i) { return pPropulsors[i]; }
+    virtual double getTimeConstant() { return 0.0; }
     
 protected:
     class DynamicsModel     *pDyn;
@@ -74,6 +77,7 @@ public:
     QuadcopterPropulsionModel(ModelMap *pMapInit, bool debugFlagIn = false);
     
     virtual void initialize(void);
+    virtual double getTimeConstant() { return riseTimes[0]; }
 private:
     typedef PropulsionModelBase Base;
     
@@ -128,7 +132,11 @@ public:
     virtual void setDirection     (int direction_in)       { direction = direction_in; }
     virtual void setEngineInertia (double *inertia_in)     { util.initMatrix(*engineInertia, *inertia_in, 3, 3); }
     
-    virtual double getRPM (void) { return rpm; }
+    virtual double getThrustCoeff (void) { return b; }
+    virtual double getTorqueCoeff (void) { return k; }
+    virtual double getTorqueRatio (void) { return Q; }
+    
+    virtual double getRPM         (void) { return rpm; }
     
 protected:
     class RotateFrame       *pRotate;

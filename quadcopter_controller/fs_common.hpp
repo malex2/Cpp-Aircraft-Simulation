@@ -19,6 +19,7 @@
 #define BAROMETER
 #define PWM
 #define CONTROLS
+#define THRUST_ESTIMATOR
 #define GROUND_DETECTION
 #define NAVIGATION
 //#define TELEMETRY
@@ -418,7 +419,7 @@ void read_eeprom(unsigned int address, byte* val, unsigned int size);
 // Math Support
 double errorToVariance(double maxError);
 double varianceToError(double variance);
-void crossProduct(double *cross, double *a, double *b);
+void crossProduct(double *cross, const double *a, const double *b);
 
 // FIFO
 FS_FIFO* get_print_fifo();

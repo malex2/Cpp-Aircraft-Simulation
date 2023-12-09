@@ -114,6 +114,7 @@ private:
     double posLLH_deg[3];
     double bodyRatesDeg[3];
     double eulerAnglesDeg[3];
+    double deltaThetaDeg[3];
     
     //  --------------------- Aircraft            ---     ---
     //            |                                |       |

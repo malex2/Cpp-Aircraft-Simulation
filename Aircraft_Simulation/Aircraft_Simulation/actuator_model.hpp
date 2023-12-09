@@ -155,7 +155,7 @@ private:
     };
     */
     // Servo dynamics
-    double escDelays[4] = {0.01, 0.01, 0.01, 0.01};
+    double escDelays[4] = {0.0, 0.0, 0.0, 0.0};
 };
 
 // **********************************************************************
@@ -303,7 +303,6 @@ private:
     // virtual void applyLimits(void);
     
     Delay *pESC;
-    
 };
 
 #endif /* actuator_model_hpp */

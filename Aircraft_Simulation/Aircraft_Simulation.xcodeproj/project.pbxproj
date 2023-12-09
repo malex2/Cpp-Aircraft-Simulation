@@ -39,6 +39,7 @@
 		1EED09B024A974DA007DC0C3 /* aero_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EED09AF24A974DA007DC0C3 /* aero_model.cpp */; };
 		1EFAAF41259A1A5D007AEE56 /* imu_model.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFAAF3F259A1A5D007AEE56 /* imu_model.cpp */; };
 		7D2DAC4C2A8025CA00E32FF1 /* time.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7D2DAC4B2A8025CA00E32FF1 /* time.cpp */; };
+		7D6821A82AB634BA00990E47 /* fs_thrust_estimator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7D510EA22AB577EF005BC928 /* fs_thrust_estimator.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -121,6 +122,8 @@
 		1EFAAF3F259A1A5D007AEE56 /* imu_model.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = imu_model.cpp; sourceTree = "<group>"; };
 		1EFAAF40259A1A5D007AEE56 /* imu_model.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = imu_model.hpp; sourceTree = "<group>"; };
 		7D2DAC4B2A8025CA00E32FF1 /* time.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = time.cpp; sourceTree = "<group>"; };
+		7D510EA22AB577EF005BC928 /* fs_thrust_estimator.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = fs_thrust_estimator.cpp; path = ../quadcopter_controller/fs_thrust_estimator.cpp; sourceTree = "<group>"; };
+		7D510EA32AB577EF005BC928 /* fs_thrust_estimator.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = fs_thrust_estimator.hpp; path = ../quadcopter_controller/fs_thrust_estimator.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -143,6 +146,8 @@
 				1EE8DFE025E9EE840063C83F /* fs_common.hpp */,
 				1EE84534295FC87B00E55EEA /* fs_telemetry.cpp */,
 				1EE84535295FC87B00E55EEA /* fs_telemetry.hpp */,
+				7D510EA22AB577EF005BC928 /* fs_thrust_estimator.cpp */,
+				7D510EA32AB577EF005BC928 /* fs_thrust_estimator.hpp */,
 				1E789C3D281F53FF009E9A5F /* fs_gps.cpp */,
 				1E789C3E281F53FF009E9A5F /* fs_gps.hpp */,
 				1E6719C628BBD71E005B948C /* fs_gps_ubx_message_types.h */,
@@ -280,6 +285,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7D6821A82AB634BA00990E47 /* fs_thrust_estimator.cpp in Sources */,
 				1E3D1D5624951E240025A1CD /* model_mapping.cpp in Sources */,
 				1E17D5612495989C00338B14 /* data_logger.cpp in Sources */,
 				1E6C2E62260684BC007B3C48 /* fs_navigation.cpp in Sources */,

@@ -294,8 +294,6 @@ void FsNavigation_performNavigation( double &navDt )
         computeTruthErrors();
 #endif
     }
-    
-    FsImu_zeroDelta();
 #endif
 }
 
@@ -606,8 +604,7 @@ void applyCorrections()
         if (gpsResidual[GPS_VN] > vn_filter_error) { gpsFailCount[GPS_VN]++; }
         if (gpsResidual[GPS_VE] > ve_filter_error) { gpsFailCount[GPS_VE]++; }
         if (gpsResidual[GPS_VD] > vd_filter_error) { gpsFailCount[GPS_VD]++; }
-        
-        //if (gpsResidual[GPS_VN] > vn_filter_error || gpsResidual[GPS_VE] > ve_filter_error || gpsResidual[GPS_VD] > vd_filter_error) { return; }
+
         filterUpdate(gpsResidual, *R_GPS, *H_GPS, *K_GPS, NGPSSTATES);
     }
     else if (NavData.state == GPSUpdate2D)
@@ -987,9 +984,9 @@ void FsNavigation_calibrateIMU()
         P[ABIAS_Y][ABIAS_Y] = errorToVariance(g_error_est[1]);
         P[ABIAS_Z][ABIAS_Z] = errorToVariance(g_error_est[2]);
         
-        //P[GBIAS_X][GBIAS_X] = 0.0;
-        //P[GBIAS_Y][GBIAS_Y] = 0.0;
-        //P[GBIAS_Z][GBIAS_Z] = 0.0;
+        P[GBIAS_X][GBIAS_X] = errorToVariance(0.01*degree2radian);
+        P[GBIAS_Y][GBIAS_Y] = errorToVariance(0.01*degree2radian);
+        P[GBIAS_Z][GBIAS_Z] = errorToVariance(0.01*degree2radian);
         
         if (NavData.allowLoadIMUCal)
         {
@@ -1314,9 +1311,9 @@ inline void quaternionProduct(double *product, double *q1, double *q2)
 inline void updateEulerAngles()
 {
     const double* q = NavData.q_B_NED;
-    NavData.eulerAngles[0] = atan2(2*q[2]*q[3] + 2*q[0]*q[1], 2*q[0]*q[0] + 2*q[3]*q[3] - 1);
+    NavData.eulerAngles[0] = atan2(2*q[2]*q[3] + 2*q[0]*q[1], 2*q[0]*q[0] + 2*q[3]*q[3] - 1.0);
     NavData.eulerAngles[1] = asin(-2*q[1]*q[3] + 2*q[0]*q[2]);
-    NavData.eulerAngles[2] = atan2(2*q[1]*q[2] + 2*q[0]*q[3], 2*q[0]*q[0] + 2*q[1]*q[1] - 1);
+    NavData.eulerAngles[2] = atan2(2*q[1]*q[2] + 2*q[0]*q[3], 2*q[0]*q[0] + 2*q[1]*q[1] - 1.0);
 }
 
 inline void updateQuaternions()

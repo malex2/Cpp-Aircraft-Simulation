@@ -27,7 +27,7 @@
 #define FLAT_GROUND
 
 // Time
-const double runTime_init          = 600;
+const double runTime_init          = 330;
 const double printInterval_init    = 5.0;
 const double saveInterval_init     = 0.5;
 const double dynamicsInterval_init = 1.0/800.0;
@@ -44,7 +44,7 @@ const int second_init = 00;
 const bool saveOutput  = true;
 const bool printOutput = true;
 const bool plotOutput  = false;
-const std::string savefile    = "output.csv";
+const std::string savefile    = "output_baro_gps_thrustEst.csv";
 const std::string gps_file    = "/Users/alexandermclean/Documents/Cpp-Aircraft-Simulation/gps_nav_messages_Adeline5.txt";
 const bool readGPSFile        = false;
 const std::string eeprom_file = "/Users/alexandermclean/Documents/Cpp-Aircraft-Simulation/eeprom.txt";

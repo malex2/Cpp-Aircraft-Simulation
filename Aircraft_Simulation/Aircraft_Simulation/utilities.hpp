@@ -680,34 +680,42 @@ public:
         x     = x_in;
         xdot  = 0.0;
         maxrate = std::numeric_limits<double>::infinity();
+        
+        updateConstants();
     }
     
     void setInitialValue(double x_in)   { x = x_in; }
-    void setTimeConstant(double tau_in) { tau = tau_in; }
+    void setTimeConstant(double tau_in) { tau = tau_in; updateConstants(); }
     void setGain(double gain_in)        { k = gain_in; }
-    void setDt(double dt_in)            { dt = dt_in; }
+    void setDt(double dt_in)            { dt = dt_in; updateConstants(); }
     void setMaxRate(double maxrate_in)  { maxrate = maxrate_in; }
     
     void setValue(double xcmd)
     {
         xprev = x;
-        if (tau != 0.0) { xdot  = (k*xcmd - x)/tau; }
-        else            { xdot = (k*xcmd-xprev)/dt;} // x = xcmd
+        x = A*xprev + B*k*xcmd;
         
-        if (xdot > maxrate)  { xdot = maxrate; }
-        if (xdot < -maxrate) { xdot = -maxrate; }
-        
-        x  = xprev + xdot*dt;
-        //std::cout<<xcmd<<std::endl;
-        //std::cout<<x<<"="<<xprev<<"+"<<xdot<<"*"<<dt<<std::endl;
+        double dx = x - xprev;
+        double dx_max = maxrate * dt;
+        if (dx > dx_max)  { x = xprev + dx_max; }
+        if (dx < -dx_max) { x = xprev - dx_max; }
     }
     
     // Getters and Setters
-    
-    double getFilterValue(void) { return x; }
-    double getFilterRate(void)  { return xdot; }
+    double getFilterValue(void)  { return x; }
+    double getFilterRate(void)   { return xdot; }
+    double getTimeConstant(void) { return tau; }
     
 private:
+    
+    void updateConstants()
+    {
+        if (tau != 0.0) { A = exp(-dt/tau); }
+        else            { A = 0.0; }
+    
+        B = (1.0 - A);
+    }
+    
     double xprev;
     double x;
     double xdot;
@@ -716,6 +724,9 @@ private:
     double tau;
     double k;
     double maxrate;
+    
+    double A;
+    double B;
 };
 
 class MassUtilities {
@@ -1172,6 +1183,44 @@ public:
     
     template<typename TempType>
     void dcmToQuaternion(TempType *q, TempType *dcm);
+    
+    // Rodrigues Parameter Math
+    template<typename TempType>
+    void quaternionToRodrigues(TempType *rp, TempType *q);
+    
+    template<typename TempType>
+    void eulerToRodrigues(TempType *rp, TempType *euler);
+    
+    template<typename TempType>
+    void dcmToRodrigues(TempType *rp, TempType *dcm);
+    
+    template<typename TempType>
+    void rodriguesToQuaternion(TempType *q, TempType *rp);
+    
+    template<typename TempType>
+    void rodriguesToEuler(TempType *euler, TempType *rp);
+    
+    template<typename TempType>
+    void rodriguesToDcm(TempType *dcm, TempType *rp);
+    
+    // Modified Rodrigues Parameter Math
+    template<typename TempType>
+    void quaternionToModifiedRodrigues(TempType *mrp, TempType *q);
+    
+    template<typename TempType>
+    void eulerToModifiedRodrigues(TempType *mrp, TempType *euler);
+    
+    template<typename TempType>
+    void dcmToModifiedRodrigues(TempType *mrp, TempType *dcm);
+    
+    template<typename TempType>
+    void modifiedRodriguesToQuaternion(TempType *q, TempType *mrp);
+    
+    template<typename TempType>
+    void modifiedRodriguesToEuler(TempType *euler, TempType *mrp);
+    
+    template<typename TempType>
+    void modifiedRodriguesToDcm(TempType *dcm, TempType *rmp);
     
     // ECEF/LLH Math
     template<typename TempType>

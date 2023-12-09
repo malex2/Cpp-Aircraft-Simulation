@@ -441,7 +441,7 @@ double varianceToError(double variance)
     return error;
 }
 
-void crossProduct(double *cross, double *a, double *b)
+void crossProduct(double *cross, const double *a, const double *b)
 {
     *(cross+0) = a[1]*b[2] - a[2]*b[1];
     *(cross+1) = a[2]*b[0] - a[0]*b[2];

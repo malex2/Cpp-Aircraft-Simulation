@@ -33,8 +33,8 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("posECEF Y", &posECEF[1], savePlot, 2);
     //pMap->addLogVar("posECEF Z", &posECEF[2], savePlot, 2);
     
-    pMap->addLogVar("N (m)", &posNED[0], savePlot, 2);
-    pMap->addLogVar("E (m)", &posNED[1], savePlot, 2);
+    //pMap->addLogVar("N (m)", &posNED[0], savePlot, 2);
+    //pMap->addLogVar("E (m)", &posNED[1], savePlot, 2);
     //pMap->addLogVar("D (m)", &posNED[2], printSavePlot, 2);
     pMap->addLogVar("gndAlt", &hGround, printSavePlot, 3);
     
@@ -65,9 +65,14 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("qdot", &bodyAngularAcc[1], savePlot, 2);
     //pMap->addLogVar("rdot", &bodyAngularAcc[2], printSavePlot, 3);
     
-    //pMap->addLogVar("p", &bodyRatesDeg[0], savePlot, 2);
-    //pMap->addLogVar("q", &bodyRatesDeg[1], savePlot, 2);
-    //pMap->addLogVar("r", &bodyRatesDeg[2], savePlot, 2);
+    pMap->addLogVar("p", &bodyRatesDeg[0], savePlot, 2);
+    pMap->addLogVar("q", &bodyRatesDeg[1], savePlot, 2);
+    pMap->addLogVar("r", &bodyRatesDeg[2], savePlot, 2);
+    
+    pMap->addLogVar("deltaTheta[0]", &deltaThetaDeg[0], savePlot, 2);
+    pMap->addLogVar("deltaTheta[1]", &deltaThetaDeg[1], savePlot, 2);
+    pMap->addLogVar("deltaTheta[2]", &deltaThetaDeg[2], savePlot, 2);
+    pMap->addLogVar("deltaVelocity[2]", &deltaVelocity[2], savePlot, 2);
     
     pMap->addLogVar("Roll ", &eulerAnglesDeg[0], savePlot, 2);
     pMap->addLogVar("Pitch", &eulerAnglesDeg[1], savePlot, 2);
@@ -143,7 +148,8 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     util.initArray(posLLH_deg, 0.0, 3);
     util.initArray(bodyRatesDeg, 0.0, 3);
     util.initArray(eulerAnglesDeg, 0.0, 3);
-   
+    util.initArray(deltaThetaDeg, 0.0, 3);
+    
     debugFlag = debugFlagIn;
     
     if (debugFlag)
@@ -349,6 +355,7 @@ void DynamicsModel::updateStates()
     {
         bodyRatesDeg[i] = bodyRates[i] / util.deg2rad;
         eulerAnglesDeg[i] = eulerAngles[i] / util.deg2rad;
+        deltaThetaDeg[i] = deltaTheta[i] / util.deg2rad;
     }
 }
 

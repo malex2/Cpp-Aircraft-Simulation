@@ -1478,6 +1478,90 @@ void Utilities::dcmToQuaternion(TempType *q, TempType *dcm)
     q[3] = (dcm01 - dcm10)/(4.0*q[0]);
 }
 
+// Rodrigues Parameter Math
+template<typename TempType>
+void Utilities::quaternionToRodrigues(TempType *rp, TempType *q)
+{
+    rp[0] = q[1]/q[0];
+    rp[1] = q[2]/q[0];
+    rp[2] = q[3]/q[0];
+}
+
+template<typename TempType>
+void Utilities::eulerToRodrigues(TempType *rp, TempType *euler)
+{
+    TempType q[4];
+    eulerToQuaternion(q, euler);
+    quaternionToRodrigues(rp, q);
+}
+
+template<typename TempType>
+void Utilities::dcmToRodrigues(TempType *rp, TempType *dcm)
+{
+    TempType q[4];
+    dcmToQuaternion(q, dcm);
+    quaternionToRodrigues(rp, q);
+}
+
+template<typename TempType>
+void Utilities::rodriguesToQuaternion(TempType *q, TempType *rp)
+{
+    
+}
+
+template<typename TempType>
+void Utilities::rodriguesToEuler(TempType *euler, TempType *rp)
+{
+    
+}
+
+template<typename TempType>
+void Utilities::rodriguesToDcm(TempType *dcm, TempType *rp)
+{
+    
+}
+
+// Modified Rodrigues Parameter Math
+template<typename TempType>
+void Utilities::quaternionToModifiedRodrigues(TempType *mrp, TempType *q)
+{
+    mrp[0] = q[1]/(1.0+q[0]);
+    mrp[1] = q[2]/(1.0+q[0]);
+    mrp[2] = q[3]/(1.0+q[0]);
+}
+
+template<typename TempType>
+void Utilities::eulerToModifiedRodrigues(TempType *mrp, TempType *euler)
+{
+    TempType q[4];
+    eulerToQuaternion(q, euler);
+    quaternionToModifiedRodrigues(mrp, q);
+}
+
+template<typename TempType>
+void Utilities::dcmToModifiedRodrigues(TempType *mrp, TempType *dcm)
+{
+    
+}
+
+template<typename TempType>
+void Utilities::modifiedRodriguesToQuaternion(TempType *q, TempType *mrp)
+{
+    
+}
+
+template<typename TempType>
+void Utilities::modifiedRodriguesToEuler(TempType *euler, TempType *mrp)
+{
+    
+}
+
+template<typename TempType>
+void Utilities::modifiedRodriguesToDcm(TempType *dcm, TempType *rmp)
+{
+    
+}
+
 // ECEF/LLH Math
 template<typename TempType>
 void Utilities::LLHtoECEF(TempType* ECEF, TempType* LLH)
