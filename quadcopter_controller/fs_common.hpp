@@ -19,7 +19,7 @@
 #define BAROMETER
 #define PWM
 #define CONTROLS
-#define THRUST_ESTIMATOR
+//#define THRUST_ESTIMATOR
 #define GROUND_DETECTION
 #define NAVIGATION
 //#define TELEMETRY
@@ -119,6 +119,7 @@ struct TWO_BYTE_DATA
 #define EARTH_b2 EARTH_b*EARTH_b
 #define EARTH_e2 1.0 - (EARTH_b2)/(EARTH_a2)
 const double dtPad = 1e-10;
+const double IMUtoBody[3] = {1.0, -1.0, -1.0};
 
 // Pulse In Pins - TODO
 #define THROTTLEPIN  7  // CH3

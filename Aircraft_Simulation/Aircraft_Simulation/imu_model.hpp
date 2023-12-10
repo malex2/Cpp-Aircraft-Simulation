@@ -37,6 +37,9 @@ public:
     double* getDeltaTheta(void)    { return dTheta; }
     double* getDeltaVelocity(void) { return dVelocity; }
     
+    double* getAccelerometerBiasGs(void) { return accBias; }
+    double* getGyroscopeBiasDps(void)    { return gyroBias; }
+    
     AngleType<double>* getIMUEuler(void) { return sensorFrameEuler; }
     bool getIMUReady(void)               { return imuReady; }
     

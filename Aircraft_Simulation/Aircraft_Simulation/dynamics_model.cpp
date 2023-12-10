@@ -65,18 +65,18 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("qdot", &bodyAngularAcc[1], savePlot, 2);
     //pMap->addLogVar("rdot", &bodyAngularAcc[2], printSavePlot, 3);
     
-    pMap->addLogVar("p", &bodyRatesDeg[0], savePlot, 2);
-    pMap->addLogVar("q", &bodyRatesDeg[1], savePlot, 2);
-    pMap->addLogVar("r", &bodyRatesDeg[2], savePlot, 2);
+    //pMap->addLogVar("p", &bodyRatesDeg[0], savePlot, 2);
+    //pMap->addLogVar("q", &bodyRatesDeg[1], savePlot, 2);
+    //pMap->addLogVar("r", &bodyRatesDeg[2], savePlot, 2);
     
-    pMap->addLogVar("deltaTheta[0]", &deltaThetaDeg[0], savePlot, 2);
-    pMap->addLogVar("deltaTheta[1]", &deltaThetaDeg[1], savePlot, 2);
-    pMap->addLogVar("deltaTheta[2]", &deltaThetaDeg[2], savePlot, 2);
-    pMap->addLogVar("deltaVelocity[2]", &deltaVelocity[2], savePlot, 2);
+    //pMap->addLogVar("deltaTheta[0]", &deltaThetaDeg[0], savePlot, 2);
+    //pMap->addLogVar("deltaTheta[1]", &deltaThetaDeg[1], savePlot, 2);
+    //pMap->addLogVar("deltaTheta[2]", &deltaThetaDeg[2], savePlot, 2);
+    //pMap->addLogVar("deltaVelocity[2]", &deltaVelocity[2], savePlot, 2);
     
     pMap->addLogVar("Roll ", &eulerAnglesDeg[0], savePlot, 2);
     pMap->addLogVar("Pitch", &eulerAnglesDeg[1], savePlot, 2);
-    pMap->addLogVar("Yaw  ", &eulerAnglesDeg[2], savePlot, 2);
+    //pMap->addLogVar("Yaw  ", &eulerAnglesDeg[2], savePlot, 2);
     
     //pMap->addLogVar("q_B_NED[0]", &q_B_NED[0], savePlot, 2);
     //pMap->addLogVar("q_B_NED[1]", &q_B_NED[1], savePlot, 2);
@@ -103,7 +103,7 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
  
     //pMap->addLogVar("Body Accel X", &accelBody[0], savePlot, 2);
     //pMap->addLogVar("Body Accel Y", &accelBody[1], savePlot, 2);
-    pMap->addLogVar("Body Accel Z", &accelBody[2], savePlot, 2);
+    //pMap->addLogVar("Body Accel Z", &accelBody[2], savePlot, 2);
     //pMap->addLogVar("Accel Mag", &accelMag, savePlot, 2);
     
     //pMap->addLogVar("SumMX", &bodyMoment[0], savePlot, 2);

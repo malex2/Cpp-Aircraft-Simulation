@@ -19,6 +19,7 @@ struct BarometerType {
     double pressure;
     double temperature;
     double altitude;
+    double altitudeRMS;
     baroStateType state;
     double timestamp;
     I2C_Error_Code errorCodeBaro;
@@ -32,6 +33,7 @@ struct BarometerType {
         pressure    = 0.0;
         temperature = 0.0;
         altitude    = 0.0;
+        altitudeRMS = 0.5;
         state       = baroStandby;
         timestamp   = 0.0;
         errorCodeBaro = I2C_0_SUCCESS;

@@ -17,7 +17,7 @@
 
 // Types
 enum NavState {Nav_Startup, Calibration, INS, AccelUpdate, GPSUpdate, GPSUpdate2D, BaroUpdate, GroundAlign, NNAVSTATES};
-enum StateType {ROLL, PITCH, YAW, VN, VE, VD, N, E, ALT, GBIAS_X, GBIAS_Y, GBIAS_Z, ABIAS_X, ABIAS_Y, ABIAS_Z, GRAVITY, NSTATES};
+enum StateType {ATT_X, ATT_Y, ATT_Z, VN, VE, VD, N, E, ALT, GBIAS_X, GBIAS_Y, GBIAS_Z, ABIAS_X, ABIAS_Y, ABIAS_Z, GRAVITY, NSTATES};
 enum VECTORTYPE {X, Y, Z};
 enum AccelUpdateType {ACCEL_ROLL, ACCEL_PITCH, NACCELSTATES};
 enum GroundMeasurementType {GROUND_N, GROUND_E, GROUND_ALT, GROUND_VN, GROUND_VE, GROUND_VD, GROUND_YAW, NGROUNDSTATES};
@@ -141,6 +141,7 @@ NavState FsNavigation_getNavState();
 const double*  FsNavigation_getCovariance();
 const double*  FsNavigation_getProcessNoise();
 const double*  FsNavigation_getStateError();
+const double*  FsNavigation_getAccumStateError();
 const double*  FsNavigation_getCovarianceCorrection();
 const double*  FsNavigation_getBaroKalmanGain();
 const double*  FsNavigation_getBaroResidual();

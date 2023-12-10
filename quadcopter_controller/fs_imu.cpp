@@ -39,8 +39,6 @@ short rawAccel[3];
 short rawGyro[3];
 short rawTemp;
 
-float toBody[3] = {1.0, -1.0, -1.0};
-
 //double accelSumSqr = 0.0;
 //double gyroSumSqr = 0.0;
 
@@ -144,14 +142,14 @@ void readIMU()
             rawGyro[i]  = pIMUmodel->getGyroscope()[i];
         }
 #endif
-        IMUdata.accel[i] = (double) toBody[i]*rawAccel[i]/LSBg * Gravity;
-        IMUdata.gyro[i]  = (double) toBody[i]*rawGyro[i]/LSBdps * degree2radian;
+        IMUdata.accel[i] = (double) IMUtoBody[i]*rawAccel[i]/LSBg * Gravity;
+        IMUdata.gyro[i]  = (double) IMUtoBody[i]*rawGyro[i]/LSBdps * degree2radian;
   
 #ifdef SIMULATION
         if (directUnitIMU)
         {
-            IMUdata.accel[i] = toBody[i]*pIMUmodel->getAccelerometerGs()[i] * Gravity;
-            IMUdata.gyro[i]  = toBody[i]*pIMUmodel->getGyroscopeDps()[i] * degree2radian;
+            IMUdata.accel[i] = IMUtoBody[i]*pIMUmodel->getAccelerometerGs()[i] * Gravity;
+            IMUdata.gyro[i]  = IMUtoBody[i]*pIMUmodel->getGyroscopeDps()[i] * degree2radian;
         }
 #endif
         //accelSumSqr = accelSumSqr + IMUdata.accel[i]*IMUdata.accel[i];

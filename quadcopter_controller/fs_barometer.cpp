@@ -53,7 +53,6 @@ void FsBarometer_setupBarometer()
     pressureResolution = BMP180_COMMAND_PRESSURE0;
     pressDelay = 5.0 / 1000.0;
     tempDelay = 5.0 / 1000.0;
-    altitudeRMS = 0.5;
     pressureError.reset();
     
     // Calibrate
@@ -115,22 +114,22 @@ void FsBarometer_setPressureResolution(byte pressureResolutionIn)
     {
         case BMP180_COMMAND_PRESSURE0:
             pressDelay  = 5.0 / 1000.0;
-            altitudeRMS = 0.5;
+            baroData.altitudeRMS = 0.5;
             break;
             
         case BMP180_COMMAND_PRESSURE1:
             pressDelay  = 8.0 / 1000.0;
-            altitudeRMS = 0.4;
+            baroData.altitudeRMS = 0.4;
             break;
             
         case BMP180_COMMAND_PRESSURE2:
             pressDelay  = 14.0 / 1000.0;
-            altitudeRMS = 0.3;
+            baroData.altitudeRMS = 0.3;
             break;
             
         case BMP180_COMMAND_PRESSURE3:
             pressDelay  = 26.0 / 1000.0;
-            altitudeRMS = 0.25;
+            baroData.altitudeRMS = 0.25;
             break;
             
         default:
@@ -322,4 +321,4 @@ const BarometerType* FsBarometer_getBaroData() { return &baroData; }
 
 baroStateType FsBarometer_getBaroState() { return baroData.state; }
 
-double FsBarometer_getAltitudeVariance() { return altitudeRMS*altitudeRMS; }
+double FsBarometer_getAltitudeVariance() { return baroData.altitudeRMS*baroData.altitudeRMS; }
