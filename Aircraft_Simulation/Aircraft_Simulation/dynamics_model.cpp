@@ -33,10 +33,11 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("posECEF Y", &posECEF[1], savePlot, 2);
     //pMap->addLogVar("posECEF Z", &posECEF[2], savePlot, 2);
     
-    //pMap->addLogVar("N (m)", &posNED[0], savePlot, 2);
-    //pMap->addLogVar("E (m)", &posNED[1], savePlot, 2);
+    pMap->addLogVar("N (m)", &posNED[0], savePlot, 2);
+    pMap->addLogVar("E (m)", &posNED[1], savePlot, 2);
     //pMap->addLogVar("D (m)", &posNED[2], printSavePlot, 2);
-    pMap->addLogVar("gndAlt", &hGround, printSavePlot, 3);
+    pMap->addLogVar("posAboveOrigin", &posAboveOrigin, printSavePlot, 3);
+    pMap->addLogVar("gndAlt", &hGround, savePlot, 2);
     
     //pMap->addLogVar("speed", &velMag, savePlot, 2);
     
@@ -49,34 +50,34 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("VbY  ", &velBody[1], savePlot, 2);
     //pMap->addLogVar("VbZ  ", &velBody[2], savePlot, 3);
     
-    //pMap->addLogVar("VN  ", &velNED[0], savePlot, 2);
-    //pMap->addLogVar("VE  ", &velNED[1], savePlot, 2);
-    //pMap->addLogVar("VD  ", &velNED[2], savePlot, 2);
+    pMap->addLogVar("VN  ", &velNED[0], savePlot, 2);
+    pMap->addLogVar("VE  ", &velNED[1], savePlot, 2);
+    pMap->addLogVar("VD  ", &velNED[2], savePlot, 2);
     
-    pMap->addLogVar("velLL X  ", &velLL[0], savePlot, 2);
-    pMap->addLogVar("velLL Y  ", &velLL[1], savePlot, 2);
-    pMap->addLogVar("velLL Z  ", &velLL[2], savePlot, 2);
-
-    //pMap->addLogVar("Roll Rate", &eulerRatesDeg[0].val, savePlot, 2);
-    //pMap->addLogVar("Pitch Rate", &eulerRatesDeg[1].val, savePlot, 2);
-    //pMap->addLogVar("Yaw Rate", &eulerRatesDeg[2].val, savePlot, 2);
+    //pMap->addLogVar("velLL X  ", &velLL[0], savePlot, 2);
+    //pMap->addLogVar("velLL Y  ", &velLL[1], savePlot, 2);
+    //pMap->addLogVar("velLL Z  ", &velLL[2], savePlot, 2);
     
     //pMap->addLogVar("pdot", &bodyAngularAcc[0], printSavePlot, 3);
     //pMap->addLogVar("qdot", &bodyAngularAcc[1], savePlot, 2);
     //pMap->addLogVar("rdot", &bodyAngularAcc[2], printSavePlot, 3);
     
-    //pMap->addLogVar("p", &bodyRatesDeg[0], savePlot, 2);
-    //pMap->addLogVar("q", &bodyRatesDeg[1], savePlot, 2);
-    //pMap->addLogVar("r", &bodyRatesDeg[2], savePlot, 2);
+    pMap->addLogVar("p", &bodyRatesDeg[0], savePlot, 2);
+    pMap->addLogVar("q", &bodyRatesDeg[1], savePlot, 2);
+    pMap->addLogVar("r", &bodyRatesDeg[2], savePlot, 2);
     
     //pMap->addLogVar("deltaTheta[0]", &deltaThetaDeg[0], savePlot, 2);
     //pMap->addLogVar("deltaTheta[1]", &deltaThetaDeg[1], savePlot, 2);
     //pMap->addLogVar("deltaTheta[2]", &deltaThetaDeg[2], savePlot, 2);
-    //pMap->addLogVar("deltaVelocity[2]", &deltaVelocity[2], savePlot, 2);
-    
+    //pMap->addLogVar("deltaVelocityNED[0]", &deltaVelocityNED[0], savePlot, 2);
+    //pMap->addLogVar("deltaVelocityNED[1]", &deltaVelocityNED[1], savePlot, 2);
+    //pMap->addLogVar("deltaVelocityNED[2]", &deltaVelocityNED[2], savePlot, 2);
+    //pMap->addLogVar("deltaPositionNED[0]", &deltaPositionNED[0], savePlot, 2);
+    //pMap->addLogVar("deltaPositionNED[1]", &deltaPositionNED[1], savePlot, 2);
+    //pMap->addLogVar("deltaPositionNED[2]", &deltaPositionNED[2], savePlot, 2);
     pMap->addLogVar("Roll ", &eulerAnglesDeg[0], savePlot, 2);
     pMap->addLogVar("Pitch", &eulerAnglesDeg[1], savePlot, 2);
-    //pMap->addLogVar("Yaw  ", &eulerAnglesDeg[2], savePlot, 2);
+    pMap->addLogVar("Yaw  ", &eulerAnglesDeg[2], savePlot, 2);
     
     //pMap->addLogVar("q_B_NED[0]", &q_B_NED[0], savePlot, 2);
     //pMap->addLogVar("q_B_NED[1]", &q_B_NED[1], savePlot, 2);
@@ -139,6 +140,11 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     util.initArray(dq_B_NED, 0.0, 4);
     util.initArray(eulerAngles, 0.0, 3);
     
+    util.initArray(deltaTheta, 0.0, 3);
+    util.initArray(deltaVelocity, 0.0, 3);
+    util.initArray(deltaVelocityNED, 0.0, 3);
+    util.initArray(prevVelNED, 0.0, 3);
+
     util.setMatrix(*inertia, *inertia_init, 3, 3);
     mass = mass_init;
     timestamp = 0.0;
@@ -273,7 +279,7 @@ void DynamicsModel::updatePosition()
     for (int i = 0; i < 3; i++)
     {
         accelECI[i] = forceECI[i]/mass;
-        posECI[i] = posECI[i] + velECI[i]*dt;// + 0.5*accelECI[i]*dt*dt;
+        posECI[i] += velECI[i]*dt + 0.5*accelECI[i]*dt*dt;
         velECI[i] += accelECI[i]*dt;
     }
 }
@@ -299,8 +305,8 @@ void DynamicsModel::updateAttitude()
     // Angular Rates
     for (int i = 0; i < 3; i++)
     {
+        dTheta[i] = bodyRates[i]*dt + 0.5*bodyAngularAcc[i]*dt*dt;
         bodyRates[i] += bodyAngularAcc[i]*dt;
-        dTheta[i] = bodyRates[i]*dt;
     }
     
     // Update quaternion
@@ -326,6 +332,7 @@ void DynamicsModel::updateStates()
     util.vSubtract(d_posECEF, posECEF, posECEF_init, 3);
     pRotate->ECEFToNED(posNED, d_posECEF);
     pRotate->ECEFToNED(velNED, velECEF);
+    posAboveOrigin = -posNED[2];
     
     // Lat/Lon/Altitude
     util.ECEFtoLLH(posLLH, posECEF, 0.0);
@@ -371,6 +378,9 @@ void DynamicsModel::deltaIMU(double dt)
     {
         deltaTheta[i]    += bodyRates[i]*dt;
         deltaVelocity[i] += accelBody[i]*dt;
+        
+        deltaVelocityNED[i] = velNED[i] - prevVelNED[i];
+        deltaPositionNED[i] = posNED[i] - prevPosNED[i];
     }
 }
 
@@ -378,4 +388,6 @@ void DynamicsModel::resetIMU()
 {
     util.setArray(deltaTheta, zero_init, 3);
     util.setArray(deltaVelocity, zero_init, 3);
+    util.setArray(prevVelNED, velNED, 3);
+    util.setArray(prevPosNED, posNED, 3);
 }

@@ -48,7 +48,7 @@ void variance_update(double &dt);
 void FsThrustEstimator_setMotorPWMCmd(const double* pwmCmd);
 void FsThrustEstimator_performIMUupdate(const double* imuDeltaAngle, const double * imuDeltaVelocity);
 void FsThrustEstimator_setGravity(const double* gravity);
-void FsThrustEstimator_setBodyVelocity(const double* velocity);
+void FsThrustEstimator_setVelocity(const double* velocity);
 
 #ifdef SIMULATION
     void FsThrustEstimator_setSimulationModels(ModelMap* pMap);

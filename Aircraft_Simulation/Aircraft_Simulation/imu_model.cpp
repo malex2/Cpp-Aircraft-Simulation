@@ -70,7 +70,6 @@ IMUModelBase::IMUModelBase(ModelMap *pMapInit, bool debugFlagIn)
     util.setUnitClassArray(velNormalBody, zero_init, metersPerSecond, 3);
     util.initArray(accRotationBody, 0.0, 3);
     util.initArray(accTotalBody, 0.0, 3);
-    util.initArray(gravityNED, 0.0, 3);
     util.initArray(gravityBody, 0.0, 3);
     util.initArray(gravityIMU, 0.0, 3);
     util.initArray(unitGravityBody, 0.0, 3);
@@ -94,6 +93,18 @@ IMUModelBase::IMUModelBase(ModelMap *pMapInit, bool debugFlagIn)
     util.setUnitClassArray(sensorFramePosition, zero_init, meters, 3);
     
     debugFlag = debugFlagIn;
+    
+    //pMap->addLogVar("IMU accNoGravity[0] (m/s/s)", &accIMUnoGravity[0], savePlot, 2);
+    //pMap->addLogVar("IMU accNoGravity[1] (m/s/s)", &accIMUnoGravity[1], savePlot, 2);
+    //pMap->addLogVar("IMU accNoGravity[2] (m/s/s)", &accIMUnoGravity[2], savePlot, 2);
+    
+    //pMap->addLogVar("IMU gravityIMU[0] (m/s/s)", &gravityIMU[0], savePlot, 2);
+    //pMap->addLogVar("IMU gravityIMU[1] (m/s/s)", &gravityIMU[1], savePlot, 2);
+    //pMap->addLogVar("IMU gravityIMU[2] (m/s/s)", &gravityIMU[2], savePlot, 2);
+    
+    //pMap->addLogVar("IMU acc[0] (m/s/s)", &accIMU[0], savePlot, 2);
+    //pMap->addLogVar("IMU acc[1] (m/s/s)", &accIMU[1], savePlot, 2);
+    //pMap->addLogVar("IMU acc[2] (m/s/s)", &accIMU[2], savePlot, 2);
     
     //pMap->addLogVar("IMU gyro x Error (deg/s)", &gyroError[0], savePlot, 2);
     //pMap->addLogVar("IMU gyro y Error (deg/s)", &gyroError[1], savePlot, 2);
@@ -171,13 +182,17 @@ bool IMUModelBase::update(void)
 {
     util.setUnitClassUnit(bodyRates, radiansPerSecond, 3);
     
+    // Update Models
+    pRotate->update();
+    pAtmo->update();
+    
     // Update States
     util.setUnitClassArray(bodyRates  , pDyn->getBodyRates()  , radiansPerSecond, 3);
     util.setUnitClassArray(eulerAngles, pDyn->getEulerAngles(), radians, 3);
     util.setArray(bodyAcc    , pDyn->getAccBody()    , 3);
     util.setArray(bodyAngularAcc, pDyn->getbodyAngularAcc(), 3);
-    gravity        = pAtmo->getGravity();
-    //refGravity     = gravity; // Check and udpate
+    gravity = pAtmo->getGravity();
+    util.setArray(gravityBody, pAtmo->getGravityBody(), 3);
     //magneticStrength = pAtmo->getMagneticFieldStrength();
     //inclination      = pDyn->getInclination();
     
@@ -209,7 +224,7 @@ bool IMUModelBase::update(void)
         util.print(accNormalBody, 3, "Body Normal Acceleration");
         util.print(accTotalBody, 3, "Body Total Acceleration");
         util.print(gravityIMU, 3, "Gravity In IMU Frame");
-        util.print(accIMU, 3, "True IMU Accelerometer");
+        util.print(accIMUg, 3, "True IMU Accelerometer");
         util.print(accError, 3, "Accelerometer Errors");
         util.print(accInUnits, 3, "Acclerometer In Units");
         util.print(accSensor, 3, "Accelerometer Raw");
@@ -268,8 +283,6 @@ void IMUModelBase::accelerometerModel(void)
     util.vAdd(accTotalBody, bodyAcc, accRotationBody, 3);
     
     // Gravity
-    gravityNED[2] = gravity;
-    pRotate->NEDToBody(gravityBody, gravityNED);
     pRotate->bodyToImu(gravityIMU, gravityBody);
     
     // Gravity relative to free-fall
@@ -285,7 +298,8 @@ void IMUModelBase::accelerometerModel(void)
     if (onlyGravity) { util.setArray(accIMU, gravityIMU, 3); }
     
     // Acceleration in g's
-    util.vgain(accIMU, 1.0/refGravity, 3);
+    util.setArray(accIMUg, accIMU, 3);
+    util.vgain(accIMUg, 1.0/refGravity, 3);
     
     // Add Error
     //util.vAdd(accError, accBias, randomNoiseModel(accNoiseMax), 3);
@@ -293,11 +307,11 @@ void IMUModelBase::accelerometerModel(void)
     
     if (perfectSensor)
     {
-        util.setArray(accInUnits, accIMU, 3);
+        util.setArray(accInUnits, accIMUg, 3);
     }
     else
     {
-        util.vAdd(accInUnits, accIMU, accError, 3);
+        util.vAdd(accInUnits, accIMUg, accError, 3);
     }
     
     // Raw Acceleration
@@ -375,9 +389,7 @@ void IMUModelBase::accelerometerAttitude()
     Myz = sqrt(accel[1]*accel[1] + accel[2]*accel[2]);
     accel_roll = -atan2(accel[1], -accel[2]) / util.deg2rad;
     accel_pitch = atan2(accel[0], Myz) / util.deg2rad;
-    
-    //accel_roll = -atan2(unitGravityBody[1], -unitGravityBody[2]) / util.deg2rad;
-    //accel_pitch = atan2(unitGravityBody[0] ,sqrt(unitGravityBody[1]*unitGravityBody[1] + unitGravityBody[2]*unitGravityBody[2])) / util.deg2rad;
+
     
     // Linear Model Around 0,0
     // lin_accel_roll = -1.0*accel[1]/refGravity / util.deg2rad;
@@ -486,9 +498,9 @@ QuadcopterIMUModel::QuadcopterIMUModel(ModelMap *pMapInit, bool debugFlagIn) : I
     gyroBias[0] = 0.02;  // deg/s
     gyroBias[1] = -0.08; // deg/s
     gyroBias[2] = 0.05;  // deg/s
-    gyroNoiseMax[0] = 0.23;//0.15;  // deg/s
-    gyroNoiseMax[1] = 0.27;//0.35;  // deg/s
-    gyroNoiseMax[2] = 0.26;//0.15;  // deg/s
+    gyroNoiseMax[0] = 0.23;  // deg/s
+    gyroNoiseMax[1] = 0.27;  // deg/s
+    gyroNoiseMax[2] = 0.26;  // deg/s
     
     accBias[0] = 0.01;     // g's
     accBias[1] = -0.03;    // g's

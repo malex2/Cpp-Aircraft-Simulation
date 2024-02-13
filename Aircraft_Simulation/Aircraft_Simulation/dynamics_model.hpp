@@ -52,9 +52,10 @@ public:
     double  getMass(void)           { return mass; }
     double  getTimestamp(void)      { return timestamp; }
 
-    double* getDeltaTheta(void)    { return deltaTheta; }
-    double* getDeltaVelocity(void) { return deltaVelocity; }
-    
+    double* getDeltaTheta(void)       { return deltaTheta; }
+    double* getDeltaVelocity(void)    { return deltaVelocity; }
+    double* getDeltaVelocityNED(void) { return deltaVelocityNED; }
+    double* getDeltaPositionNED(void) { return deltaPositionNED; }
 private:
     // Classes
     class RotateFrame         *pRotate;
@@ -72,6 +73,10 @@ private:
     // Variables
     double deltaTheta[3];
     double deltaVelocity[3];
+    double deltaVelocityNED[3];
+    double prevVelNED[3];
+    double deltaPositionNED[3];
+    double prevPosNED[3];
     
     double forceECI[3];
     double accelECI[3];
@@ -92,6 +97,7 @@ private:
     double posECEF_init[3];
     double d_posECEF[3];
     double posNED[3];
+    double posAboveOrigin;
     
     double hCenter;
     double hGround;

@@ -119,12 +119,12 @@ protected:
     SpeedType<double> velNormalBody[3];
     double accRotationBody[3];
     double accTotalBody[3];
-    double gravityNED[3];
     double gravityBody[3];
     double gravityIMU[3];
     double unitGravityBody[3];
     double accIMUnoGravity[3];
     double accIMU[3];
+    double accIMUg[3];
     
     double magNED[3];
     double magBody[3];

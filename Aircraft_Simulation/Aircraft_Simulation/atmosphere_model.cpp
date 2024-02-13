@@ -19,7 +19,6 @@ AtmosphereModel::AtmosphereModel(ModelMap *pMapInit, bool debugFlagIn)
     pDyn    = NULL;
     pMap    = pMapInit;
     
-    
     //pMap->addLogVar("Body Gravity X", &bodyGravity[0], savePlot, 2);
     //pMap->addLogVar("Body Gravity Y", &bodyGravity[1], savePlot, 2);
     //pMap->addLogVar("Body Gravity Z", &bodyGravity[2], savePlot, 2);
@@ -160,6 +159,7 @@ void AtmosphereModel::updateGravity(void)
     
     nedGravity[2] = gravity;
     pRotate->NEDToBody(bodyGravity, nedGravity);
+    util.setArray(gravityEuler, pDyn->getEulerAngles(), 3);
     
     nedForce[2] = mass*gravity;
     pRotate->NEDToBody(bodyForce, nedForce);

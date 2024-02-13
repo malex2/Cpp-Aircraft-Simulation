@@ -499,7 +499,7 @@ void FsControls_setControlsData(const IMUtype* pIMUdataIn, const NavType* pNavDa
         gyroError[i].update(pIMUdataIn->gyro[i]);
         accelError[i].update(pIMUdataIn->accel[i]);
     }
-    FsNavigation_bodyToLL(velLL, pNavDataIn->velBody);
+    FsNavigation_NEDToLL(velLL, pNavDataIn->velNED);
     accelZ = pNavDataIn->accelBody[2];
 }
 

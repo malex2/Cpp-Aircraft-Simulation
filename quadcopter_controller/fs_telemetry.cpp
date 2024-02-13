@@ -452,7 +452,8 @@ void updateStatusTM(TM_Message_Info* pTMMSG)
     TM.status_data.hz50_avg_rate = (1.0/pFSTiming[hz50]) / TM.status_scale.hz50_avg_rate;
     TM.status_data.hz100_avg_rate = (1.0/pFSTiming[hz100]) / TM.status_scale.hz100_avg_rate;
     TM.status_data.hz200_avg_rate = (1.0/pFSTiming[hz200]) / TM.status_scale.hz200_avg_rate;
-    TM.status_data.hz600_avg_rate = (1.0/pFSTiming[hz600]) / TM.status_scale.hz600_avg_rate;
+    TM.status_data.hz400_avg_rate = (1.0/pFSTiming[hz400]) / TM.status_scale.hz400_avg_rate;
+    TM.status_data.hz800_avg_rate = (1.0/pFSTiming[hz800]) / TM.status_scale.hz800_avg_rate;
     
     pTMMSG->reset();
     pTMMSG->size = sizeof(TM.status_data);

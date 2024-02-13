@@ -984,6 +984,9 @@ public:
     
     // Statistics
     template<typename TempType>
+    TempType bound(TempType x, TempType boundL, TempType boundH);
+    
+    template<typename TempType>
     TempType max(TempType val1, TempType val2);
     
     template<typename TempType>

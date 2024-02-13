@@ -146,8 +146,8 @@ void RotateFrame::updateRotations(void)
     util.mtran(*T_B_imu, *T_imu_B, 3, 3);
     
     // Update angle rate matrices
-    util.setupEulerRateToBodyRate(*L_B_E, pDyn->getEulerAngles() );
-    util.setupBodyRateToEulerRate(*L_E_B, pDyn->getEulerAngles() );
+    util.setupEulerRateToBodyRate(*L_B_E, pDyn->getEulerAngles());
+    util.setupBodyRateToEulerRate(*L_E_B, pDyn->getEulerAngles());
 }
 
 // ECI
@@ -233,27 +233,23 @@ void RotateFrame::NEDToBody(unitType<valType> *bodyFrame, unitType<valType> *NED
 void RotateFrame::bodyToLL(double *LLFrame, double *bodyFrame)
 {
     util.quaternionTransformation(LLFrame, q_LL_B, bodyFrame);
-    //util.mmult(LLFrame, *R_LL_B, bodyFrame, 3, 3);
 }
 
 template<typename valType, template<typename T> class unitType>
 void RotateFrame::bodyToLL(unitType<valType> *LLFrame, unitType<valType> *bodyFrame)
 {
     util.quaternionTransformation(LLFrame, q_LL_B, bodyFrame);
-    //util.mmult(LLFrame, *R_LL_B, bodyFrame, 3, 3);
 }
 
 void RotateFrame::LLToBody(double *bodyFrame, double *LLFrame)
 {
     util.quaternionTransformation(bodyFrame, q_B_LL, LLFrame);
-    //util.mmult(bodyFrame, *R_B_LL, LLFrame, 3, 3);
 }
 
 template<typename valType, template<typename T> class unitType>
 void RotateFrame::LLToBody(unitType<valType> *bodyFrame, unitType<valType> *LLFrame)
 {
     util.quaternionTransformation(bodyFrame, q_B_LL, LLFrame);
-    //util.mmult(bodyFrame, *R_B_LL, LLFrame, 3, 3);
 }
 
 // Sensors

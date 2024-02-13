@@ -18,6 +18,9 @@ struct IMUtype {
     double gyro[3];
     double dTheta[3];
 
+    double coningCorrection[3];
+    double scullingCorrection[3];
+    
     double temperature;
     double timestamp;
     
@@ -37,6 +40,9 @@ struct IMUtype {
             dVelocity[i] = 0.0;
             gyro[i]      = 0.0;
             dTheta[i]    = 0.0;
+            
+            coningCorrection[i]   = 0.0;
+            scullingCorrection[i] = 0.0;
         }
         temperature = 0.0;
         timestamp   = 0.0;
@@ -57,6 +63,7 @@ void FsImu_setupIMU(accSensitivityType accSensitivity, gyroSensitivityType gyroS
 const IMUtype* FsImu_getIMUdata();
 void FsImu_zeroDelta();
 bool FsImu_IMUGood();
+void FsImu_setCorrectionsFlag(bool flag);
 
 // Internal Functions
 void readIMU();

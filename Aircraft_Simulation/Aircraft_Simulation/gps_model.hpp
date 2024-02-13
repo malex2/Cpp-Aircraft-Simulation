@@ -208,23 +208,23 @@ private:
     // Adeline
     // Fix = 2, [horiz, vert] = [15-30, 65]
     static const int GPSFixLength  = 3;
-    int GPSFixTimes[GPSFixLength]  = {0, 5, 20};
-    int GPSFixValues[GPSFixLength] = {3, 3, 3};
+    int GPSFixTimes[GPSFixLength]  = {0, 5, 80};
+    int GPSFixValues[GPSFixLength] = {0, 3, 3};
     LookupTable<int> GPSFixLookup;
     
     static const int HorizAccLength = 3;
     double HorizAccTimes[HorizAccLength]  = {0.0, 5.0, 300.0};
-    double HorizAccValues[HorizAccLength] = {10.0, 0.1, 0.1};
+    double HorizAccValues[HorizAccLength] = {0.1, 0.1, 0.1};
     LookupTable<double> HorizAccLookup;
     
     static const int VertAccLength = 3;
     double VertAccTimes[VertAccLength]  = {0.0, 5.0, 300.0};
-    double VertAccValues[VertAccLength] = {10.0, 0.5, 0.5};
+    double VertAccValues[VertAccLength] = {0.5, 0.5, 0.5};
     LookupTable<double> VertAccLookup;
     
     static const int VelAccLength = 3;
     double VelAccTimes[VelAccLength]  = {0.0, 5.0, 300.0};
-    double VelAccValues[VelAccLength] = {5.0, 0.05 , 0.05};
+    double VelAccValues[VelAccLength] = {0.05, 0.05 , 0.05};
     LookupTable<double> VelAccLookup;
     
     virtual void updatePositionError();

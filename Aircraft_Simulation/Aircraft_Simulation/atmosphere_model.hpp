@@ -57,6 +57,7 @@ public:
     double  getGravity(void)      { return gravity; }
     double* getGravityNED(void)   { return nedGravity; }
     double* getGravityBody(void)  { return bodyGravity; }
+    double* getGravityEuler(void) { return gravityEuler; }
     double* getAir(void)          { return air; }
     double  getRe(void)           { return Re;  }
     double  getMach(void)         { return Mach; }
@@ -87,6 +88,7 @@ private:
     double nedForce[3];
     double bodyGravity[3];
     double nedGravity[3];
+    double gravityEuler[3];
     double air[7]; // density, pressure, dynamic pressure, temperature, dynamic viscocity, R;
     double Re;   // Reynolds number
     double Mach; // Mach number

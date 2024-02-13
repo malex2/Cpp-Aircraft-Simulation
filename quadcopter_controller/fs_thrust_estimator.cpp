@@ -8,6 +8,7 @@
 
 #include "fs_thrust_estimator.hpp"
 #include "fs_controls.hpp"
+#include "fs_navigation.hpp"
 #ifdef SIMULATION
     #include "dynamics_model.hpp"
     #include "propulsion_model.hpp"
@@ -23,7 +24,7 @@ bool ThrustEstimator_setup = false;
 double pwmSlope;
 double pwmOffset;
 const double* gB;
-const double* vB;
+double vB[3];
 double KT_L_est;
 double KH_est;
 const double* rpm;
@@ -48,7 +49,7 @@ void FsThrustEstimator_setup()
     pwmOffset = -pwmSlope*PWMMIN;
     
     gB = NULL;
-    vB = NULL;
+    memset(vB, 0, sizeof(vB));
     
     KT_L_est = 0.0;
     KH_est = 0.0;
@@ -243,9 +244,9 @@ void FsThrustEstimator_setGravity(const double* gravity)
     gB = gravity;
 }
  
-void FsThrustEstimator_setBodyVelocity(const double* velocity)
+void FsThrustEstimator_setVelocity(const double* velocityNED)
 {
-    vB = velocity;
+    FsNavigation_NEDToBody(vB, velocityNED);
 }
 
 #ifdef SIMULATION

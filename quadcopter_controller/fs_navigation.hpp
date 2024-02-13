@@ -42,6 +42,8 @@ struct StateInputType {
 struct NavType {
     double position[3]; // North, East, Altitude
     double velNED[3];
+    double deltaVelNED[3];
+    double deltaPosNED[3];
     bool   initNED;
     bool   allowLoadIMUCal;
     double eulerAngles[3];
@@ -52,7 +54,7 @@ struct NavType {
     double altitude_msl;
     double geoidCorrection;
     double gravity;
-    double velBody[3];
+    double velRotationComp[3];
     double accelBody[3];
     double gravityBody[3];
     double bodyRates[3];
@@ -86,11 +88,13 @@ struct NavType {
         accel_mag   = 0.0;
         rates_mag   = 0.0;
         gravityBias = 0.0;
+        
         for (int i=0; i<3; i++)
         {
             position[i]    = 0.0;
             velNED[i]      = 0.0;
-            velBody[i]     = 0.0;
+            deltaVelNED[i] = 0.0;
+            velRotationComp[i] = 0.0;
             eulerAngles[i] = 0.0;
             accBias[i]     = 0.0;
             gyroBias[i]    = 0.0;
@@ -108,6 +112,27 @@ struct NavType {
     }
 };
 
+#ifdef SIMULATION
+struct ObservabilityTestType {
+    unsigned int rank;
+    bool observable[NSTATES];
+    const bool* tested;
+    const double* H;
+    unsigned int nMeas;
+    
+    ObservabilityTestType(int nMeasInput, const double* Hinput, const bool* testInput)
+    {
+        nMeas = nMeasInput;
+        H = Hinput;
+        tested = testInput;
+        for (int i = 0; i < NSTATES; i++)
+        {
+            observable[i] = false;
+        }
+    }
+};
+
+#endif
 // Setup
 void FsNavigation_setupNavigation(double *initialPosition, double initialHeading, bool loadIMUCalibration);
 
@@ -117,6 +142,7 @@ void FsNavigation_performNavigation( double &navDt );
 void updateGravity();
 void updateInputs(double &navDt);
 void performARHS(double &navDt);
+void preINSCalculations(double &navDt);
 void pitchRollAccelerometer();
 void gyroUpdate(double &navDt);
 void performINS( double &navDt );
@@ -135,29 +161,34 @@ void FsNavigation_calibrateIMU();
 
 // Getters
 const NavType* FsNavigation_getNavData(bool useTruth = false);
-double   FsNavigation_getNavAlt();
 const NavType* FsNavigation_getNavError();
+const NavType* FsNavigation_getTruthNavData();
 NavState FsNavigation_getNavState();
+double   FsNavigation_getNavAlt();
 const double*  FsNavigation_getCovariance();
 const double*  FsNavigation_getProcessNoise();
+const double*  FsNavigation_getStateTransition();
 const double*  FsNavigation_getStateError();
 const double*  FsNavigation_getAccumStateError();
 const double*  FsNavigation_getCovarianceCorrection();
 const double*  FsNavigation_getBaroKalmanGain();
 const double*  FsNavigation_getBaroResidual();
+const double*  FsNavigation_getGPSKalmanGain();
 const double*  FsNavigation_getGPSMeasVariance();
 const double*  FsNavigation_getGPSResidual();
 const unsigned int* FsNavigation_getGPSFilterError();
 const double*  FsNavigation_getAccelMeasVariance();
-const double* FsNavigation_getGroundResidual();
+const double*  FsNavigation_getGroundResidual();
 
 const SensorErrorType* FsNavigation_getGyroStatistics();
 const SensorErrorType* FsNavigation_getAccelStatistics();
 
 // Setters
+void FsNavigation_setIMUToNavRateRatio(double rateRatio);
 void FsNavigation_setIMUdata(const IMUtype* pIMUdataIn);
 void FsNavigation_setNED(double* LLA, double* velNED, double heading, bool bypassInit = false);
 void FsNavigation_setGroundFlags(bool onGround, bool movingDetection);
+void FsNavigation_setVelocityCorrectionsFlag(bool flag);
 #ifdef SIMULATION
     void FsNavigation_setSimulationModels(ModelMap* pMap);
     void FsNavigation_setTruthTransitionMatrix();
@@ -167,11 +198,12 @@ void FsNavigation_setGroundFlags(bool onGround, bool movingDetection);
 #ifdef SIMULATION
    void updateTruth();
    void computeTruthErrors();
+   void copmuteObservability(ObservabilityTestType oInfo);
 #endif
 
 inline void FsNavigation_bodyToNED(double* vNED, const double* vB);
-inline void FsNavigation_NEDToBody(double* vB, const double* vNED);
-void FsNavigation_bodyToLL(double* vLL, const double* vBody);
+void FsNavigation_NEDToBody(double* vB, const double* vNED);
+void FsNavigation_NEDToLL(double* vLL, const double* vNED);
 inline void quaternionProduct(double *product, double *q1, double *q2);
 inline void updateEulerAngles();
 inline void updateQuaternions();

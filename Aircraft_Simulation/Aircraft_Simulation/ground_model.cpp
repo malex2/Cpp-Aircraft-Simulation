@@ -85,7 +85,6 @@ bool ContactPoint::update(void)
     posNED[2].val -= hMSL_init;
     
     groundElevation = pGround->getGroundElevation(posNED[0].m(), posNED[1].m());
-
     altGround.val = -posNED[2].m() - groundElevation;
     
     // Update Local Level velocity
@@ -435,15 +434,11 @@ bool GroundModelBase::update(void)
 // Get elevation above MSL in meters
 double GroundModelBase::getGroundElevation(double north, double east)
 {
-    //NORTH_ELEVATION_POINTS[N_NORTH_GRID_POINTS];
-    //EAST_ELEVATION_POINTS[N_EAST_GRID_POINTS];
-    //GRID_ELEVATION[N_NORTH_GRID_POINTS][N_EAST_GRID_POINTS];
-    
     // Interpolate east for north low and north high
     double north_elevation[2];
     double north_grid[2];
-    double ground_evation;
-    int    i_north[2] = {0, N_NORTH_GRID_POINTS};
+    double ground_elevation;
+    int    i_north[2];
     int    i = 0;
     
     for (i = 0; i < N_NORTH_GRID_POINTS; i++)
@@ -451,16 +446,16 @@ double GroundModelBase::getGroundElevation(double north, double east)
         if (north <= NORTH_ELEVATION_POINTS[i]) { break; }
     }
  
-    i_north[0] = util.max(i_north[0], i-1);
-    i_north[1] = util.min(i_north[1], i);
+    i_north[0] = util.bound(i-1, 0, N_NORTH_GRID_POINTS-1);
+    i_north[1] = util.bound(i  , 0, N_NORTH_GRID_POINTS-1);
     north_grid[0] = NORTH_ELEVATION_POINTS[i_north[0]];
     north_grid[1] = NORTH_ELEVATION_POINTS[i_north[1]];
 
     north_elevation[0] = util.interpolate(EAST_ELEVATION_POINTS, &GRID_ELEVATION[i_north[0]][0], east, N_EAST_GRID_POINTS);
     north_elevation[1] = util.interpolate(EAST_ELEVATION_POINTS, &GRID_ELEVATION[i_north[1]][0], east, N_EAST_GRID_POINTS);
-    ground_evation = util.interpolate(north_grid, north_elevation, north, 2);
-    
-    return ground_evation;
+    ground_elevation = util.interpolate(north_grid, north_elevation, north, 2);
+
+    return ground_elevation;
 }
 
  void GroundModelBase::getGroundAngles(double north, double east, double* ground_euler)

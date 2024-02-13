@@ -21,6 +21,7 @@ bool printI2C  = false;
 bool startDelta = false;
 bool I2C_data_available = false;
 bool I2C_data_valid = false;
+bool imu_apply_corrections = false;
 # ifdef SIMULATION
     bool print_wire = false;
     bool directRawIMU  = false; // Use direct raw IMU and not I2C
@@ -38,6 +39,17 @@ float LSBdps;
 short rawAccel[3];
 short rawGyro[3];
 short rawTemp;
+
+double gyro_dt[3];
+double vel_dt[3];
+
+// Coning/Sculling Corrections
+double coning_part1[3];
+double dconing[3];
+double sculling_part1a[3];
+double sculling_part1b[3];
+double sculling_part2a[3];
+double sculling_part2b[3];
 
 //double accelSumSqr = 0.0;
 //double gyroSumSqr = 0.0;
@@ -76,6 +88,12 @@ void FsImu_setupIMU(accSensitivityType accSensitivity, gyroSensitivityType gyroS
     Wire.write( sensitivityByte[accSensitivity] );
     IMUdata.errorCodeIMU = (I2C_Error_Code) Wire.endTransmission(true);
     
+    for (int i = 0; i < 3; i++)
+    {
+        gyro_dt[i] = 0.0;
+        vel_dt[i] = 0.0;
+    }
+    
     imu_setup = true;
 #endif
 }
@@ -109,16 +127,7 @@ void readIMU()
         rawGyro[0]   = (((int16_t) Wire.read()) << 8) | Wire.read(); // reading registers: 0x43 (GYRO_XOUT_H) and 0x44 (GYRO_XOUT_L)
         rawGyro[1]   = (((int16_t) Wire.read()) << 8) | Wire.read(); // reading registers: 0x45 (GYRO_YOUT_H) and 0x46 (GYRO_YOUT_L)
         rawGyro[2]   = (((int16_t) Wire.read()) << 8) | Wire.read(); // reading registers: 0x47 (GYRO_ZOUT_H) and 0x48 (GYRO_ZOUT_L)
-        
-        /*
-        rawAccel[0]  = Wire.read() << 8 | Wire.read(); // reading registers: 0x3B (ACCEL_XOUT_H) and 0x3C (ACCEL_XOUT_L)
-        rawAccel[1]  = Wire.read() << 8 | Wire.read(); // reading registers: 0x3D (ACCEL_YOUT_H) and 0x3E (ACCEL_YOUT_L)
-        rawAccel[2]  = Wire.read() << 8 | Wire.read(); // reading registers: 0x3F (ACCEL_ZOUT_H) and 0x40 (ACCEL_ZOUT_L)
-        rawTemp      = Wire.read() << 8 | Wire.read(); // reading registers: 0x41 (TEMP_OUT_H) and 0x42 (TEMP_OUT_L)
-        rawGyro[0]   = Wire.read() << 8 | Wire.read(); // reading registers: 0x43 (GYRO_XOUT_H) and 0x44 (GYRO_XOUT_L)
-        rawGyro[1]   = Wire.read() << 8 | Wire.read(); // reading registers: 0x45 (GYRO_YOUT_H) and 0x46 (GYRO_YOUT_L)
-        rawGyro[2]   = Wire.read() << 8 | Wire.read(); // reading registers: 0x47 (GYRO_ZOUT_H) and 0x48 (GYRO_ZOUT_L)
-        */
+
         I2C_data_available = true;
         I2C_data_valid = rawAccel[0] != 0 | rawAccel[1] != 0 | rawAccel[2] != 0 | rawGyro[0] != 0 | rawGyro[1] != 0 | rawGyro[2] != 0;
     }
@@ -172,8 +181,34 @@ void updateDelta( double &imuDt )
     
     for (int i = 0; i < 3; i++)
     {
-        IMUdata.dTheta[i]    += IMUdata.gyro[i] * imuDt;
-        IMUdata.dVelocity[i] += IMUdata.accel[i] * imuDt;
+        if (imu_apply_corrections)
+        {
+            coning_part1[i] = 0.5 * (IMUdata.dTheta[i] + gyro_dt[i]/6.0);
+            sculling_part1a[i] = IMUdata.dTheta[i] + gyro_dt[i]/6.0;
+            sculling_part2a[i] = IMUdata.dVelocity[i] + vel_dt[i]/6.0;
+        }
+        
+        gyro_dt[i] = IMUdata.gyro[i]  * imuDt;
+        vel_dt[i]  = IMUdata.accel[i] * imuDt;
+        
+        IMUdata.dTheta[i]    += gyro_dt[i];
+        IMUdata.dVelocity[i] += vel_dt[i];
+    }
+    
+    if (imu_apply_corrections)
+    {
+        // Coning
+        crossProduct(dconing, coning_part1, gyro_dt);
+        IMUdata.coningCorrection[0] += dconing[0];
+        IMUdata.coningCorrection[1] += dconing[1];
+        IMUdata.coningCorrection[2] += dconing[2];
+        
+        // Sculling
+        crossProduct(sculling_part1b, sculling_part1a, vel_dt);
+        crossProduct(sculling_part2b, sculling_part2a, gyro_dt);
+        IMUdata.scullingCorrection[0] += 0.5 * (sculling_part1b[0] + sculling_part2b[0]);
+        IMUdata.scullingCorrection[1] += 0.5 * (sculling_part1b[1] + sculling_part2b[1]);
+        IMUdata.scullingCorrection[2] += 0.5 * (sculling_part1b[2] + sculling_part2b[2]);
     }
     
 #ifdef SIMULATION
@@ -195,6 +230,12 @@ void FsImu_zeroDelta()
     {
         IMUdata.dTheta[i]    = 0.0;
         IMUdata.dVelocity[i] = 0.0;
+        
+        IMUdata.coningCorrection[i]   = 0.0;
+        IMUdata.scullingCorrection[i] = 0.0;
+        
+        gyro_dt[i] = 0.0;
+        vel_dt[i] = 0.0;
     }
 
 #ifdef SIMULATION
@@ -207,6 +248,12 @@ bool FsImu_IMUGood()
 {
     return IMUdata.IMUgood;
 }
+
+void FsImu_setCorrectionsFlag(bool flag)
+{
+    imu_apply_corrections = flag;
+}
+
 void printI2CErrors(bool printBool)
 {
     printI2C = printBool;

@@ -72,7 +72,7 @@ struct ControlType;
 
 // Types
 enum I2C_Error_Code {I2C_0_SUCCESS, I2C_1_DATA_TOO_LONG, I2C_2_NACK_ADDRESS, I2C_3_NACK_DATA, I2C_4_OTHER, I2C_5_TIMEOUT};
-enum FS_Timing_Type {hz1, hz50, hz100, hz200, hz600, printRoutine, nRoutines};
+enum FS_Timing_Type {hz1, hz50, hz100, hz200, hz400, hz800, printRoutine, nRoutines};
 enum FS_TM_READ_STATE {FS_TM_HEADER, TM_TYPE_HEADER, READ_TM_LENGTH, READ_TM_BUFFER, CALC_TM_CHECKSUM, TM_READ_COMPLETE};
 enum TM_MSG_TYPE {FS_TM_IMU, FS_TM_BARO, FS_TM_GPS, FS_TM_NAV_HIGHRATE, FS_TM_NAV_LOWRATE, FS_TM_CONTROLS, FS_TM_STATUS, FS_PRINT, N_TM_MSGS};
 
@@ -170,7 +170,7 @@ const double APC220_SETTING_TIMEOUT = 300.0/1000.0; // 200ms expected + 100ms bu
 #define minPWMIncr   5.0
 
 // Velocity accuracy for velocity control
-#define VELSTDLIM 0.1
+#define VELSTDLIM 0.3
 
 // Yaw accuracy for ground align
 #define YAWSTDLIM 5.0 * degree2radian
@@ -704,7 +704,8 @@ struct FS_Telemetry_Type
         uint16_t hz50_avg_rate = 0;
         uint16_t hz100_avg_rate = 0;
         uint16_t hz200_avg_rate = 0;
-        uint16_t hz600_avg_rate = 0;
+        uint16_t hz400_avg_rate = 0;
+        uint16_t hz800_avg_rate = 0;
         
     }  __attribute__((packed)) status_data;
     
@@ -724,7 +725,8 @@ struct FS_Telemetry_Type
         double hz50_avg_rate = 0.1;
         double hz100_avg_rate = 0.1;
         double hz200_avg_rate = 0.1;
-        double hz600_avg_rate = 0.1;
+        double hz400_avg_rate = 0.1;
+        double hz800_avg_rate = 0.1;
         
     }  __attribute__((packed)) status_scale;
     
@@ -895,13 +897,14 @@ struct FS_Telemetry_Type
         
          if (print_bool[FS_TM_STATUS])
          {
-             Serial.print("FS Rates = [1hz, 50hz, 100hz, 200hz, 600hz]: [");
+             Serial.print("FS Rates = [1hz, 50hz, 100hz, 200hz, 400hz, 800hz]: [");
              Serial.print(status_data.hz1_avg_rate * status_scale.hz1_avg_rate); Serial.print(", ");
              Serial.print(status_data.hz50_avg_rate * status_scale.hz50_avg_rate); Serial.print(", ");
              Serial.print(status_data.hz100_avg_rate * status_scale.hz100_avg_rate); Serial.print(", ");
              Serial.print(status_data.hz200_avg_rate * status_scale.hz200_avg_rate); Serial.print(", ");
-             Serial.print(status_data.hz600_avg_rate * status_scale.hz600_avg_rate); Serial.println("]");
-         
+             Serial.print(status_data.hz400_avg_rate * status_scale.hz400_avg_rate); Serial.print(", ");
+             Serial.print(status_data.hz800_avg_rate * status_scale.hz800_avg_rate); Serial.println("]");
+             
              Serial.print("[max_tm_rate, tm_timeout_count]: [");
              Serial.print(status_data.max_tm_rate * status_scale.max_tm_rate); Serial.print(", ");
              Serial.println(status_data.tm_timeout_count * status_scale.tm_timeout_count);

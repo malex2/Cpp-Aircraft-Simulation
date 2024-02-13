@@ -332,6 +332,12 @@ void Utilities::setMatrix(TempType *matrix, const TempType *setMat, int nrow, in
 
 /* -------------------- Statistics -------------------- */
 template<typename TempType>
+TempType Utilities::bound(TempType x, TempType boundL, TempType boundH)
+{
+    return min(max(x, boundL), boundH);
+}
+
+template<typename TempType>
 TempType Utilities::max(TempType val1, TempType val2)
 {
     if (val1 >= val2) { return val1; }
@@ -1851,6 +1857,10 @@ template void Utilities::setMatrix(double*, const double*, int, int);
 template void Delay::delayValue(bool *value, bool newValue);
 template void Delay::delayValue(float *value, float newValue);
 template void Delay::delayValue(double *value, double newValue);
+
+template int Utilities::bound(int, int, int);
+template float Utilities::bound(float, float, float);
+template double Utilities::bound(double, double, double);
 
 template int Utilities::max(int, int);
 template float Utilities::max(float, float);
