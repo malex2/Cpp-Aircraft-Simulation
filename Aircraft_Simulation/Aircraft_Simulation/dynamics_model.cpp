@@ -36,7 +36,7 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     pMap->addLogVar("N (m)", &posNED[0], savePlot, 2);
     pMap->addLogVar("E (m)", &posNED[1], savePlot, 2);
     //pMap->addLogVar("D (m)", &posNED[2], printSavePlot, 2);
-    pMap->addLogVar("posAboveOrigin", &posAboveOrigin, printSavePlot, 3);
+    pMap->addLogVar("gOrg", &posAboveOrigin, printSavePlot, 3);
     pMap->addLogVar("gndAlt", &hGround, savePlot, 2);
     
     //pMap->addLogVar("speed", &velMag, savePlot, 2);
