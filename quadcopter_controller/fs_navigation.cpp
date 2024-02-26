@@ -101,7 +101,6 @@ double R_GPS[NGPSSTATES][NGPSSTATES];
 double H_GPS[NGPSSTATES][NSTATES];
 double K_GPS[NSTATES][NGPSSTATES];
 double gpsResidual[NGPSSTATES];
-unsigned int gpsFailCount[NGPSSTATES];
 #ifdef SIMULATION
     ObservabilityTestType GPS_Observability(NGPSSTATES, *H_GPS, observabilityTestStates);
 #endif
@@ -201,7 +200,7 @@ void FsNavigation_setupNavigation(double *initialPosition, double initialHeading
             if (j<NGROUNDSTATES)                    { K_GROUND[i][j] = 0.0; }
             
             if (i<NGPSSTATES && j<NGPSSTATES) { R_GPS[i][j] = 0.0; }
-            if (i<NGPSSTATES)                 { H_GPS[i][j] = 0.0; gpsFailCount[i] = 0; }
+            if (i<NGPSSTATES)                 { H_GPS[i][j] = 0.0; }
             if (j<NGPSSTATES)                 { K_GPS[i][j] = 0.0; }
             
             if (i<NBAROSTATES && j<NBAROSTATES) { R_BARO[i][j] = 0.0; }
@@ -216,7 +215,7 @@ void FsNavigation_setupNavigation(double *initialPosition, double initialHeading
     H_GROUND[GROUND_VN][VN]     = 1.0;
     H_GROUND[GROUND_VE][VE]     = 1.0;
     H_GROUND[GROUND_VD][VD]     = 1.0;
-    H_GROUND[GROUND_YAW][ATT_Z] = 0.0;
+    H_GROUND[GROUND_YAW][ATT_Z] = 1.0;
     
     H_ACCEL[ACCEL_ROLL][ATT_X]  = 1.0;
     H_ACCEL[ACCEL_PITCH][ATT_Y] = 1.0;
@@ -238,7 +237,7 @@ void FsNavigation_setupNavigation(double *initialPosition, double initialHeading
     // State Covariance (State Uncertainties)
     P[ATT_X][ATT_X] = errorToVariance(5.0*degree2radian);
     P[ATT_Y][ATT_Y] = errorToVariance(5.0*degree2radian);
-    P[ATT_Z][ATT_Z] = errorToVariance(0*180.0*degree2radian);
+    P[ATT_Z][ATT_Z] = errorToVariance(180.0*degree2radian);
     P[VN][VN]       = errorToVariance(0.0);
     P[VE][VE]       = errorToVariance(0.0);
     P[VD][VD]       = errorToVariance(0.0);
@@ -627,14 +626,6 @@ void applyCorrections()
     }
     else if (NavData.state == GPSUpdate)
     {
-        
-        double vn_filter_error = varianceToError(P[VN][VN]);
-        double ve_filter_error = varianceToError(P[VE][VE]);
-        double vd_filter_error = varianceToError(P[VD][VD]);
-        if (gpsResidual[GPS_VN] > vn_filter_error) { gpsFailCount[GPS_VN]++; }
-        if (gpsResidual[GPS_VE] > ve_filter_error) { gpsFailCount[GPS_VE]++; }
-        if (gpsResidual[GPS_VD] > vd_filter_error) { gpsFailCount[GPS_VD]++; }
-
         filterUpdate(gpsResidual, *R_GPS, *H_GPS, *K_GPS, NGPSSTATES);
     }
     else if (NavData.state == GPSUpdate2D)
@@ -1144,11 +1135,6 @@ const double* FsNavigation_getGPSMeasVariance()
 const double* FsNavigation_getGPSResidual()
 {
     return gpsResidual;
-}
-
-const unsigned int* FsNavigation_getGPSFilterError()
-{
-    return gpsFailCount;
 }
 
 const double* FsNavigation_getAccelMeasVariance()

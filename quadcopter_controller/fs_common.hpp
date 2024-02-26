@@ -17,13 +17,13 @@
 #define IMU
 #define GPS
 #define BAROMETER
-#define PWM
-#define CONTROLS
+//#define PWM
+//#define CONTROLS
 //#define THRUST_ESTIMATOR
 #define GROUND_DETECTION
 #define NAVIGATION
 //#define TELEMETRY
-//#define PRINT
+#define PRINT
 //#define UBX_PRINT
 //#define TM_PRINT
 
@@ -170,7 +170,7 @@ const double APC220_SETTING_TIMEOUT = 300.0/1000.0; // 200ms expected + 100ms bu
 #define minPWMIncr   5.0
 
 // Velocity accuracy for velocity control
-#define VELSTDLIM 0.3
+#define VELSTDLIM 0.5
 
 // Yaw accuracy for ground align
 #define YAWSTDLIM 5.0 * degree2radian
