@@ -71,18 +71,11 @@ double stateErrorLatch[NSTATES];
 double stateErrorAccum[NSTATES];
 double diagOnes[NSTATES][NSTATES];
 
-#ifdef SIMULATION
-bool observabilityTestStates[NSTATES];
-#endif
-
 // Ground Align Correction
 double R_GROUND[NGROUNDSTATES][NGROUNDSTATES];
 double H_GROUND[NGROUNDSTATES][NSTATES];
 double K_GROUND[NSTATES][NGROUNDSTATES];
 double groundResidual[NGROUNDSTATES];
-#ifdef SIMULATION
-    ObservabilityTestType GROUND_Observability(NGROUNDSTATES, *H_GROUND, observabilityTestStates);
-#endif
 
 double position_ground_latch[3];
 double yaw_ground_latch;
@@ -93,31 +86,17 @@ double R_ACCEL[NACCELSTATES][NACCELSTATES];
 double H_ACCEL[NACCELSTATES][NSTATES];
 double K_ACCEL[NSTATES][NACCELSTATES];
 double accelResidual[NACCELSTATES];
-#ifdef SIMULATION
-    ObservabilityTestType ACCEL_Observability(NACCELSTATES, *H_ACCEL, observabilityTestStates);
-#endif
 
 // GPS Corrections
 double R_GPS[NGPSSTATES][NGPSSTATES];
 double H_GPS[NGPSSTATES][NSTATES];
 double K_GPS[NSTATES][NGPSSTATES];
 double gpsResidual[NGPSSTATES];
-#ifdef SIMULATION
-    ObservabilityTestType GPS_Observability(NGPSSTATES, *H_GPS, observabilityTestStates);
-#endif
 
 double R_GPS2D[N2DGPSSTATES][N2DGPSSTATES];
 double H_GPS2D[N2DGPSSTATES][NSTATES];
 double K_GPS2D[NSTATES][N2DGPSSTATES];
 double gpsResidual2D[N2DGPSSTATES];
-#ifdef SIMULATION
-    ObservabilityTestType GPS2D_Observability(N2DGPSSTATES, *H_GPS2D, observabilityTestStates);
-#endif
-
-double R_GPSBRG[NGPSBRGSTATES][NGPSBRGSTATES];
-double H_GPSBRG[NGPSBRGSTATES][NSTATES];
-double K_GPSBRG[NSTATES][NGPSBRGSTATES];
-double gpsResidualBRG[NGPSBRGSTATES];
 
 // Barometer Correction
 double R_BARO[NBAROSTATES][NBAROSTATES];
@@ -125,9 +104,6 @@ double H_BARO[NBAROSTATES][NSTATES];
 double K_BARO[NSTATES][NBAROSTATES];
 double baroRefAltitude;
 double baroResidual[NBAROSTATES];
-#ifdef SIMULATION
-    ObservabilityTestType BARO_Observability(NBAROSTATES, *H_BARO, observabilityTestStates);
-#endif
 
 double Pcorrection[NSTATES][NSTATES];
 
@@ -207,10 +183,6 @@ void FsNavigation_setupNavigation(double *initialPosition, double initialHeading
             if (i<N2DGPSSTATES)                   { H_GPS2D[i][j] = 0.0; }
             if (j<N2DGPSSTATES)                   { K_GPS2D[i][j] = 0.0; }
             
-            if (i<NGPSBRGSTATES && j<NGPSBRGSTATES) { R_GPSBRG[i][j] = 0.0; }
-            if (i<NGPSBRGSTATES)                    { H_GPSBRG[i][j] = 0.0; }
-            if (j<NGPSBRGSTATES)                    { K_GPSBRG[i][j] = 0.0; }
-            
             if (i<NBAROSTATES && j<NBAROSTATES) { R_BARO[i][j] = 0.0; }
             if (i<NBAROSTATES)                  { H_BARO[i][j] = 0.0; }
             if (j<NBAROSTATES)                  { K_BARO[i][j] = 0.0; }
@@ -227,19 +199,7 @@ void FsNavigation_setupNavigation(double *initialPosition, double initialHeading
     
     H_ACCEL[ACCEL_ROLL][ATT_X]  = 1.0;
     H_ACCEL[ACCEL_PITCH][ATT_Y] = 1.0;
-/*
-    H_GPS[GPS_N][N]     = 1.0;
-    H_GPS[GPS_E][E]     = 1.0;
-    H_GPS[GPS_ALT][ALT] = 1.0;
-    H_GPS[GPS_VN][VN]   = 1.0;
-    H_GPS[GPS_VE][VE]   = 1.0;
-    H_GPS[GPS_VD][VD]   = 1.0;
- 
-    H_GPS2D[GPS2D_N][N]   = 1.0;
-    H_GPS2D[GPS2D_E][E]   = 1.0;
-    H_GPS2D[GPS2D_VN][VN] = 1.0;
-    H_GPS2D[GPS2D_VE][VE] = 1.0;
- */
+
     H_BARO[BARO_ALT][ALT] = 1.0;
     
     // State Covariance (State Uncertainties)
@@ -264,23 +224,6 @@ void FsNavigation_setupNavigation(double *initialPosition, double initialHeading
     yaw_var_ground_latch = P[ATT_Z][ATT_Z];
     
 #ifdef SIMULATION
-    observabilityTestStates[ATT_X]   = true;
-    observabilityTestStates[ATT_Y]   = true;
-    observabilityTestStates[ATT_Z]   = true;
-    observabilityTestStates[VN]      = true;
-    observabilityTestStates[VE]      = true;
-    observabilityTestStates[VD]      = true;
-    observabilityTestStates[N]       = true;
-    observabilityTestStates[E]       = true;
-    observabilityTestStates[ALT]     = true;
-    observabilityTestStates[GBIAS_X] = true;
-    observabilityTestStates[GBIAS_Y] = true;
-    observabilityTestStates[GBIAS_Z] = true;
-    observabilityTestStates[ABIAS_X] = true;
-    observabilityTestStates[ABIAS_Y] = true;
-    observabilityTestStates[ABIAS_Z] = true;
-    observabilityTestStates[GRAVITY] = true;
-    
     NavError.gravity = 0.0;
 #endif
     
@@ -344,9 +287,6 @@ void FsNavigation_performNavigation( double &navDt )
 #ifdef SIMULATION
         // Update truth errors
         computeTruthErrors();
-        
-        // Observability
-        //copmuteObservability(GPS_Observability);
 #endif
     }
 #endif
@@ -625,10 +565,6 @@ void applyCorrections()
     {
         filterUpdate(gpsResidual2D, *R_GPS2D, *H_GPS2D, *K_GPS2D, N2DGPSSTATES);
     }
-    else if (NavData.state == GPSUpdateBRG)
-    {
-        filterUpdate(gpsResidualBRG, *R_GPSBRG, *H_GPSBRG, *K_GPSBRG, NGPSBRGSTATES);
-    }
     else if (NavData.state == AccelUpdate)
     {
         filterUpdate(accelResidual, *R_ACCEL, *H_ACCEL, *K_ACCEL, NACCELSTATES);
@@ -781,7 +717,6 @@ void FsNavigation_performAccelerometerUpdate(bool performUpdate)
     }
     
     if (NavData.state != Nav_Startup && performUpdate && NavData.rates_mag < highRate && (NavData.accel_mag < 0.2 || groundFlag))
-        //&& !nav_pIMUdata->highDynamics )
     {
         stable_count++;
         if (stable_count > 10)
@@ -891,6 +826,20 @@ void FsNavigation_performGPSUpdate(const GpsType* gpsData)
         
         if (gpsData->gpsFix == FIX2D)
         {
+            H_GPS2D[GPS2D_N][N]           = cyb;
+            H_GPS2D[GPS2D_N][E]           = -syb;
+            H_GPS2D[GPS2D_N][ATT_Z_BIAS]  = -syb*NavData.position[0] - cyb*NavData.position[1];
+            H_GPS2D[GPS2D_E][N]           = syb;
+            H_GPS2D[GPS2D_E][E]           = cyb;
+            H_GPS2D[GPS2D_E][ATT_Z_BIAS]  = cyb*NavData.position[0] - syb*NavData.position[1];
+            
+            H_GPS2D[GPS2D_VN][VN]         = cyb;
+            H_GPS2D[GPS2D_VN][VE]         = -syb;
+            H_GPS2D[GPS2D_VN][ATT_Z_BIAS] = -syb*NavData.velNED[0] - cyb*NavData.velNED[1];
+            H_GPS2D[GPS2D_VE][VN]         = syb;
+            H_GPS2D[GPS2D_VE][VE]         = cyb;
+            H_GPS2D[GPS2D_VE][ATT_Z_BIAS] = cyb*NavData.velNED[0] - syb*NavData.velNED[1];
+            
             R_GPS2D[GPS2D_N][GPS2D_N]   = horizPosVar;
             R_GPS2D[GPS2D_E][GPS2D_E]   = horizPosVar;
             R_GPS2D[GPS2D_VN][GPS2D_VN] = speedVar;
@@ -1433,79 +1382,6 @@ void computeTruthErrors()
     NavError.accel_pitch = (NavData.accel_pitch - truthNavData.accel_pitch) * radian2degree;
     
     NavError.imuTimestamp = (NavData.imuTimestamp - truthNavData.imuTimestamp)*1000.0;
-}
-
-void copmuteObservability(ObservabilityTestType oInfo)
-{
-    // Get subset of states to be tested
-    unsigned int nstates = 0;
-    for (int i = 0; i < NSTATES; i++)
-    {
-        if (oInfo.tested[i]) { nstates++; }
-    }
-    
-    if (nstates == 0) { return; }
-    
-    // Get A and C from subset of states
-    double A[nstates][nstates];
-    double C[oInfo.nMeas][nstates];
-    
-    double Atrans[nstates][nstates];
-    double Ctrans[nstates][oInfo.nMeas];
-    
-    unsigned int xstate = 0;
-    unsigned int ystate = 0;
-    for (int i = 0; i < NSTATES; i++)
-    {
-        if (oInfo.tested[i])
-        {
-            for (int j = 0; j < oInfo.nMeas; j++)
-            {
-                C[j][xstate] = *(oInfo.H+j*oInfo.nMeas+i);
-            }
-            
-            ystate = 0;
-            for (int j = 0; j < NSTATES; j++)
-            {
-                if (oInfo.tested[j])
-                {
-                    A[xstate][ystate++] = PHI[i][j];
-                }
-            }
-            xstate++;
-        }
-    }
-    
-    // O = [C' A'C' (A')^2 C' ... (A')^(n-1) C'] = [nstates, nMeas*(nstates-1)]
-    math_mtran(*Atrans, *A, nstates, nstates);
-    math_mtran(*Ctrans, *C, nstates, oInfo.nMeas);
-    double O[nstates][oInfo.nMeas*(nstates-1)];
-    unsigned int nAC = oInfo.nMeas * nstates;
-    
-    //Aij = *(matrix+i*ncol+j);
-    for (int i = 0; i < nstates; i++)
-    {
-        double AnC[nstates][oInfo.nMeas];
-        double An[nstates][nstates];
-        for (int ii=0;ii<nstates;ii++)
-        {
-            for (int jj=0; jj<nstates;jj++)
-            {
-                if (ii==jj) { An[ii][jj] = 1.0; }
-                else { An[ii][jj] = 0.0; }
-            }
-        }
-        
-        for (int j = 0; j < i; j++)
-        {
-            double Aresults[nstates][nstates];
-            math_mmult(*Aresults, *An, nstates, nstates, *Atrans, nstates, nstates);
-            memcpy(*An, *Aresults, nstates*nstates*sizeof(double));
-        }
-        math_mmult(*AnC, *An, nstates, nstates, *Ctrans, nstates, oInfo.nMeas);
-        
-        memcpy(*(O+i*oInfo.nMeas), *AnC, nAC*sizeof(double));
-    }
 }
 #endif
 

@@ -51,9 +51,6 @@ double sculling_part1b[3];
 double sculling_part2a[3];
 double sculling_part2b[3];
 
-//double accelSumSqr = 0.0;
-//double gyroSumSqr = 0.0;
-
 // Simulation
 #ifdef SIMULATION
     DynamicsModel* pDYNModel = 0;
@@ -140,8 +137,6 @@ void readIMU()
     IMUdata.IMUgood = (IMUdata.errorCodeIMU == I2C_0_SUCCESS) & I2C_data_available & I2C_data_valid;
     
     // Convert to Units
-    //accelSumSqr = 0.0;
-    //gyroSumSqr  = 0.0;
     for (int i=0; i<3; i++)
     {
 #ifdef SIMULATION
@@ -161,17 +156,7 @@ void readIMU()
             IMUdata.gyro[i]  = IMUtoBody[i]*pIMUmodel->getGyroscopeDps()[i] * degree2radian;
         }
 #endif
-        //accelSumSqr = accelSumSqr + IMUdata.accel[i]*IMUdata.accel[i];
-        //gyroSumSqr  = gyroSumSqr  + IMUdata.gyro[i]*IMUdata.gyro[i];
     }
-    //accelSumSqr = sqrt(accelSumSqr);
-    //gyroSumSqr  = sqrt(gyroSumSqr);
-    
-    //if ((gyroSumSqr > highRate)  || (accelSumSqr > highAccel))
-    //{
-    //    IMUdata.highDynamics = true;
-    //}
-    //else { IMUdata.highDynamics = false; }
 }
 
 void updateDelta( double &imuDt )

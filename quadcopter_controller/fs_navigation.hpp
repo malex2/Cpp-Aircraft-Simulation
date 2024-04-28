@@ -24,7 +24,6 @@ enum AccelUpdateType {ACCEL_ROLL, ACCEL_PITCH, NACCELSTATES};
 enum GroundMeasurementType {GROUND_N, GROUND_E, GROUND_ALT, GROUND_VN, GROUND_VE, GROUND_VD, GROUND_YAW, NGROUNDSTATES};
 enum GPSMeasurementType {GPS_N, GPS_E, GPS_ALT, GPS_VN, GPS_VE, GPS_VD, NGPSSTATES};
 enum GPS2DMeasurementType {GPS2D_N, GPS2D_E, GPS2D_VN, GPS2D_VE, N2DGPSSTATES};
-enum GPSBearingMeasurementType {GPS_BRG, NGPSBRGSTATES};
 
 enum BAROMeasurementType {BARO_ALT, NBAROSTATES};
 
@@ -117,27 +116,6 @@ struct NavType {
     }
 };
 
-#ifdef SIMULATION
-struct ObservabilityTestType {
-    unsigned int rank;
-    bool observable[NSTATES];
-    const bool* tested;
-    const double* H;
-    unsigned int nMeas;
-    
-    ObservabilityTestType(int nMeasInput, const double* Hinput, const bool* testInput)
-    {
-        nMeas = nMeasInput;
-        H = Hinput;
-        tested = testInput;
-        for (int i = 0; i < NSTATES; i++)
-        {
-            observable[i] = false;
-        }
-    }
-};
-
-#endif
 // Setup
 void FsNavigation_setupNavigation(double *initialPosition, double initialHeading, bool loadIMUCalibration);
 
@@ -203,7 +181,6 @@ void FsNavigation_setVelocityCorrectionsFlag(bool flag);
 #ifdef SIMULATION
    void updateTruth();
    void computeTruthErrors();
-   void copmuteObservability(ObservabilityTestType oInfo);
 #endif
 
 inline void FsNavigation_bodyToNED(double* vNED, const double* vB);

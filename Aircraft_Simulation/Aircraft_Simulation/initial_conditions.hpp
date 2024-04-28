@@ -29,7 +29,7 @@
 // Time
 const double runTime_init          = 400;
 const double printInterval_init    = 5.0;
-const double saveInterval_init     = 0.1;
+const double saveInterval_init     = 0.5;
 const double dynamicsInterval_init = 1.0/800.0;
 const double clock_dt              = 1.0/9600.0; // time interval when not in real time mode
 
@@ -44,7 +44,7 @@ const int second_init = 00;
 const bool saveOutput  = true;
 const bool printOutput = true;
 const bool plotOutput  = false;
-const std::string savefile    = "output_ins_baro_gps_initGPS2.csv";
+const std::string savefile    = "output.csv";
 const std::string gps_file    = "../gps_nav_messages_Adeline5.txt";
 const bool readGPSFile        = false;
 const std::string eeprom_file = "/Users/alexandermclean/Documents/Cpp-Aircraft-Simulation/eeprom.txt";

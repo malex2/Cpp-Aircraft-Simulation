@@ -26,7 +26,6 @@ struct IMUtype {
     
     double gyroQuantizationError_dps;
     double accelQuantizationError_g;
-    bool highDynamics;
     
     bool IMUgood;
     
@@ -48,7 +47,6 @@ struct IMUtype {
         timestamp   = 0.0;
         gyroQuantizationError_dps = 0.0;
         accelQuantizationError_g  = 0.0;
-        highDynamics = false;
         errorCodeIMU = I2C_4_OTHER;
         IMUgood = false;
     }
