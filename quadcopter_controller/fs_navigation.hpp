@@ -16,13 +16,16 @@
 #define FILTERTEST
 
 // Types
-enum NavState {Nav_Startup, Calibration, INS, AccelUpdate, GPSUpdate, GPSUpdate2D, BaroUpdate, GroundAlign, NNAVSTATES};
-enum StateType {ATT_X, ATT_Y, ATT_Z, VN, VE, VD, N, E, ALT, GBIAS_X, GBIAS_Y, GBIAS_Z, ABIAS_X, ABIAS_Y, ABIAS_Z, GRAVITY, NSTATES};
+enum NavState {Nav_Startup, Calibration, INS, AccelUpdate, GPSUpdate, GPSUpdate2D, GPSUpdateBRG, BaroUpdate, GroundAlign, NNAVSTATES};
+enum StateType {ATT_X, ATT_Y, ATT_Z, ATT_Z_BIAS, VN, VE, VD, N, E, ALT, GBIAS_X, GBIAS_Y, GBIAS_Z, ABIAS_X, ABIAS_Y, ABIAS_Z, GRAVITY, NSTATES};
+
 enum VECTORTYPE {X, Y, Z};
 enum AccelUpdateType {ACCEL_ROLL, ACCEL_PITCH, NACCELSTATES};
 enum GroundMeasurementType {GROUND_N, GROUND_E, GROUND_ALT, GROUND_VN, GROUND_VE, GROUND_VD, GROUND_YAW, NGROUNDSTATES};
 enum GPSMeasurementType {GPS_N, GPS_E, GPS_ALT, GPS_VN, GPS_VE, GPS_VD, NGPSSTATES};
 enum GPS2DMeasurementType {GPS2D_N, GPS2D_E, GPS2D_VN, GPS2D_VE, N2DGPSSTATES};
+enum GPSBearingMeasurementType {GPS_BRG, NGPSBRGSTATES};
+
 enum BAROMeasurementType {BARO_ALT, NBAROSTATES};
 
 struct StateInputType {
@@ -47,6 +50,7 @@ struct NavType {
     bool   initNED;
     bool   allowLoadIMUCal;
     double eulerAngles[3];
+    double yaw_bias;
     double q_B_NED[4]; // Quaternion of Body relative to NED
     double accBias[3];
     double gyroBias[3];
@@ -76,13 +80,14 @@ struct NavType {
     NavType()
     {
         state = Nav_Startup;
-        timestamp = 0.0;
-        gravity = (double) (Gravity);
-        altitude_msl = 0.0;
+        timestamp       = 0.0;
+        gravity         = (double) (Gravity);
+        altitude_msl    = 0.0;
         geoidCorrection = 0.0;
-        initNED = false;
+        initNED         = false;
         allowLoadIMUCal = false;
         
+        yaw_bias    = 0.0;
         accel_pitch = 0.0;
         accel_roll  = 0.0;
         accel_mag   = 0.0;
@@ -186,7 +191,7 @@ const SensorErrorType* FsNavigation_getAccelStatistics();
 // Setters
 void FsNavigation_setIMUToNavRateRatio(double rateRatio);
 void FsNavigation_setIMUdata(const IMUtype* pIMUdataIn);
-void FsNavigation_setNED(double* LLA, double* velNED, double heading, bool bypassInit = false);
+void FsNavigation_setNED(const double* position, const double* velNED, double heading, bool bypassInit = false);
 void FsNavigation_setGroundFlags(bool onGround, bool movingDetection);
 void FsNavigation_setVelocityCorrectionsFlag(bool flag);
 #ifdef SIMULATION

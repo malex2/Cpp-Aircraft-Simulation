@@ -24,6 +24,11 @@ RotateFrame::RotateFrame(ModelMap *pMapInit, bool debugFlagIn)
     pIMU  = NULL;
     pMap  = pMapInit;
 
+    // Init Rotation
+    double euler_INIT_NED[3] = {0.0, 0.0, eulerAngles_init[2]*util.deg2rad};
+    util.setupRotation(*R_INIT_NED, euler_INIT_NED);
+    util.mtran(*R_NED_INIT, *R_INIT_NED, 3, 3);
+    
     // IMU frame
     util.setUnitClassArray(imuFrame, imuFrame_init, degrees, 3);
     util.setupRotation(*T_B_imu, imuFrame);
@@ -252,6 +257,29 @@ void RotateFrame::LLToBody(unitType<valType> *bodyFrame, unitType<valType> *LLFr
     util.quaternionTransformation(bodyFrame, q_B_LL, LLFrame);
 }
 
+// Init Frame
+void RotateFrame::NEDToInit(double *initFrame, double *nedFrame)
+{
+    util.mmult(initFrame, *R_INIT_NED, nedFrame, 3, 3);
+}
+
+template<typename valType, template<typename T> class unitType>
+void RotateFrame::NEDToInit(unitType<valType> *initFrame, unitType<valType> *nedFrame)
+{
+    util.mmult(initFrame, *R_INIT_NED, nedFrame, 3, 3);
+}
+
+void RotateFrame::initToNED(double *nedFrame, double *initFrame)
+{
+    util.mmult(nedFrame, *R_INIT_NED, initFrame, 3, 3);
+}
+
+template<typename valType, template<typename T> class unitType>
+void RotateFrame::initToNED(unitType<valType> *nedFrame, unitType<valType> *initFrame)
+{
+    util.mmult(nedFrame, *R_INIT_NED, initFrame, 3, 3);
+}
+
 // Sensors
 void RotateFrame::imuToBody(double *bodyFrame, double *imuFrame)
 {
@@ -309,6 +337,12 @@ template void RotateFrame::bodyToLL(SpeedType<double>*, SpeedType<double>*);
 
 template void RotateFrame::LLToBody(DistanceType<double>*, DistanceType<double>*);
 template void RotateFrame::LLToBody(SpeedType<double>*, SpeedType<double>*);
+
+template void RotateFrame::NEDToInit(DistanceType<double>*, DistanceType<double>*);
+template void RotateFrame::NEDToInit(SpeedType<double>*, SpeedType<double>*);
+
+template void RotateFrame::initToNED(DistanceType<double>*, DistanceType<double>*);
+template void RotateFrame::initToNED(SpeedType<double>*, SpeedType<double>*);
 
 template void RotateFrame::imuToBody(AngleRateType<double>*, AngleRateType<double>*);
 template void RotateFrame::bodyToImu(double*, AngleRateType<double>*);

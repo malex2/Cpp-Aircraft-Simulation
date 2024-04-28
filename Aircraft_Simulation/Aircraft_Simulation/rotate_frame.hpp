@@ -57,6 +57,15 @@ public:
     template<typename valType, template<typename T> class unitType>
     void LLToBody(unitType<valType> *bodyFrame, unitType<valType> *LLFrame);
     
+    // Init Frame
+    void NEDToInit(double *initFrame, double *nedFrame);
+    template<typename valType, template<typename T> class unitType>
+    void NEDToInit(unitType<valType> *initFrame, unitType<valType> *nedFrame);
+       
+    void initToNED(double *nedFrame, double *initFrame);
+    template<typename valType, template<typename T> class unitType>
+    void initToNED(unitType<valType> *nedFrame, unitType<valType> *initFrame);
+    
     // Sensors
     void imuToBody(double *bodyFrame, double *imuFrame);
     template<typename valType, template<typename T> class unitType>
@@ -101,11 +110,14 @@ private:
     double R_B_NED[3][3]; // NED to body matrix (for reference)
     double R_NED_B[3][3]; // Body to NED matrix (for reference)
     
-    double q_B_LL[4];     // NED to body rotation
-    double q_LL_B[4];     // Body to NED rotation
+    double q_B_LL[4];     // LL to body rotation
+    double q_LL_B[4];     // Body to LL rotation
     
     double R_B_LL[3][3];  // LL to body (for reference)
     double R_LL_B[3][3];  // Body to LL (for reference)
+    
+    double R_INIT_NED[3][3]; // NED to Init
+    double R_NED_INIT[3][3]; // Init to NED
     
     double T_B_imu[3][3]; // IMU to body matrix
     double T_imu_B[3][3]; // Body to IMU matrix

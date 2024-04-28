@@ -54,8 +54,8 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     pMap->addLogVar("VE  ", &velNED[1], savePlot, 2);
     pMap->addLogVar("VD  ", &velNED[2], savePlot, 2);
     
-    //pMap->addLogVar("velLL X  ", &velLL[0], savePlot, 2);
-    //pMap->addLogVar("velLL Y  ", &velLL[1], savePlot, 2);
+    pMap->addLogVar("velLL X  ", &velLL[0], savePlot, 2);
+    pMap->addLogVar("velLL Y  ", &velLL[1], savePlot, 2);
     //pMap->addLogVar("velLL Z  ", &velLL[2], savePlot, 2);
     
     //pMap->addLogVar("pdot", &bodyAngularAcc[0], printSavePlot, 3);
@@ -78,7 +78,7 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     pMap->addLogVar("Roll ", &eulerAnglesDeg[0], savePlot, 2);
     pMap->addLogVar("Pitch", &eulerAnglesDeg[1], savePlot, 2);
     pMap->addLogVar("Yaw  ", &eulerAnglesDeg[2], savePlot, 2);
-    
+    //pMap->addLogVar("bearing", &bearingDeg, savePlot, 2);
     //pMap->addLogVar("q_B_NED[0]", &q_B_NED[0], savePlot, 2);
     //pMap->addLogVar("q_B_NED[1]", &q_B_NED[1], savePlot, 2);
     //pMap->addLogVar("q_B_NED[2]", &q_B_NED[2], savePlot, 2);
@@ -139,6 +139,7 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     util.initArray(q_B_NED, 0.0, 4);
     util.initArray(dq_B_NED, 0.0, 4);
     util.initArray(eulerAngles, 0.0, 3);
+    bearing = 0.0;
     
     util.initArray(deltaTheta, 0.0, 3);
     util.initArray(deltaVelocity, 0.0, 3);
@@ -350,6 +351,14 @@ void DynamicsModel::updateStates()
     // Local Level states
     pRotate->bodyToLL(velLL, velBody);
     pRotate->bodyToLL(accelLL, accelBody);
+    if ( sqrt(velLL[0]*velLL[0] + velLL[1]*velLL[1]) > 0.1 )
+    {
+        bearing = atan2(velNED[1], velNED[0]);
+    }
+    
+    // Init States
+    pRotate->NEDToInit(posInit, posNED);
+    pRotate->NEDToInit(velInit, velNED);
     
     // Magnitudes
     velMag   = util.mag(velECI, 3);
@@ -364,6 +373,7 @@ void DynamicsModel::updateStates()
         eulerAnglesDeg[i] = eulerAngles[i] / util.deg2rad;
         deltaThetaDeg[i] = deltaTheta[i] / util.deg2rad;
     }
+    bearingDeg = bearing / util.deg2rad;
 }
 
 double DynamicsModel::getEllipsoidHeight()

@@ -25,8 +25,8 @@ GPSModelBase::GPSModelBase(ModelMap *pMapInit, bool debugFlagIn)
     pMap = pMapInit;
     debugFlag = debugFlagIn;
    
-    //pMap->addLogVar("gps_velN", &gps_velNED[0], savePlot, 2);
-    //pMap->addLogVar("gps_velE", &gps_velNED[1], savePlot, 2);
+    pMap->addLogVar("gps_velN", &gps_velNED[0], savePlot, 2);
+    pMap->addLogVar("gps_velE", &gps_velNED[1], savePlot, 2);
     //pMap->addLogVar("gps_velD", &gps_velNED[2], savePlot, 2);
     //pMap->addLogVar("gps_speed", &gps_speed, savePlot, 2);
     //pMap->addLogVar("gps_groundSpeed", &gps_groundSpeed, savePlot, 2);
@@ -181,8 +181,10 @@ bool GPSModelBase::update()
     gps_velNE[1]    = gps_velNED[1];
     gps_speed       = util.mag(gps_velNED, 3);
     gps_groundSpeed = util.mag(gps_velNE, 2);
-    gps_heading     = atan2(gps_velNE[1], gps_velNE[0]) / util.deg2rad;
-    
+    if ( sqrt(gps_velNED[0]*gps_velNED[0] + gps_velNED[1]*gps_velNED[1]) > 0.1 ) //velAcc
+    {
+        gps_heading = atan2(gps_velNED[1], gps_velNED[0]) / util.deg2rad;
+    }
     readInputMessages();
     decodeInputMessages();
     
