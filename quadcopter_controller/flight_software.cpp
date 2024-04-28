@@ -114,7 +114,6 @@ unsigned int TM_MSG_Counts[N_TM_MSGS];
 
 // Print
 #ifdef SIMULATION
-    double highDynamics = 0.0;
     double gyro_dps[3];
     double rates_mag_dps;
     double body_accel_ms2[3];
@@ -409,13 +408,13 @@ bool mainFlightSoftware(void)
         FsBarometer_performBarometer();
         if (FsBarometer_getBaroState() == baroReady)
         {
-            if (useBarometer && !pControlData->controlAltitude) { FsNavigation_performBarometerUpdate(pBaroData); }
+            if (useBarometer) { FsNavigation_performBarometerUpdate(pBaroData); }
             FsBarometer_setStandby();
         }
         
         // Update GPS
         FsGPS_performGPS();
-        if (useGPS && !pControlData->controlAltitude) { FsNavigation_performGPSUpdate(pGPSdata); }
+        if (useGPS) { FsNavigation_performGPSUpdate(pGPSdata); }
         
         // 5Hz
         count5hz++;
@@ -466,15 +465,13 @@ bool mainFlightSoftware(void)
     // Print Variables
     fsTime = getTime();
     
-    highDynamics      = static_cast<double> (pIMUdata->highDynamics);
-    navState          = static_cast<double> (pNavData->state);
-    
     for (int i = 0; i < NNAVSTATES; i++)
     {
         NavUpdateCounts[i] = pNavData->updateCount[i];
         NavSkippedUpdates[i] = pNavData->skippedUpdateCount[i];
     }
     
+    navState          = static_cast<double> (pNavData->state);
     baroState         = static_cast<double> (pBaroData->state);
     gpsGood           = static_cast<double> (pGPSdata->gpsGood);
     gpsFix            = static_cast<double> (pGPSdata->gpsFix);
@@ -670,7 +667,6 @@ void setPrintVariables()
     //pMap->addLogVar("countDelta50hz", &countDelta50hz, savePlot, 2);
     
     // IMU
-    //pMap->addLogVar("IMU highDynamics" , &highDynamics, savePlot, 2);
     //pMap->addLogVar("IMU SF X" , &pIMUdata->accel[0], savePlot, 2);
     //pMap->addLogVar("IMU SF Y" , &pIMUdata->accel[1], savePlot, 2);
     //pMap->addLogVar("IMU SF Z" , &pIMUdata->accel[2], savePlot, 2);
@@ -798,7 +794,7 @@ void setPrintVariables()
     
     //pMap->addLogVar("Nav Roll Rate", &bodyRates_dps[0], savePlot, 2);
     //pMap->addLogVar("Nav Pitch Rate", &bodyRates_dps[1], savePlot, 2);
-    pMap->addLogVar("Nav Yaw Rate", &bodyRates_dps[2], savePlot, 2);
+    //pMap->addLogVar("Nav Yaw Rate", &bodyRates_dps[2], savePlot, 2);
     
     //pMap->addLogVar("Nav dTheta X", &nav_dTheta_deg[0], savePlot, 2);
     //pMap->addLogVar("Nav dTheta Y", &nav_dTheta_deg[1], savePlot, 2);
@@ -1218,8 +1214,8 @@ void setPrintVariables()
     //pMap->addLogVar("Ctrl yawRateCmd", &yawRateCmd, savePlot, 2);
     //pMap->addLogVar("Ctrl VLLxCmd", &pControlData->VLLxCmd, savePlot, 2);
     //pMap->addLogVar("Ctrl VLLyCmd", &pControlData->VLLyCmd, savePlot, 2);
-    pMap->addLogVar("Ctrl VLLzCmd", &pControlData->VLLzCmd, printSavePlot, 3);
-    pMap->addLogVar("Ctrl hCmd", &pControlData->hCmd, savePlot, 2);
+    //pMap->addLogVar("Ctrl VLLzCmd", &pControlData->VLLzCmd, printSavePlot, 3);
+    //pMap->addLogVar("Ctrl hCmd", &pControlData->hCmd, savePlot, 2);
     //pMap->addLogVar("controlAltitude", &controlAltitude, savePlot, 2);
     //pMap->addLogVar("takeOff", &takeOff, printSavePlot, 3);
     //pMap->addLogVar("crashLand", &crashLand, savePlot, 2);

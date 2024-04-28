@@ -24,7 +24,6 @@
 #define NAVIGATION
 //#define TELEMETRY
 //#define PRINT
-//#define PRINT
 //#define UBX_PRINT
 //#define TM_PRINT
 
