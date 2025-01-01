@@ -19,7 +19,7 @@
 #define BAROMETER
 #define PWM
 #define CONTROLS
-//#define THRUST_ESTIMATOR
+#define THRUST_ESTIMATOR
 #define GROUND_DETECTION
 #define NAVIGATION
 //#define TELEMETRY
@@ -57,7 +57,7 @@
       #define FS_Serial HardwareSerial
       #include "Wire.h"
 
-      #define DEBUG_PRINT
+      //#define DEBUG_PRINT
       //#include <SPI.h>
       #include <nRF24L01.h>
       #include <RF24.h>
@@ -75,7 +75,6 @@ enum I2C_Error_Code {I2C_0_SUCCESS, I2C_1_DATA_TOO_LONG, I2C_2_NACK_ADDRESS, I2C
 enum FS_Timing_Type {hz1, hz50, hz100, hz200, hz400, hz800, printRoutine, nRoutines};
 enum FS_TM_READ_STATE {FS_TM_HEADER, TM_TYPE_HEADER, READ_TM_LENGTH, READ_TM_BUFFER, CALC_TM_CHECKSUM, TM_READ_COMPLETE};
 enum TM_MSG_TYPE {FS_TM_IMU, FS_TM_BARO, FS_TM_GPS, FS_TM_NAV_HIGHRATE, FS_TM_NAV_LOWRATE, FS_TM_CONTROLS, FS_TM_STATUS, FS_PRINT, N_TM_MSGS};
-
 enum channelType {THROTTLE_CHANNEL, ROLL_CHANNEL, PITCH_CHANNEL, YAW_CHANNEL, nChannels};
 
 struct TWO_BYTE_DATA

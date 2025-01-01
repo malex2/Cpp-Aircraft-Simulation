@@ -98,6 +98,7 @@ const NavType* pNavData = 0;
 // Controls
 const ControlType* pControlData = 0;
 ControlMode controlMode;
+bool autoControlModing;
 
 // Thrust Estimator
 const ThrustEstimatorType* pThrustEstData = 0;
@@ -192,22 +193,22 @@ void initialize(void)
 #ifdef PRINT
     printTiming        = false;
     printIMU           = false;
-    printCalibration   = true;
+    printCalibration   = false;
     printCalibratedIMU = false;
-    printBarometer     = true;
-    printGPS           = false;
+    printBarometer     = false;
+    printGPS           = true;
     printGPS_DOP       = false;
     printNavInputs     = false;
-    printAngles        = true;
-    printVelocity      = true;
-    printPosition      = true;
-    printNavVariance   = true;
+    printAngles        = false;
+    printVelocity      = false;
+    printPosition      = false;
+    printNavVariance   = false;
     printAccelFilter    = false;
-    printNavFilterCount = true;
+    printNavFilterCount = false;
     printPWMIn         = false;
     printCommands      = false;
     printMotorPWM      = false;
-    printTakeOff       = true;
+    printTakeOff       = false;
     printTelemetry     = false;
 #endif
     
@@ -242,6 +243,7 @@ void initialize(void)
     
     // Control Settings
     controlMode = AttitudeControl; //NoControl, ThrottleControl, AttitudeControl, VelocityControl
+    autoControlModing = true;
     
     // Telemetry
     // Note: Rates must be divisible by 600
@@ -707,7 +709,7 @@ void setPrintVariables()
     //pMap->addLogVar("Baro Temperature", &pBaroData->temperature, savePlot, 2);
     //pMap->addLogVar("Baro tu", &pBaroData->tu, savePlot, 2);
     pMap->addLogVar("Baro Altitude", &pBaroData->altitude, savePlot, 2);
-    //pMap->addLogVar("Baro Altitude RMS", &pBaroData->altitudeRMS, savePlot, 2);
+    pMap->addLogVar("Baro Altitude RMS", &pBaroData->altitudeRMS, savePlot, 2);
     
     // GPS
     //pMap->addLogVar("GPS Timestamp", &pGPSdata->timestamp, savePlot, 2);
@@ -758,18 +760,18 @@ void setPrintVariables()
     pMap->addLogVar("Nav Alt", &pNavData->position[2], savePlot, 3);
     //pMap->addLogVar("Nav geoidCorrection", &pNavData->geoidCorrection, savePlot, 2);
 
-    pMap->addLogVar("Nav vel N" , &pNavData->velNED[0], savePlot, 2);
-    pMap->addLogVar("Nav vel E" , &pNavData->velNED[1], savePlot, 2);
+    //pMap->addLogVar("Nav vel N" , &pNavData->velNED[0], savePlot, 2);
+    //pMap->addLogVar("Nav vel E" , &pNavData->velNED[1], savePlot, 2);
     //pMap->addLogVar("Nav vel D" , &pNavData->velNED[2], savePlot, 2);
 
-    pMap->addLogVar("Nav velLL X" , &nav_velLL[0], savePlot, 2);
-    pMap->addLogVar("Nav velLL Y" , &nav_velLL[1], savePlot, 2);
-    pMap->addLogVar("Nav velLL Z" , &nav_velLL[2], savePlot, 2);
+    pMap->addLogVar("Nav velLL X" , &nav_velLL[0], printSavePlot, 3);
+    pMap->addLogVar("Nav velLL Y" , &nav_velLL[1], printSavePlot, 3);
+    pMap->addLogVar("Nav velLL Z" , &nav_velLL[2], printSavePlot, 3);
     
-    pMap->addLogVar("Nav Roll" , &eulerAnglesDeg[0], savePlot, 2);
-    pMap->addLogVar("Nav Pitch", &eulerAnglesDeg[1], savePlot, 2);
-    pMap->addLogVar("Nav Yaw"  , &eulerAnglesDeg[2], savePlot, 2);
-    pMap->addLogVar("Nav Yaw Bias", &yawBiasDeg, savePlot, 2);
+    //pMap->addLogVar("Nav Roll" , &eulerAnglesDeg[0], savePlot, 2);
+    //pMap->addLogVar("Nav Pitch", &eulerAnglesDeg[1], savePlot, 2);
+    //pMap->addLogVar("Nav Yaw"  , &eulerAnglesDeg[2], savePlot, 2);
+    //pMap->addLogVar("Nav Yaw Bias", &yawBiasDeg, printSavePlot, 3);
     
     //pMap->addLogVar("Nav Gravity Body X", &pNavData->gravityBody[0], savePlot, 2);
     //pMap->addLogVar("Nav Gravity Body Y", &pNavData->gravityBody[1], savePlot, 2);
@@ -806,7 +808,12 @@ void setPrintVariables()
     pMap->addLogVar("Baro Update Count", &NavUpdateCounts[BaroUpdate], savePlot, 2);
     pMap->addLogVar("GPS Update Count", &NavUpdateCounts[GPSUpdate], savePlot, 2);
     //pMap->addLogVar("Accel Update Count", &NavUpdateCounts[AccelUpdate], savePlot, 2);
-    pMap->addLogVar("Ground Align Update Count", &NavUpdateCounts[GroundAlign], savePlot, 2);
+    //pMap->addLogVar("Ground Align Update Count", &NavUpdateCounts[GroundAlign], savePlot, 2);
+    
+    pMap->addLogVar("Baro Chi2", &pNavData->chi2value[BaroUpdate], savePlot, 2);
+    pMap->addLogVar("GPS Chi2", &pNavData->chi2value[GPSUpdate], savePlot, 2);
+    pMap->addLogVar("GPS2D Chi2", &pNavData->chi2value[GPSUpdate2D], savePlot, 2);
+    pMap->addLogVar("Ground Align Chi2", &pNavData->chi2value[GroundAlign], savePlot, 2);
     
     //pMap->addLogVar("Baro Skipped Update Count", &NavSkippedUpdates[BaroUpdate], savePlot, 2);
     //pMap->addLogVar("GPS Skipped Update Count", &NavSkippedUpdates[GPSUpdate], savePlot, 2);
@@ -994,29 +1001,29 @@ void setPrintVariables()
     //pMap->addLogVar("P[ATT_Z][VE]", &Cov[ATT_Z][VE], savePlot, 2);
     //pMap->addLogVar("P[ATT_Z][VD]", &Cov[ATT_Z][VD], savePlot, 2);
     
-    pMap->addLogVar("Roll Stdev"    , &navStd[ATT_X][ATT_X], printSavePlot, 3);
+    pMap->addLogVar("Roll Stdev"    , &navStd[ATT_X][ATT_X], savePlot, 2);
     //pMap->addLogVar("Roll 3 Stdev"  , &nav3Std[ATT_X][ATT_X], savePlot, 2);
-    pMap->addLogVar("Pitch Stdev"   , &navStd[ATT_Y][ATT_Y], printSavePlot, 3);
+    pMap->addLogVar("Pitch Stdev"   , &navStd[ATT_Y][ATT_Y], savePlot, 2);
     //pMap->addLogVar("Pitch Stdev Due to Alt"   , &navStd[ATT_Y][ALT], savePlot, 2);
     //pMap->addLogVar("Roll Stdev Due to Alt"   , &navStd[ATT_X][ALT], savePlot, 2);
     //pMap->addLogVar("Yaw Stdev Due to VN"   , &navStd[ATT_Z][VN], savePlot, 2);
     //pMap->addLogVar("Yaw Stdev Due to VE"   , &navStd[ATT_Z][VE], savePlot, 2);
     //pMap->addLogVar("Pitch 3 Stdev" , &nav3Std[ATT_Y][ATT_Y], savePlot, 2);
-    pMap->addLogVar("Yaw Stdev"   , &navStd[ATT_Z][ATT_Z], printSavePlot, 3);
-    pMap->addLogVar("Yaw Bias Stdev"   , &navStd[ATT_Z_BIAS][ATT_Z_BIAS], savePlot, 3);
+    pMap->addLogVar("Yaw Stdev"   , &navStd[ATT_Z][ATT_Z], savePlot, 2);
+    //pMap->addLogVar("Yaw Bias Stdev"   , &navStd[ATT_Z_BIAS][ATT_Z_BIAS], savePlot, 2);
     pMap->addLogVar("VN Stdev"    , &navStd[VN][VN], savePlot, 2);
     pMap->addLogVar("VE Stdev"    , &navStd[VE][VE], savePlot, 2);
     pMap->addLogVar("VD Stdev"    , &navStd[VD][VD], savePlot, 2);
     pMap->addLogVar("N Stdev"    , &navStd[N][N], savePlot, 2);
     pMap->addLogVar("E Stdev"    , &navStd[E][E], savePlot, 2);
     pMap->addLogVar("Alt Stdev"    , &navStd[ALT][ALT], savePlot, 2);
-    pMap->addLogVar("Gravity Stdev"    , &navStd[GRAVITY][GRAVITY], savePlot, 2);
-    pMap->addLogVar("Accel Bias X Stdev"    , &navStd[ABIAS_X][ABIAS_X], savePlot, 2);
-    pMap->addLogVar("Accel Bias Y Stdev"    , &navStd[ABIAS_Y][ABIAS_Y], savePlot, 2);
-    pMap->addLogVar("Accel Bias Z Stdev"    , &navStd[ABIAS_Z][ABIAS_Z], savePlot, 2);
-    pMap->addLogVar("Gyro Bias X Stdev"    , &navStd[GBIAS_X][GBIAS_X], savePlot, 2);
-    pMap->addLogVar("Gyro Bias Y Stdev"    , &navStd[GBIAS_Y][GBIAS_Y], savePlot, 2);
-    pMap->addLogVar("Gyro Bias Z Stdev"    , &navStd[GBIAS_Z][GBIAS_Z], savePlot, 2);
+    //pMap->addLogVar("Gravity Stdev"    , &navStd[GRAVITY][GRAVITY], savePlot, 2);
+    //pMap->addLogVar("Accel Bias X Stdev"    , &navStd[ABIAS_X][ABIAS_X], savePlot, 2);
+    //pMap->addLogVar("Accel Bias Y Stdev"    , &navStd[ABIAS_Y][ABIAS_Y], savePlot, 2);
+    //pMap->addLogVar("Accel Bias Z Stdev"    , &navStd[ABIAS_Z][ABIAS_Z], savePlot, 2);
+    //pMap->addLogVar("Gyro Bias X Stdev"    , &navStd[GBIAS_X][GBIAS_X], savePlot, 2);
+    //pMap->addLogVar("Gyro Bias Y Stdev"    , &navStd[GBIAS_Y][GBIAS_Y], savePlot, 2);
+    //pMap->addLogVar("Gyro Bias Z Stdev"    , &navStd[GBIAS_Z][GBIAS_Z], savePlot, 2);
     
     //pMap->addLogVar("navStd[ATT_X][ATT_Y]", &navStd[ATT_X][ATT_Y], savePlot, 2);
     //pMap->addLogVar("navStd[ATT_X][ATT_Z]", &navStd[ATT_X][ATT_Z], savePlot, 2);
@@ -1134,6 +1141,8 @@ void setPrintVariables()
     //pMap->addLogVar("EKF Accum Pitch Error", &accumStateError[ATT_Y], savePlot, 2);
     //pMap->addLogVar("EKF Accum Yaw Error"  , &accumStateError[ATT_Z], savePlot, 2);
     //pMap->addLogVar("EKF Accum VD Error", &accumStateError[VD], savePlot, 2);
+    //pMap->addLogVar("EKF Accum N Error", &accumStateError[N], savePlot, 2);
+    //pMap->addLogVar("EKF Accum E Error", &accumStateError[E], savePlot, 2);
     //pMap->addLogVar("EKF Accum ALT Error", &accumStateError[ALT], savePlot, 2);
     //pMap->addLogVar("EKF Accum Gyro Bias X Error", &accumStateError[GBIAS_X], savePlot, 2);
     //pMap->addLogVar("EKF Accum Gyro Bias Y Error", &accumStateError[GBIAS_Y], savePlot, 2);
@@ -1161,12 +1170,12 @@ void setPrintVariables()
     //pMap->addLogVar("KB[ABIAS_Y][BARO_ALT]"    , &KB[ABIAS_Y][BARO_ALT], savePlot, 2);
     //pMap->addLogVar("KB[ABIAS_Z][BARO_ALT]"    , &KB[ABIAS_Z][BARO_ALT], savePlot, 2);
     
-    //pMap->addLogVar("GPSResidual[GPS_N]", &GPSResidual[GPS_N], savePlot, 2);
-    //pMap->addLogVar("GPSResidual[GPS_E]", &GPSResidual[GPS_E], savePlot, 2);
-    //pMap->addLogVar("GPSResidual[GPS_ALT]", &GPSResidual[GPS_ALT], savePlot, 2);
-    //pMap->addLogVar("GPSResidual[GPS_VN]", &GPSResidual[GPS_VN], savePlot, 2);
-    //pMap->addLogVar("GPSResidual[GPS_VE]", &GPSResidual[GPS_VE], savePlot, 2);
-    //pMap->addLogVar("GPSResidual[GPS_VD]", &GPSResidual[GPS_VD], savePlot, 2);
+    pMap->addLogVar("GPSResidual[GPS_N]", &GPSResidual[GPS_N], savePlot, 2);
+    pMap->addLogVar("GPSResidual[GPS_E]", &GPSResidual[GPS_E], savePlot, 2);
+    pMap->addLogVar("GPSResidual[GPS_ALT]", &GPSResidual[GPS_ALT], savePlot, 2);
+    pMap->addLogVar("GPSResidual[GPS_VN]", &GPSResidual[GPS_VN], savePlot, 2);
+    pMap->addLogVar("GPSResidual[GPS_VE]", &GPSResidual[GPS_VE], savePlot, 2);
+    pMap->addLogVar("GPSResidual[GPS_VD]", &GPSResidual[GPS_VD], savePlot, 2);
 
     //pMap->addLogVar("GroundResiudal[GROUND_N]", &FsNavigation_getGroundResidual()[GROUND_N], savePlot, 2);
     //pMap->addLogVar("GroundResiudal[GROUND_E]", &FsNavigation_getGroundResidual()[GROUND_E], savePlot, 2);
@@ -1348,7 +1357,7 @@ void setupIO(void)
     
     // Controls
     FsControls_setup();
-    FsControls_setMode(controlMode);
+    if (autoControlModing) { FsControls_setMode(controlMode); }
     
     // Thrust Estimator
     FsThrustEstimator_setup();
@@ -1396,7 +1405,6 @@ void controlsModing()
             FsControls_setMode(controlMode);
         }
     }
-    
 }
 
 void performSerialIO()
@@ -1471,7 +1479,7 @@ void printData()
         anyPrint = true;
     }
     
-    if (printCalibration && pNavData->state != Calibration)
+    if (printCalibration && pNavData->state > Calibration)
     {
         display(getTime());
         display(" ");

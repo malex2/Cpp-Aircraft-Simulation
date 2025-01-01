@@ -33,6 +33,8 @@ bool use_truth_bias = false;
 bool use_truth_attitude = false;
 bool initNEDwithGPS = true;
 
+const char* NavStateStr[NNAVSTATES] = {"Nav_Startup", "Calibration", "INS", "AccelUpdate", "GPSUpdate", "GPSUpdate2D", "GPSUpdateBRG", "BaroUpdate", "GroundAlign"};
+
 // Sensor Errors/Calibration
 SensorErrorType calAccelError[3];
 SensorErrorType calGyroError[3];
@@ -106,6 +108,8 @@ double baroRefAltitude;
 double baroResidual[NBAROSTATES];
 
 double Pcorrection[NSTATES][NSTATES];
+
+bool rejectUpdate;
 
 void FsNavigation_setupNavigation(double *initialPosition, double initialHeading, bool loadIMUCalibration)
 {
@@ -195,7 +199,7 @@ void FsNavigation_setupNavigation(double *initialPosition, double initialHeading
     H_GROUND[GROUND_VN][VN]     = 1.0;
     H_GROUND[GROUND_VE][VE]     = 1.0;
     H_GROUND[GROUND_VD][VD]     = 1.0;
-    H_GROUND[GROUND_YAW][ATT_Z] = 0.0;
+    H_GROUND[GROUND_YAW][ATT_Z] = 1.0;
     
     H_ACCEL[ACCEL_ROLL][ATT_X]  = 1.0;
     H_ACCEL[ACCEL_PITCH][ATT_Y] = 1.0;
@@ -223,6 +227,7 @@ void FsNavigation_setupNavigation(double *initialPosition, double initialHeading
 
     yaw_var_ground_latch = P[ATT_Z][ATT_Z];
     
+    rejectUpdate = false;
 #ifdef SIMULATION
     NavError.gravity = 0.0;
 #endif
@@ -240,8 +245,17 @@ void FsNavigation_performNavigation( double &navDt )
     if (NavData.state != Nav_Startup && NavData.state != INS && NavData.state != Calibration)
     {
         applyCorrections();
-        NavData.updateCount[NavData.state]++;
-        NavData.timestamp_diff[NavData.state] = NavData.sensorTimestamp[NavData.state] - NavData.timestamp;
+        
+        if (rejectUpdate)
+        {
+            NavData.rejectedUpdateCount[NavData.state]++;
+            std::cout << NavStateStr[NavData.state] << " rejected" << std::endl;
+        }
+        else
+        {
+            NavData.updateCount[NavData.state]++;
+            NavData.timestamp_diff[NavData.state] = NavData.sensorTimestamp[NavData.state] - NavData.timestamp;
+        }
         
         if (NavData.updateCount[Calibration] < maxCalCounter)
         {
@@ -385,8 +399,9 @@ void preINSCalculations( double &navDt )
         NavData.stateInputs.dVelocity[i] += NavData.gravityBody[i]*navDt;
         NavData.accelBody[i] = NavData.stateInputs.dVelocity[i]/navDt;
         NavData.bodyRates[i] = NavData.stateInputs.dTheta[i]/navDt;
+        
+        NavData.deltaVelNED[i] += gravityNED[i] * navDt;
     }
-    NavData.deltaVelNED[2] += NavData.gravity*navDt;
     
     NavData.accel_mag = sqrt(NavData.accelBody[0]*NavData.accelBody[0] + NavData.accelBody[1]*NavData.accelBody[1] + NavData.accelBody[2]*NavData.accelBody[2]);
     NavData.rates_mag = sqrt(NavData.bodyRates[0]*NavData.bodyRates[0] + NavData.bodyRates[1]*NavData.bodyRates[1] + NavData.bodyRates[2]*NavData.bodyRates[2]);
@@ -394,23 +409,20 @@ void preINSCalculations( double &navDt )
 
 void performINS( double &navDt )
 {    
-    // Integrate Position (N, E, Alt)
+    // Delta position (N, E, Alt)
     NavData.deltaPosNED[0] = NavData.velNED[0]*navDt + 0.5*NavData.deltaVelNED[0]*navDt;
     NavData.deltaPosNED[1] = NavData.velNED[1]*navDt + 0.5*NavData.deltaVelNED[1]*navDt;
     NavData.deltaPosNED[2] = -NavData.velNED[2]*navDt - 0.5*NavData.deltaVelNED[2]*navDt;
     
-    NavData.position[0] = NavData.position[0] + NavData.velNED[0]*navDt + 0.5*NavData.deltaVelNED[0]*navDt;
-    NavData.position[1] = NavData.position[1] + NavData.velNED[1]*navDt + 0.5*NavData.deltaVelNED[1]*navDt;
-    NavData.position[2] = NavData.position[2] - NavData.velNED[2]*navDt - 0.5*NavData.deltaVelNED[2]*navDt;
-    
-    // height_above_ellipsoid = MSL + geoidHeight
-    NavData.altitude_msl = NavData.position[2] - NavData.geoidCorrection;
-    
-    // Integrate Velocity
+    // Integrate position and velocity
     for (int i=0; i<3; i++)
     {
-        NavData.velNED[i] += NavData.deltaVelNED[i];
+        NavData.position[i] += NavData.deltaPosNED[i];
+        NavData.velNED[i]   += NavData.deltaVelNED[i];
     }
+
+    // height_above_ellipsoid = MSL + geoidHeight
+    NavData.altitude_msl = NavData.position[2] - NavData.geoidCorrection;
 }
 
 void propogateVariance( double &navDt )
@@ -537,6 +549,7 @@ void propogateVariance( double &navDt )
     
     // Update Process Noise
     memset(Q, 0, NSTATES*NSTATES*sizeof(double));
+    
     Q[ATT_X][ATT_X] = imuToNavRateRatio*(gyroCov[X][X] + gyroCov[Y][Y] + gyroCov[Z][Z])*navDt2;
     Q[ATT_Y][ATT_Y] = imuToNavRateRatio*(gyroCov[X][X] + gyroCov[Y][Y] + gyroCov[Z][Z])*navDt2;
     Q[ATT_Z][ATT_Z] = imuToNavRateRatio*(gyroCov[X][X] + gyroCov[Y][Y] + gyroCov[Z][Z])*navDt2;
@@ -553,51 +566,55 @@ void propogateVariance( double &navDt )
 
 void applyCorrections()
 {
+    rejectUpdate = false;
     if (NavData.state == BaroUpdate)
     {
-        filterUpdate(baroResidual, *R_BARO, *H_BARO, *K_BARO, NBAROSTATES);
+        filterUpdate(baroResidual, *R_BARO, *H_BARO, *K_BARO, &NavData.chi2value[NavData.state], NBAROSTATES);
     }
     else if (NavData.state == GPSUpdate)
     {
-        filterUpdate(gpsResidual, *R_GPS, *H_GPS, *K_GPS, NGPSSTATES);
+        filterUpdate(gpsResidual, *R_GPS, *H_GPS, *K_GPS, &NavData.chi2value[NavData.state], NGPSSTATES);
     }
     else if (NavData.state == GPSUpdate2D)
     {
-        filterUpdate(gpsResidual2D, *R_GPS2D, *H_GPS2D, *K_GPS2D, N2DGPSSTATES);
+        filterUpdate(gpsResidual2D, *R_GPS2D, *H_GPS2D, *K_GPS2D, &NavData.chi2value[NavData.state], N2DGPSSTATES);
     }
     else if (NavData.state == AccelUpdate)
     {
-        filterUpdate(accelResidual, *R_ACCEL, *H_ACCEL, *K_ACCEL, NACCELSTATES);
+        filterUpdate(accelResidual, *R_ACCEL, *H_ACCEL, *K_ACCEL, &NavData.chi2value[NavData.state], NACCELSTATES);
     }
     else if (NavData.state == GroundAlign)
     {
-        filterUpdate(groundResidual, *R_GROUND, *H_GROUND, *K_GROUND, NGROUNDSTATES);
+        filterUpdate(groundResidual, *R_GROUND, *H_GROUND, *K_GROUND, &NavData.chi2value[NavData.state], NGROUNDSTATES);
     }
 
-    NavData.velNED[0] += stateError[VN];
-    NavData.velNED[1] += stateError[VE];
-    NavData.velNED[2] += stateError[VD];
-    
-    NavData.position[0] += stateError[N];
-    NavData.position[1] += stateError[E];
-    NavData.position[2] += stateError[ALT];
-
-    NavData.eulerAngles[0] += stateError[ATT_X];
-    NavData.eulerAngles[1] += stateError[ATT_Y];
-    NavData.eulerAngles[2] += stateError[ATT_Z];
-    updateQuaternions();
-
-    NavData.yaw_bias += stateError[ATT_Z_BIAS];
-    
-    NavData.gyroBias[0] += stateError[GBIAS_X];
-    NavData.gyroBias[1] += stateError[GBIAS_Y];
-    NavData.gyroBias[2] += stateError[GBIAS_Z];
-    
-    NavData.accBias[0] += stateError[ABIAS_X];
-    NavData.accBias[1] += stateError[ABIAS_Y];
-    NavData.accBias[2] += stateError[ABIAS_Z];
-    
-    NavData.gravityBias += stateError[GRAVITY];
+    if (!rejectUpdate)
+    {
+        NavData.velNED[0] += stateError[VN];
+        NavData.velNED[1] += stateError[VE];
+        NavData.velNED[2] += stateError[VD];
+        
+        NavData.position[0] += stateError[N];
+        NavData.position[1] += stateError[E];
+        NavData.position[2] += stateError[ALT];
+        
+        NavData.eulerAngles[0] += stateError[ATT_X];
+        NavData.eulerAngles[1] += stateError[ATT_Y];
+        NavData.eulerAngles[2] += stateError[ATT_Z];
+        updateQuaternions();
+        
+        NavData.yaw_bias += stateError[ATT_Z_BIAS];
+        
+        NavData.gyroBias[0] += stateError[GBIAS_X];
+        NavData.gyroBias[1] += stateError[GBIAS_Y];
+        NavData.gyroBias[2] += stateError[GBIAS_Z];
+        
+        NavData.accBias[0] += stateError[ABIAS_X];
+        NavData.accBias[1] += stateError[ABIAS_Y];
+        NavData.accBias[2] += stateError[ABIAS_Z];
+        
+        NavData.gravityBias += stateError[GRAVITY];
+    }
     
     for (int i = 0; i < NSTATES; i++)
     {
@@ -607,7 +624,7 @@ void applyCorrections()
     }
 }
 
-void filterUpdate(double* residual, double* R, double* H, double* K, int nMeas)
+void filterUpdate(double* residual, double* R, double* H, double* K, double* chi2val, int nMeas)
 {
     double HT[NSTATES][nMeas];
     double P_HT[NSTATES][nMeas];
@@ -615,7 +632,7 @@ void filterUpdate(double* residual, double* R, double* H, double* K, int nMeas)
     double H_P_HT_R[nMeas][nMeas];
     double inv_H_P_HT_R[nMeas][nMeas];
     double HT_inv_H_P_HT_R[NSTATES][nMeas];
-    
+    double inv_H_P_HT_R_r[nMeas];
     double K_H[NSTATES][NSTATES];
     double diagOnes_K_H[NSTATES][NSTATES];
     double Pprev[NSTATES][NSTATES];
@@ -634,24 +651,36 @@ void filterUpdate(double* residual, double* R, double* H, double* K, int nMeas)
     math_mmult(*H_P_HT, H, nMeas, NSTATES, *P_HT, NSTATES, nMeas);
     math_madd(*H_P_HT_R, *H_P_HT, R, nMeas, nMeas);
     math_minv(*inv_H_P_HT_R, *H_P_HT_R, nMeas);
+    
+    // innovRatio = r' * inv_H_P_HT_R * r
+    math_mmult(inv_H_P_HT_R_r, *inv_H_P_HT_R, residual, nMeas, nMeas);
+    *chi2val = math_dotproduct(residual, inv_H_P_HT_R_r, nMeas);
+    if (nMeas <= n_chi2limit)
+    {
+        rejectUpdate = *chi2val > chi2limit_95[nMeas-1];
+    }
+    
     math_mmult(*HT_inv_H_P_HT_R, *HT, NSTATES, nMeas, *inv_H_P_HT_R, nMeas, nMeas);
     math_mmult(K, *P, NSTATES, NSTATES, *HT_inv_H_P_HT_R, NSTATES, nMeas);
-
-    //    10x1    =  10x6  *   6x1
-    // stateError = K * Residual
-    math_mmult(stateError, K, residual, NSTATES, nMeas);
     
-    //10x10 = (10x10 -  10x6  *  6x10 ) * 10x10
-    // P    =  (  I  - K * H) *   P
-    math_mmult(*K_H, K, NSTATES, nMeas, H, nMeas, NSTATES);
-    math_msubtract(*diagOnes_K_H, *diagOnes, *K_H, NSTATES, NSTATES);
-    math_mmult(*P, *diagOnes_K_H, NSTATES, NSTATES, *Pprev, NSTATES, NSTATES);
-    
-    for (int i = 0; i < NSTATES; i++)
+    if (!rejectUpdate)
     {
-        for (int j = 0; j < NSTATES; j++)
+        //    10x1    =  10x6  *   6x1
+        // stateError = K * Residual
+        math_mmult(stateError, K, residual, NSTATES, nMeas);
+        
+        //10x10 = (10x10 -  10x6  *  6x10 ) * 10x10
+        // P    =  (  I  - K * H) *   P
+        math_mmult(*K_H, K, NSTATES, nMeas, H, nMeas, NSTATES);
+        math_msubtract(*diagOnes_K_H, *diagOnes, *K_H, NSTATES, NSTATES);
+        math_mmult(*P, *diagOnes_K_H, NSTATES, NSTATES, *Pprev, NSTATES, NSTATES);
+        
+        for (int i = 0; i < NSTATES; i++)
         {
-            Pcorrection[i][j] = -K_H[i][j];
+            for (int j = 0; j < NSTATES; j++)
+            {
+                Pcorrection[i][j] = -K_H[i][j];
+            }
         }
     }
 }
@@ -769,7 +798,7 @@ void FsNavigation_performGPSUpdate(const GpsType* gpsData)
     if (gpsData->positionValid && gpsData->velocityValid)
     {
         double horizPosVar = errorToVariance(gpsData->horizPosAcc);
-        double vertPosVar  = errorToVariance(gpsData->vertPosAcc);
+        double vertPosVar  = errorToVariance(3.0*gpsData->vertPosAcc);
         double speedVar    = errorToVariance(gpsData->speedAcc);
         
         double cyb = cos(NavData.yaw_bias);
@@ -800,8 +829,13 @@ void FsNavigation_performGPSUpdate(const GpsType* gpsData)
                 
                 // Print
                 double nav_yaw = NavData.eulerAngles[2] + bearing_error;
-                double yaw_truth = truthNavData.eulerAngles[2];
                 if (nav_yaw < 0) { nav_yaw += 2.0*M_PI; }
+                
+#ifdef SIMULATION
+                double yaw_truth = truthNavData.eulerAngles[2];
+#else
+                double yaw_truth = 0.0;
+#endif
                 if (yaw_truth < 0) { yaw_truth += 2.0*M_PI; }
                 
                 display("Yaw [Truth, Est, Std, Bias] = [");
@@ -845,10 +879,10 @@ void FsNavigation_performGPSUpdate(const GpsType* gpsData)
             R_GPS2D[GPS2D_VN][GPS2D_VN] = speedVar;
             R_GPS2D[GPS2D_VE][GPS2D_VE] = speedVar;
             
-            gpsResidual2D[GPS2D_N]  = gpsData->posENU[1] - NavData.position[0];
-            gpsResidual2D[GPS2D_E]  = gpsData->posENU[0] - NavData.position[1];
-            gpsResidual2D[GPS2D_VN] = gpsData->velNED[0] - NavData.velNED[0];
-            gpsResidual2D[GPS2D_VE] = gpsData->velNED[1] - NavData.velNED[1];
+            gpsResidual2D[GPS2D_N]  = gpsData->posENU[1] - (cyb*NavData.position[0] - syb*NavData.position[1]);
+            gpsResidual2D[GPS2D_E]  = gpsData->posENU[0] - (syb*NavData.position[0] + cyb*NavData.position[1]);
+            gpsResidual2D[GPS2D_VN] = gpsData->velNED[0] - (cyb*NavData.velNED[0] - syb*NavData.velNED[1]);
+            gpsResidual2D[GPS2D_VE] = gpsData->velNED[1] - (syb*NavData.velNED[0] + cyb*NavData.velNED[1]);
             
             NavData.state = GPSUpdate2D;
         }
@@ -1191,11 +1225,7 @@ void FsNavigation_setIMUdata(const IMUtype* pIMUdataIn)
 }
 
 void FsNavigation_setNED(const double* position, const double* velNED, double heading, bool bypassInitFlag)
-{
-    std::cout << "FsNavigation_setNED() = Before [" << NavData.eulerAngles[0] * radian2degree;
-    std::cout << ", " << NavData.eulerAngles[1] * radian2degree;
-    std::cout << ", " << NavData.eulerAngles[2] * radian2degree << "]" << std::endl;
-    
+{    
     // Update position and velocity
     for (int i=0; i<3; i++)
     {
@@ -1205,10 +1235,6 @@ void FsNavigation_setNED(const double* position, const double* velNED, double he
     
     NavData.eulerAngles[2] = heading;
     updateQuaternions();
-    
-    std::cout << "FsNavigation_setNED() = After [" << NavData.eulerAngles[0] * radian2degree;
-    std::cout << ", " << NavData.eulerAngles[1] * radian2degree;
-    std::cout << ", " << NavData.eulerAngles[2] * radian2degree << "]" << std::endl;
     
     if (!bypassInitFlag)
     {
@@ -1229,10 +1255,10 @@ void FsNavigation_setGroundFlags(bool onGround, bool movingDetection)
         
         yaw_var_ground_latch = P[ATT_Z][ATT_Z];
         yaw_ground_latch = NavData.eulerAngles[2];
-        if (sqrt(yaw_var_ground_latch) < YAWSTDLIM)
-        {
-            H_GROUND[GROUND_YAW][ATT_Z] = 1.0;
-        }
+        //if (sqrt(yaw_var_ground_latch) < YAWSTDLIM)
+        //{
+        //    H_GROUND[GROUND_YAW][ATT_Z] = 1.0;
+        //}
     }
     
     groundFlag = onGround;
@@ -1480,6 +1506,16 @@ inline void unitVector(double* vector, int n)
     }
 }
 
+double math_dotproduct(double *x1, double *x2, int n)
+{
+    double result = 0.0;
+    for (int i=0; i<n; i++)
+    {
+        result += x1[i] * x2[i];
+    }
+    return result;
+}
+
 // Math
 void math_mgain(double *result, double *matrix, double gain, int nrow, int ncol)
 {
@@ -1627,7 +1663,7 @@ void math_LUdecomp(double *x, double *A, double *b, int n)
     for(int i=0;i<n;i++){
         L[i][0] = *(A+i*n+0); //L[i][0] = A[i][0]
         U[i][i] = 1.0; // U diagonals = 1
-        if(i > 0) {
+        if(i > 0){
             U[0][i] = *(A+0*n+i)/L[0][0]; // U[0][i] = A[0][i]/L[0][0]
         }
     }

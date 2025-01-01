@@ -207,24 +207,24 @@ private:
  
     // Adeline
     // Fix = 2, [horiz, vert] = [15-30, 65]
-    static const int GPSFixLength  = 3;
-    int GPSFixTimes[GPSFixLength]  = {0, 5, 80};
-    int GPSFixValues[GPSFixLength] = {0, 3, 3};
+    static const int GPSFixLength  = 4;
+    int GPSFixTimes[GPSFixLength]  = {0, 5, 80, 120};
+    int GPSFixValues[GPSFixLength] = {0, 3, 3 , 3};
     LookupTable<int> GPSFixLookup;
     
     static const int HorizAccLength = 3;
     double HorizAccTimes[HorizAccLength]  = {0.0, 20.0, 300.0};
-    double HorizAccValues[HorizAccLength] = {12.0, 2.0, 0.5};
+    double HorizAccValues[HorizAccLength] = {12.0, 12.0, 3.0};
     LookupTable<double> HorizAccLookup;
     
     static const int VertAccLength = 3;
     double VertAccTimes[VertAccLength]  = {0.0, 200.0, 300.0};
-    double VertAccValues[VertAccLength] = {15.0, 5.0, 1.0};
+    double VertAccValues[VertAccLength] = {15.0, 15.0, 5.0};
     LookupTable<double> VertAccLookup;
     
     static const int VelAccLength = 3;
     double VelAccTimes[VelAccLength]  = {0.0, 200.0, 300.0};
-    double VelAccValues[VelAccLength] = {1.5, 0.5, 0.1};
+    double VelAccValues[VelAccLength] = {2.5, 2.5, 0.5};
     LookupTable<double> VelAccLookup;
     
     virtual void updatePositionError();

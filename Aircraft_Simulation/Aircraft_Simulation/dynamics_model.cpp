@@ -33,10 +33,10 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("posECEF Y", &posECEF[1], savePlot, 2);
     //pMap->addLogVar("posECEF Z", &posECEF[2], savePlot, 2);
     
-    pMap->addLogVar("N (m)", &posNED[0], savePlot, 2);
-    pMap->addLogVar("E (m)", &posNED[1], savePlot, 2);
+    //pMap->addLogVar("N (m)", &posNED[0], savePlot, 2);
+    //pMap->addLogVar("E (m)", &posNED[1], savePlot, 2);
     //pMap->addLogVar("D (m)", &posNED[2], printSavePlot, 2);
-    pMap->addLogVar("gOrg", &posAboveOrigin, printSavePlot, 3);
+    //pMap->addLogVar("gOrg", &posAboveOrigin, printSavePlot, 3);
     pMap->addLogVar("gndAlt", &hGround, savePlot, 2);
     
     //pMap->addLogVar("speed", &velMag, savePlot, 2);
@@ -50,20 +50,20 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("VbY  ", &velBody[1], savePlot, 2);
     //pMap->addLogVar("VbZ  ", &velBody[2], savePlot, 3);
     
-    pMap->addLogVar("VN  ", &velNED[0], savePlot, 2);
-    pMap->addLogVar("VE  ", &velNED[1], savePlot, 2);
-    pMap->addLogVar("VD  ", &velNED[2], savePlot, 2);
+    //pMap->addLogVar("VN  ", &velNED[0], savePlot, 2);
+    //pMap->addLogVar("VE  ", &velNED[1], savePlot, 2);
+    //pMap->addLogVar("VD  ", &velNED[2], savePlot, 2);
     
     pMap->addLogVar("velLL X  ", &velLL[0], savePlot, 2);
     pMap->addLogVar("velLL Y  ", &velLL[1], savePlot, 2);
-    //pMap->addLogVar("velLL Z  ", &velLL[2], savePlot, 2);
+    pMap->addLogVar("velLL Z  ", &velLL[2], savePlot, 2);
     
     //pMap->addLogVar("pdot", &bodyAngularAcc[0], printSavePlot, 3);
     //pMap->addLogVar("qdot", &bodyAngularAcc[1], savePlot, 2);
     //pMap->addLogVar("rdot", &bodyAngularAcc[2], printSavePlot, 3);
     
-    pMap->addLogVar("p", &bodyRatesDeg[0], savePlot, 2);
-    pMap->addLogVar("q", &bodyRatesDeg[1], savePlot, 2);
+    //pMap->addLogVar("p", &bodyRatesDeg[0], savePlot, 2);
+    //pMap->addLogVar("q", &bodyRatesDeg[1], savePlot, 2);
     pMap->addLogVar("r", &bodyRatesDeg[2], savePlot, 2);
     
     //pMap->addLogVar("deltaTheta[0]", &deltaThetaDeg[0], savePlot, 2);

@@ -27,6 +27,11 @@ enum GPS2DMeasurementType {GPS2D_N, GPS2D_E, GPS2D_VN, GPS2D_VE, N2DGPSSTATES};
 
 enum BAROMeasurementType {BARO_ALT, NBAROSTATES};
 
+const unsigned int n_chi2limit = 10;
+const double chi2limit_95[n_chi2limit]   = {3.841, 5.991, 7.815, 9.488, 11.070, 12.592, 14.067, 15.507, 16.919, 18.307};
+const double chi2limit_99[n_chi2limit]   = {6.635, 9.210, 11.345, 13.277, 15.086, 16.812, 18.475, 20.090, 21.666, 23.209};
+const double chi2limit_99_5[n_chi2limit] = {7.879, 10.597, 12.838, 14.860, 16.750, 18.548, 20.278, 21.955, 23.589, 25.188};
+
 struct StateInputType {
     double dTheta[3];
     double dVelocity[3];
@@ -71,8 +76,10 @@ struct NavType {
     NavState     state;
     double       timestamp;
     double       imuTimestamp;
+    double       chi2value[NNAVSTATES];
     unsigned int updateCount[NNAVSTATES];
     unsigned int skippedUpdateCount[NNAVSTATES];
+    unsigned int rejectedUpdateCount[NNAVSTATES];
     double       sensorTimestamp[NNAVSTATES];
     double       timestamp_diff[NNAVSTATES];
     
@@ -133,7 +140,7 @@ void propogateVariance( double &navDt );
 void applyCorrections();
 
 // Filter Updates
-void filterUpdate(double* residual, double* R, double* H, double* K, int nMeas);
+void filterUpdate(double* residual, double* R, double* H, double* K, double* chi2val, int nMeas);
 void FsNavigation_performAccelerometerUpdate(bool performUpdate);
 void FsNavigation_performGPSUpdate(const GpsType* gpsData);
 void FsNavigation_performBarometerUpdate(const BarometerType* baroData);
@@ -192,6 +199,7 @@ inline void updateQuaternions();
 
 // Math
 inline void unitVector(double* vector, int n);
+double math_dotproduct(double *x1, double *x2, int n);
 void math_mgain(double *result, double *matrix, double gain, int nrow, int ncol);
 void math_madd(double *result, double *A, double *B, int nrows, int ncols);
 void math_msubtract(double *result, double *A, double *B, int nrows, int ncols);
