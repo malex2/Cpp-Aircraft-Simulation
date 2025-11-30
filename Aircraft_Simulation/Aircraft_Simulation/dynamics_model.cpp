@@ -62,8 +62,8 @@ DynamicsModel::DynamicsModel(ModelMap *pMapInit, bool debugFlagIn)
     //pMap->addLogVar("qdot", &bodyAngularAcc[1], savePlot, 2);
     //pMap->addLogVar("rdot", &bodyAngularAcc[2], printSavePlot, 3);
     
-    //pMap->addLogVar("p", &bodyRatesDeg[0], savePlot, 2);
-    //pMap->addLogVar("q", &bodyRatesDeg[1], savePlot, 2);
+    pMap->addLogVar("p", &bodyRatesDeg[0], savePlot, 2);
+    pMap->addLogVar("q", &bodyRatesDeg[1], savePlot, 2);
     pMap->addLogVar("r", &bodyRatesDeg[2], savePlot, 2);
     
     //pMap->addLogVar("deltaTheta[0]", &deltaThetaDeg[0], savePlot, 2);

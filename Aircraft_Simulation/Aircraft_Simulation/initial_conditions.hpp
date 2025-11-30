@@ -22,12 +22,12 @@
 //#define RealTime
 
 // Ground Slopes
-#define STEEP_GROUND
+//#define STEEP_GROUND
 //#define SHALLOW_GROUND
-//#define FLAT_GROUND
+#define FLAT_GROUND
 
 // Time
-const double runTime_init          = 550;
+const double runTime_init          = 30;
 const double printInterval_init    = 5.0;
 const double saveInterval_init     = 0.5;
 const double dynamicsInterval_init = 1.0/800.0;

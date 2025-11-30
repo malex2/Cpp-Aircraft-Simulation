@@ -208,7 +208,7 @@ private:
     // Adeline
     // Fix = 2, [horiz, vert] = [15-30, 65]
     static const int GPSFixLength  = 4;
-    int GPSFixTimes[GPSFixLength]  = {0, 5, 80, 120};
+    int GPSFixTimes[GPSFixLength]  = {0, 60, 80, 120};
     int GPSFixValues[GPSFixLength] = {0, 3, 3 , 3};
     LookupTable<int> GPSFixLookup;
     
