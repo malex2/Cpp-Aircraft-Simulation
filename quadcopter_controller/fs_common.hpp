@@ -19,7 +19,7 @@
 #define BAROMETER
 #define PWM
 #define CONTROLS
-#define THRUST_ESTIMATOR
+//#define THRUST_ESTIMATOR
 #define GROUND_DETECTION
 #define NAVIGATION
 //#define TELEMETRY
@@ -343,13 +343,14 @@ struct SensorErrorType {
 // Classes
 class FS_FIFO {
 public:
-    FS_FIFO();
-    FS_FIFO(FS_Serial* serialIO);
-    FS_FIFO(RF24* tmIO);
+    FS_FIFO(const char* name="");
+    FS_FIFO(FS_Serial* serialIO, const char* name="");
+    FS_FIFO(RF24* tmIO, const char* name="");
     ~FS_FIFO();
     
     void begin(uint32_t baud_rate);
     void end();
+    void set_kwrite(double kwrite);
     
     // Update
     void update_fifo();
@@ -378,6 +379,8 @@ public:
     void display_read_buffer();
     void display_write_buffer();
 private:
+    const char* fifo_name;
+    
     bool baud_begin;
     
     byte read_val;
@@ -395,6 +398,7 @@ private:
     unsigned short  max_write_buffer_length;
     double baud_dt;
     double prevWriteTime;
+    double kwrite;
     unsigned long write_fifo_overflow_count;
     unsigned long write_buffer_overflow_count;
     
@@ -439,7 +443,6 @@ bool FsCommon_checkChecksum(uint16_t buffer_checksum, const void* data, unsigned
 
 // Groups of 32 bytes, 8 bytes each
 // uint32_t for large types
-// uint16_t
 // byte or char for flags
 // 59 x 32 bits = 1888 bits = 236 (bytes)
 #define TM_HEADER              0xA0

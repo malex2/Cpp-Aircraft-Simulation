@@ -201,7 +201,6 @@ void FsBarometer_performBarometer()
     {
         readPres();
         
-        
         baroData.baroGood = (baroData.errorCodeBaro == I2C_0_SUCCESS) & temp_valid & pressure_valid;
         
         // Average reference pressure

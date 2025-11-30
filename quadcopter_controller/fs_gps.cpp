@@ -30,7 +30,7 @@ double ref_slat;
 double ref_clat;
 
 #define gpsIO Serial1 // [RX,TX] = [0,1]
-FS_FIFO gpsFIFO(&gpsIO);
+FS_FIFO gpsFIFO(&gpsIO, "GPS");
 UBX_MSG ubx_msg(&gpsFIFO);
 
 unsigned long n_gps_msgs[UBX_MSG_TYPES::NUBXCLASSES][UBX_MSG_TYPES::NUBXIDS];

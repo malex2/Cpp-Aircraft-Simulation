@@ -10,7 +10,7 @@
 #define ground_station_hpp
 
 #define GROUND_STATION_SIMULATION
-//#define PRINT_TM
+#define PRINT_TM
 
 //#define PRINT_ANALOG0
 //#define PRINT_ANALOG1
@@ -24,11 +24,13 @@
 #ifndef pinMode
    #define pinMode GS_pins.pinMode
    #define digitalWrite GS_pins.digitalWrite
+   #define AltSoftSerial SoftwareSerial
 #endif
 
 #else
    #include "arduino.h"
    #include <SoftwareSerial.h>
+   #include <AltSoftSerial.h>
    //#include <SPI.h>
    //#include <nRF24L01.h>
    //#include <RF24.h>
@@ -46,8 +48,8 @@
 // Telemetry Pins
 #define TELEMETRY_RADIO_RXPIN  4 // Rcv Bluetooth msgs, connect to Telemetry TX
 #define TELEMETRY_RADIO_TXPIN  5 // Txmit Bluetooth msgs, connect to Telemetry RX
-#define TELEMETRY_RADIO_ENPIN  7 // APC220 - Set high to enable
-#define TELEMETRY_RADIO_SETPIN 8 // APC220 - Set low to go into settings mode
+#define TELEMETRY_RADIO_ENPIN  6 // APC220 - Set high to enable
+#define TELEMETRY_RADIO_SETPIN 7 // APC220 - Set low to go into settings mode
 
 // Telemetry Values
 #define APC220_GSFK_RATE 10

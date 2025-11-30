@@ -25,8 +25,8 @@ GPSModelBase::GPSModelBase(ModelMap *pMapInit, bool debugFlagIn)
     pMap = pMapInit;
     debugFlag = debugFlagIn;
    
-    pMap->addLogVar("gps_velN", &gps_velNED[0], savePlot, 2);
-    pMap->addLogVar("gps_velE", &gps_velNED[1], savePlot, 2);
+    //pMap->addLogVar("gps_velN", &gps_velNED[0], savePlot, 2);
+    //pMap->addLogVar("gps_velE", &gps_velNED[1], savePlot, 2);
     //pMap->addLogVar("gps_velD", &gps_velNED[2], savePlot, 2);
     //pMap->addLogVar("gps_speed", &gps_speed, savePlot, 2);
     //pMap->addLogVar("gps_groundSpeed", &gps_groundSpeed, savePlot, 2);

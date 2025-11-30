@@ -35,7 +35,7 @@ struct ThrustEstimatorType {
 void FsThrustEstimator_setup();
 
 // Perform
-void FsThrustEstimator_rpmUpdate(double &dt);
+void rpmUpdate(double &dt);
 void FsThrustEstimator_perform(double &dt);
 void thrust_update();
 void state_update(double &dt);

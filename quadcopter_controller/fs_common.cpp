@@ -60,8 +60,9 @@ uint16_t TWO_BYTE_DATA::value()
     return val;
 }
 
-FS_FIFO::FS_FIFO()
+FS_FIFO::FS_FIFO(const char* name)
 {
+    fifo_name = name;
     serialIO = nullptr;
     nrf24L01 = nullptr;
     baud_begin = false;
@@ -69,6 +70,7 @@ FS_FIFO::FS_FIFO()
     write_byte_count = 0.0;
     prevWriteTime = 0.0;
     baud_dt       = 0.0;
+    kwrite        = 1.0;
     max_read_buffer_length    = 0;
     read_fifo_overflow_count  = 0;
     write_fifo_overflow_count = 0;
@@ -79,8 +81,9 @@ FS_FIFO::FS_FIFO()
     memset(temp_nrf24L01_buffer, 0, NRF24L01_BUFFER_SIZE);
 }
 
-FS_FIFO::FS_FIFO(FS_Serial* serialIO)
+FS_FIFO::FS_FIFO(FS_Serial* serialIO, const char* name)
 {
+    fifo_name = name;
     this->serialIO  = serialIO;
     nrf24L01 = nullptr;
     baud_begin = false;
@@ -88,6 +91,7 @@ FS_FIFO::FS_FIFO(FS_Serial* serialIO)
     write_byte_count = 0.0;
     prevWriteTime = 0.0;
     baud_dt       = 0.0;
+    kwrite        = 1.0;
     max_read_buffer_length    = 0;
     read_fifo_overflow_count  = 0;
     write_fifo_overflow_count = 0;
@@ -98,8 +102,9 @@ FS_FIFO::FS_FIFO(FS_Serial* serialIO)
     memset(temp_nrf24L01_buffer, 0, NRF24L01_BUFFER_SIZE);
 }
 
-FS_FIFO::FS_FIFO(RF24* tmIO)
+FS_FIFO::FS_FIFO(RF24* tmIO, const char* name)
 {
+    fifo_name = name;
     serialIO = nullptr;
     nrf24L01 = tmIO;
     baud_begin = false;
@@ -107,6 +112,7 @@ FS_FIFO::FS_FIFO(RF24* tmIO)
     write_byte_count = 0.0;
     prevWriteTime = 0.0;
     baud_dt       = 0.0;
+    kwrite        = 1.0;
     max_read_buffer_length    = 0;
     read_fifo_overflow_count  = 0;
     write_fifo_overflow_count = 0;
@@ -132,9 +138,17 @@ void FS_FIFO::begin(uint32_t baud_rate)
     {
         nrf24L01->begin();
     }
-    this->baud_dt = 1.0/baud_rate;
+    if (baud_rate != 0.0)
+    {
+        baud_dt = 1.0/baud_rate;
+    }
     prevWriteTime = getTime();
     baud_begin = true;
+}
+
+void FS_FIFO::set_kwrite(double kwrite)
+{
+    this->kwrite = kwrite;
 }
 
 void FS_FIFO::end()
@@ -177,9 +191,15 @@ void FS_FIFO::update_fifo()
         }
     
         // Write to SerialIO
-        //if (write_available() &&  getTime() - prevWriteTime >= baud_dt)
-        while (write_available() && serialIO->availableForWrite())
+        if (write_available() &&  ((getTime() - prevWriteTime) >= kwrite*baud_dt))
+        //while (write_available() && serialIO->availableForWrite())
         {
+            /*
+            if (strcmp(fifo_name, "TM") == 0)
+            {
+                Serial.print("w"); Serial.print(": "); Serial.println(write_buffer[write_buffer_index]);
+            }
+            */
             int n_write = serialIO->write(write_buffer[write_buffer_index]);
             write_buffer_index++;
             write_byte_count++;
@@ -203,7 +223,7 @@ void FS_FIFO::update_fifo()
         }
 
         // Write to NRF24L01
-        if (write_available() &&  getTime() - prevWriteTime >= baud_dt)
+        if (write_available() &&  ((getTime() - prevWriteTime) >= kwrite*baud_dt))
         {
             unsigned int write_length = write_buffer_length - write_buffer_index;
             if (write_length > NRF24L01_BUFFER_SIZE) { write_length = NRF24L01_BUFFER_SIZE; }
@@ -278,10 +298,12 @@ unsigned short FS_FIFO::write(byte write_val)
 {
     if (!write_fifo_full())
     {
-        //std::cout << "FS_FIFO write(): write_buffer[" << write_buffer_length << "] = ";
-        //std::cout << std::hex << std::setfill('0') << std::setw(2) << +write_val;
-        //std::cout << std::dec << std::endl;
-        
+        /*
+        if (strcmp(fifo_name, "TM") == 0)
+        {
+            Serial.print("wb"); Serial.print(": "); Serial.println(write_val);
+        }
+        */
         write_buffer[write_buffer_length] = write_val;
         write_buffer_length++;
         if (write_buffer_length > max_write_buffer_length) { max_write_buffer_length = write_buffer_length; }
@@ -463,7 +485,7 @@ void LEDoff()
 }
 
 // Printing
-FS_FIFO FS_print_fifo;
+FS_FIFO FS_print_fifo("PRINT");
 void display(const char* val, int printMode)
 {
 #ifdef TM_PRINT

@@ -68,7 +68,7 @@ void FsThrustEstimator_setup()
 }
 
 // Perform
-void FsThrustEstimator_rpmUpdate(double &dt)
+void rpmUpdate(double &dt)
 {
 #ifdef THRUST_ESTIMATOR
     if (thrustEstimateData.tau_est != 0.0) { A = exp(-dt/thrustEstimateData.tau_est); }
@@ -94,7 +94,7 @@ void FsThrustEstimator_perform(double &dt)
     }
     if (!ThrustEstimator_setup) { return; }
     
-    // note: call FsThrustEstimator_rpmUpdate() first
+    rpmUpdate(dt);
     update_variables();
     thrust_update();
     state_update(dt);

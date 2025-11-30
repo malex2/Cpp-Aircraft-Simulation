@@ -191,25 +191,25 @@ void initialize(void)
 
     // Print Settings
 #ifdef PRINT
-    printTiming        = false;
-    printIMU           = false;
-    printCalibration   = false;
-    printCalibratedIMU = false;
-    printBarometer     = false;
-    printGPS           = true;
-    printGPS_DOP       = false;
-    printNavInputs     = false;
-    printAngles        = false;
-    printVelocity      = false;
-    printPosition      = false;
-    printNavVariance   = false;
+    printTiming         = false;
+    printIMU            = false;
+    printCalibration    = false;
+    printCalibratedIMU  = false;
+    printBarometer      = false;
+    printGPS            = true;
+    printGPS_DOP        = false;
+    printNavInputs      = false;
+    printAngles         = false;
+    printVelocity       = false;
+    printPosition       = false;
+    printNavVariance    = false;
     printAccelFilter    = false;
     printNavFilterCount = false;
-    printPWMIn         = false;
-    printCommands      = false;
-    printMotorPWM      = false;
-    printTakeOff       = false;
-    printTelemetry     = false;
+    printPWMIn          = false;
+    printCommands       = false;
+    printMotorPWM       = false;
+    printTakeOff        = false;
+    printTelemetry      = false;
 #endif
     
     // General Settings
@@ -229,7 +229,7 @@ void initialize(void)
     initialPosition[1] = 0.0; // East     (m)
     initialPosition[2] = 0.0; // Altitude (m)
     initialHeading     = 0.0;
-    useAccelPitchRoll        = false;
+    useAccelPitchRoll        = true;
     groundAlign              = true;
     loadIMUCalibration       = false;
     Nav_velocity_corrections = false;
@@ -248,16 +248,16 @@ void initialize(void)
     // Telemetry
     // Note: Rates must be divisible by 600
     TMBaudRate = 9600;
-    configTM   = false;
+    configTM   = true;
     
     TM_MSG_Rates[FS_TM_IMU]          = 0.0;
     TM_MSG_Rates[FS_TM_BARO]         = 0.0;
-    TM_MSG_Rates[FS_TM_GPS]          = 1.0;
+    TM_MSG_Rates[FS_TM_GPS]          = 0.0;
     TM_MSG_Rates[FS_TM_NAV_HIGHRATE] = 0.0;
     TM_MSG_Rates[FS_TM_NAV_LOWRATE]  = 0.0;
     TM_MSG_Rates[FS_TM_CONTROLS]     = 0.0;
-    TM_MSG_Rates[FS_TM_STATUS]       = 0.5;
-    TM_MSG_Rates[FS_PRINT]           = 0.0;
+    TM_MSG_Rates[FS_TM_STATUS]       = 0.0;
+    TM_MSG_Rates[FS_PRINT]           = 1.0;
     for (unsigned int tm_id = FS_TM_IMU; tm_id < N_TM_MSGS; tm_id++ )
     { TM_MSG_Counts[tm_id] = 0;}
     
@@ -321,6 +321,7 @@ bool mainFlightSoftware(void)
             {
                 TM_MSG_Counts[tm_id]++;
                 if (TM_MSG_Rates[tm_id] != 0 && TM_MSG_Counts[tm_id] >= 800/TM_MSG_Rates[tm_id])
+                //if (TM_MSG_Rates[tm_id] != 0 && TM_MSG_Counts[tm_id] >= (1.0/actualDelays[hz800])/TM_MSG_Rates[tm_id])
                 {
                     FsTelemetry_sendTelemetry((TM_MSG_TYPE) tm_id);
                     TM_MSG_Counts[tm_id] = 0;
@@ -343,7 +344,6 @@ bool mainFlightSoftware(void)
         FsThrustEstimator_setGravity(pNavData->gravityBody);
         FsThrustEstimator_setVelocity(pNavData->velNED);
         FsThrustEstimator_setMotorPWMCmd(pControlData->TPWM);
-        FsThrustEstimator_rpmUpdate( actualDelays[hz400] );
         FsThrustEstimator_perform( actualDelays[hz400] );
     }
     
@@ -726,15 +726,15 @@ void setPrintVariables()
     //pMap->addLogVar("GPS posECEF[0]", &pGPSdata->posECEF[0], savePlot, 2);
     //pMap->addLogVar("GPS posECEF[1]", &pGPSdata->posECEF[1], savePlot, 2);
     //pMap->addLogVar("GPS posECEF[2]", &pGPSdata->posECEF[2], savePlot, 2);
-    //pMap->addLogVar("GPS posN", &pGPSdata->posENU[1], savePlot, 2);
-    //pMap->addLogVar("GPS posE", &pGPSdata->posENU[0], savePlot, 2);
-    //pMap->addLogVar("GPS posAlt", &pGPSdata->posENU[2], savePlot, 2);
+    pMap->addLogVar("GPS posN", &pGPSdata->posENU[1], savePlot, 2);
+    pMap->addLogVar("GPS posE", &pGPSdata->posENU[0], savePlot, 2);
+    pMap->addLogVar("GPS posAlt", &pGPSdata->posENU[2], savePlot, 2);
     //pMap->addLogVar("GPS 3D Fix Bias", &pGPSdata->alt_3dFixBias, savePlot, 2);
     //pMap->addLogVar("GPS horizPosAcc", &pGPSdata->horizPosAcc, savePlot, 2);
     //pMap->addLogVar("GPS vertPosAcc", &pGPSdata->vertPosAcc, savePlot, 2);
-    //pMap->addLogVar("GPS VN", &pGPSdata->velNED[0], savePlot, 2);
-    //pMap->addLogVar("GPS VE", &pGPSdata->velNED[1], savePlot, 2);
-    //pMap->addLogVar("GPS VD", &pGPSdata->velNED[2], savePlot, 2);
+    pMap->addLogVar("GPS VN", &pGPSdata->velNED[0], savePlot, 2);
+    pMap->addLogVar("GPS VE", &pGPSdata->velNED[1], savePlot, 2);
+    pMap->addLogVar("GPS VD", &pGPSdata->velNED[2], savePlot, 2);
     //pMap->addLogVar("GPS speedAcc", &pGPSdata->speedAcc, savePlot, 2);
     //pMap->addLogVar("GPS Fix", &gpsFix, savePlot, 2);
     //pMap->addLogVar("GPS Fix Ok", &fixOk, printSavePlot, 3);
@@ -755,21 +755,21 @@ void setPrintVariables()
     //pMap->addLogVar("GPS Fifo writeByteCount", &gps_fifoWritedByteCount, printSavePlot, 3);
     
     // Navigation
-    //pMap->addLogVar("Nav Pos N" , &pNavData->position[0], savePlot, 2);
-    //pMap->addLogVar("Nav Pos E" , &pNavData->position[1], savePlot, 2);
+    pMap->addLogVar("Nav Pos N" , &pNavData->position[0], savePlot, 2);
+    pMap->addLogVar("Nav Pos E" , &pNavData->position[1], savePlot, 2);
     pMap->addLogVar("Nav Alt", &pNavData->position[2], savePlot, 3);
     //pMap->addLogVar("Nav geoidCorrection", &pNavData->geoidCorrection, savePlot, 2);
 
-    //pMap->addLogVar("Nav vel N" , &pNavData->velNED[0], savePlot, 2);
-    //pMap->addLogVar("Nav vel E" , &pNavData->velNED[1], savePlot, 2);
-    //pMap->addLogVar("Nav vel D" , &pNavData->velNED[2], savePlot, 2);
+    pMap->addLogVar("Nav vel N" , &pNavData->velNED[0], savePlot, 2);
+    pMap->addLogVar("Nav vel E" , &pNavData->velNED[1], savePlot, 2);
+    pMap->addLogVar("Nav vel D" , &pNavData->velNED[2], savePlot, 2);
 
     pMap->addLogVar("Nav velLL X" , &nav_velLL[0], printSavePlot, 3);
     pMap->addLogVar("Nav velLL Y" , &nav_velLL[1], printSavePlot, 3);
     pMap->addLogVar("Nav velLL Z" , &nav_velLL[2], printSavePlot, 3);
     
-    //pMap->addLogVar("Nav Roll" , &eulerAnglesDeg[0], savePlot, 2);
-    //pMap->addLogVar("Nav Pitch", &eulerAnglesDeg[1], savePlot, 2);
+    pMap->addLogVar("Nav Roll" , &eulerAnglesDeg[0], savePlot, 2);
+    pMap->addLogVar("Nav Pitch", &eulerAnglesDeg[1], savePlot, 2);
     //pMap->addLogVar("Nav Yaw"  , &eulerAnglesDeg[2], savePlot, 2);
     //pMap->addLogVar("Nav Yaw Bias", &yawBiasDeg, printSavePlot, 3);
     
@@ -805,15 +805,15 @@ void setPrintVariables()
     
     //pMap->addLogVar("navstate", &navState, savePlot, 2);
     //pMap->addLogVar("INS Update Count", &NavUpdateCounts[INS], printSavePlot, 3);
-    pMap->addLogVar("Baro Update Count", &NavUpdateCounts[BaroUpdate], savePlot, 2);
-    pMap->addLogVar("GPS Update Count", &NavUpdateCounts[GPSUpdate], savePlot, 2);
+    //pMap->addLogVar("Baro Update Count", &NavUpdateCounts[BaroUpdate], savePlot, 2);
+    //pMap->addLogVar("GPS Update Count", &NavUpdateCounts[GPSUpdate], savePlot, 2);
     //pMap->addLogVar("Accel Update Count", &NavUpdateCounts[AccelUpdate], savePlot, 2);
     //pMap->addLogVar("Ground Align Update Count", &NavUpdateCounts[GroundAlign], savePlot, 2);
     
-    pMap->addLogVar("Baro Chi2", &pNavData->chi2value[BaroUpdate], savePlot, 2);
+    //pMap->addLogVar("Baro Chi2", &pNavData->chi2value[BaroUpdate], savePlot, 2);
     pMap->addLogVar("GPS Chi2", &pNavData->chi2value[GPSUpdate], savePlot, 2);
-    pMap->addLogVar("GPS2D Chi2", &pNavData->chi2value[GPSUpdate2D], savePlot, 2);
-    pMap->addLogVar("Ground Align Chi2", &pNavData->chi2value[GroundAlign], savePlot, 2);
+    //pMap->addLogVar("GPS2D Chi2", &pNavData->chi2value[GPSUpdate2D], savePlot, 2);
+    //pMap->addLogVar("Ground Align Chi2", &pNavData->chi2value[GroundAlign], savePlot, 2);
     
     //pMap->addLogVar("Baro Skipped Update Count", &NavSkippedUpdates[BaroUpdate], savePlot, 2);
     //pMap->addLogVar("GPS Skipped Update Count", &NavSkippedUpdates[GPSUpdate], savePlot, 2);
@@ -870,8 +870,8 @@ void setPrintVariables()
     pMap->addLogVar("Vel E Error", &pNavError->velNED[1], savePlot, 2);
     pMap->addLogVar("Vel D Error", &pNavError->velNED[2], savePlot, 2);
     
-    pMap->addLogVar("velLL X Error" , &nav_velLL_error[0], savePlot, 2);
-    pMap->addLogVar("velLL Y Error" , &nav_velLL_error[1], savePlot, 2);
+    //pMap->addLogVar("velLL X Error" , &nav_velLL_error[0], savePlot, 2);
+    //pMap->addLogVar("velLL Y Error" , &nav_velLL_error[1], savePlot, 2);
     //pMap->addLogVar("velLL Z Error" , &nav_velLL_error[2], savePlot, 2);
     
     pMap->addLogVar("N Error (m)", &pNavError->position[0], savePlot, 2);
@@ -1210,21 +1210,21 @@ void setPrintVariables()
     //pMap->addLogVar("deMomentCmd", &deMomentCmd, savePlot, 2);
     //pMap->addLogVar("drMomentCmd", &drMomentCmd, savePlot, 2);
     
-    //pMap->addLogVar("Ctrl PMW [0]", &pControlData->TPWM[0], savePlot, 2);
-    //pMap->addLogVar("Ctrl PMW [1]", &pControlData->TPWM[1], savePlot, 2);
-    //pMap->addLogVar("Ctrl PMW [2]", &pControlData->TPWM[2], savePlot, 2);
-    //pMap->addLogVar("Ctrl PMW [3]", &pControlData->TPWM[3], savePlot, 2);
+    pMap->addLogVar("Ctrl PMW [0]", &pControlData->TPWM[0], savePlot, 2);
+    pMap->addLogVar("Ctrl PMW [1]", &pControlData->TPWM[1], savePlot, 2);
+    pMap->addLogVar("Ctrl PMW [2]", &pControlData->TPWM[2], savePlot, 2);
+    pMap->addLogVar("Ctrl PMW [3]", &pControlData->TPWM[3], savePlot, 2);
     
-    //pMap->addLogVar("Ctrl rollCmd", &rollCmd, savePlot, 2);
-    //pMap->addLogVar("Ctrl pitchCmd", &pitchCmd, savePlot, 2);
+    pMap->addLogVar("Ctrl rollCmd", &rollCmd, savePlot, 2);
+    pMap->addLogVar("Ctrl pitchCmd", &pitchCmd, savePlot, 2);
     //pMap->addLogVar("Ctrl Vx int err", &pControlData->vx_int_error, savePlot, 2);
     //pMap->addLogVar("Ctrl Vy int err", &pControlData->vy_int_error, savePlot, 2);
     //pMap->addLogVar("Ctrl Vz int err", &pControlData->vz_int_error, savePlot, 2);
     //pMap->addLogVar("Ctrl yawRateCmd", &yawRateCmd, savePlot, 2);
-    //pMap->addLogVar("Ctrl VLLxCmd", &pControlData->VLLxCmd, savePlot, 2);
-    //pMap->addLogVar("Ctrl VLLyCmd", &pControlData->VLLyCmd, savePlot, 2);
-    //pMap->addLogVar("Ctrl VLLzCmd", &pControlData->VLLzCmd, printSavePlot, 3);
-    //pMap->addLogVar("Ctrl hCmd", &pControlData->hCmd, savePlot, 2);
+    pMap->addLogVar("Ctrl VLLxCmd", &pControlData->VLLxCmd, savePlot, 2);
+    pMap->addLogVar("Ctrl VLLyCmd", &pControlData->VLLyCmd, savePlot, 2);
+    pMap->addLogVar("Ctrl VLLzCmd", &pControlData->VLLzCmd, printSavePlot, 3);
+    pMap->addLogVar("Ctrl hCmd", &pControlData->hCmd, savePlot, 2);
     //pMap->addLogVar("controlAltitude", &controlAltitude, savePlot, 2);
     //pMap->addLogVar("takeOff", &takeOff, printSavePlot, 3);
     //pMap->addLogVar("crashLand", &crashLand, savePlot, 2);
@@ -1330,6 +1330,10 @@ void setupIO(void)
     Serial.begin(baudRate);
     Wire.begin(); // 18 SDA, 19 SCL
     display("Setup Begin.\n");
+    
+#ifdef TM_PRINT
+    get_print_fifo()->begin(0.0);
+#endif
     
     // LED Pin
     pinMode(LEDPIN, OUTPUT);
@@ -1460,6 +1464,10 @@ void printData()
         display(pIMUdata->errorCodeIMU);
         display(" ");
         
+        display("IMU Good: ");
+        display((int) pIMUdata->IMUgood);
+        display("\n");
+                
         display("gyro (deg/s): ");
         display(pIMUdata->gyro[0] * radian2degree);
         display(" ");
@@ -1534,6 +1542,10 @@ void printData()
         
         display("Baro I2C code: ");
         display(pBaroData->errorCodeBaro);
+        display(" ");
+        
+        display("Baro Good: ");
+        display((int) pBaroData->baroGood);
         display("\n");
         
         display("Baro timestamp/pressure/temperature/altitude: ");
@@ -1857,7 +1869,7 @@ void printData()
     {
         display(getTime());
         display(" ");
-
+/*
         display("TM startTime: [");
         for (unsigned int tm_id = FS_TM_IMU; tm_id < N_TM_MSGS; tm_id++)
         {
@@ -1881,7 +1893,7 @@ void printData()
             if (tm_id < N_TM_MSGS-1) { display(", "); }
             else { display("];\n"); }
         }
-        
+        */
         display("TM rcvdByte/writeByte/maxWriteByte: ");
         display((int) pTMData->tm_rcv_byte_count);
         display(" ");
@@ -1893,7 +1905,8 @@ void printData()
         display("TM timeout/failedWrite/fifoFull: ");
         display((int) pTMData->tm_timeout_count);
         display(" ");
-        display((int) pTMData->tm_failed_write_count);
+        //display((int) pTMData->tm_failed_write_count);
+        display((int) get_print_fifo()->get_write_fifo_overflow_count());
         display(" ");
         display((int) pTMData->tm_write_fifo_full_count);
         display("\n");

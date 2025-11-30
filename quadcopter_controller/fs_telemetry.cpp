@@ -13,6 +13,7 @@
 #include "fs_navigation.hpp"
 #include "fs_controls.hpp"
 
+// Write directly to radio instead of using FIFO
 //#define TM_DIRECT_READ
 //#define TM_DIRECT_WRITE
 
@@ -27,8 +28,9 @@ TMType TMData;
 FS_Telemetry_Type TM;
 FS_FIFO* pPrintFIFO = 0;
 #define tmIO Serial2 // [RX,TX] = [7,8]
-FS_FIFO telemetryFIFO(&tmIO);
+FS_FIFO telemetryFIFO(&tmIO, "TM");
 int TM_baud_rate;
+double TM_kwrite;
 double configStateTime;
 bool configStateSetup;
 unsigned char FsTelemetry_APC220_CONFIG[APC220_CONFIG_SIZE] =
@@ -60,6 +62,7 @@ void FsTelemetry_setupTelemetry(int baud_rate, float* msg_rates)
     configStateSetup = false;
     
     TM_baud_rate = baud_rate;
+    TM_kwrite    = 2.0; // at least 1.67
     checkPacketSizes(TM_baud_rate, msg_rates);
     
     pinMode(TM_ENPIN, OUTPUT);
@@ -70,6 +73,7 @@ void FsTelemetry_setupTelemetry(int baud_rate, float* msg_rates)
     
     // Begin telemetry port
     telemetryFIFO.begin(TM_baud_rate);
+    telemetryFIFO.set_kwrite(TM_kwrite);
 #endif
 }
 
@@ -97,7 +101,9 @@ void checkPacketSizes(int baud_rate, float* msg_rates)
     
     display("Serial Bitrate: ");
     display(baud_rate);
-    display("\n");
+    display(" -> ");
+    display(baud_rate/TM_kwrite);
+    display(" effictive \n");
     
     display("TM Configured bits/sec: ");
     display(bits_per_second);
@@ -467,7 +473,7 @@ void updatePrintTM(TM_Message_Info* pTMMSG)
     pTMMSG->reset();
     pTMMSG->size = pPrintFIFO->available();
     int i=0; while(pPrintFIFO->available()) { print_buffer_copy[i] = pPrintFIFO->read(); i++; }
-    pTMMSG->header = (byte) TM_PRINT_HEADER << 8 | (byte) TM_HEADER;
+    pTMMSG->header = (((byte) TM_PRINT_HEADER) << 8) | ((byte) TM_HEADER);
     pTMMSG->buffer = print_buffer_copy;
     pTMMSG->checksum = FsCommon_computeChecksum(pTMMSG->buffer, pTMMSG->size);
 }
@@ -478,10 +484,10 @@ void APC220_UpdateConfig()
     unsigned char baud_val = '3';
     
     switch (TM_baud_rate) {
-        case 1200:  { baud_val='0'; gsfk_val='1'; break; }
-        case 2400:  { baud_val='1'; gsfk_val='1'; break; }
-        case 4800:  { baud_val='2'; gsfk_val='2'; break; }
-        case 9600:  { baud_val='3'; gsfk_val='3'; break; }
+        case 1200:  { baud_val='0'; gsfk_val='4'; break; }
+        case 2400:  { baud_val='1'; gsfk_val='4'; break; }
+        case 4800:  { baud_val='2'; gsfk_val='4'; break; }
+        case 9600:  { baud_val='3'; gsfk_val='4'; break; }
         case 19200: { baud_val='4'; gsfk_val='4'; break; }
         case 38400: { baud_val='5'; gsfk_val='4'; break; }
         case 57600: { baud_val='6'; gsfk_val='4'; break; }

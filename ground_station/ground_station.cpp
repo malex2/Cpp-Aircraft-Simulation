@@ -12,6 +12,7 @@ bool GS_initialized = false;
 // Telemetry
 int GS_TMBaudRate;
 SoftwareSerial GS_tmIO(TELEMETRY_RADIO_RXPIN, TELEMETRY_RADIO_TXPIN);
+//AltSoftSerial GS_tmIO; // rx = 8, tx = 9
 double prevWriteTime_TM;
 double baudDt_TM;
 bool GS_configure_TM;
@@ -20,6 +21,10 @@ unsigned char APC220_CONFIG[19] = {'W','R',' ','4','3','4','0','0','0',' ','3','
 unsigned int TM_config_rsp_count;
 unsigned long TM_rcvd_count;
 unsigned long TM_sent_count;
+
+const unsigned int npb = 200;
+unsigned int ipb;
+byte print_buffer[npb];
 
 // Bluetooth
 int GS_Bluetooth_Baudrate;
@@ -49,7 +54,7 @@ void GS_initialize()
     pinMode(BLUETOOTH_TXPIN, OUTPUT);
     
     // Telemetry Settings
-    GS_TMBaudRate    = 9600;
+    GS_TMBaudRate    = 1200;
     baudDt_TM        = 1.0/GS_TMBaudRate;
     prevWriteTime_TM = 0.0;
     GS_configure_TM = true;
@@ -57,6 +62,8 @@ void GS_initialize()
     TM_config_rsp_count = 0;
     TM_rcvd_count = 0;
     TM_sent_count = 0;
+    ipb = 0;
+    memset(print_buffer, 0, npb);
     
     GS_APC220_SetAwake();
     GS_APC220_SetRunningMode();
@@ -65,10 +72,10 @@ void GS_initialize()
     unsigned char gsfk_val = '3';
     unsigned char baud_val = '3';
     switch (GS_TMBaudRate) {
-        case 1200:  { baud_val='0'; gsfk_val='1'; break; }
-        case 2400:  { baud_val='1'; gsfk_val='1'; break; }
-        case 4800:  { baud_val='2'; gsfk_val='2'; break; }
-        case 9600:  { baud_val='3'; gsfk_val='3'; break; }
+        case 1200:  { baud_val='0'; gsfk_val='4'; break; }
+        case 2400:  { baud_val='1'; gsfk_val='4'; break; }
+        case 4800:  { baud_val='2'; gsfk_val='4'; break; }
+        case 9600:  { baud_val='3'; gsfk_val='4'; break; }
         case 19200: { baud_val='4'; gsfk_val='4'; break; }
         case 38400: { baud_val='5'; gsfk_val='4'; break; }
         case 57600: { baud_val='6'; gsfk_val='4'; break; }
@@ -93,6 +100,8 @@ void GS_initialize()
     Serial.begin(9600);
     
     GS_tmIO.listen();
+    
+    delay(500);
 }
 
 // **********************************************************************
@@ -145,12 +154,12 @@ void GS_PerformTelemetry()
             BLE_sent_count += bluetoothIO.write(tm_byte);
             TM_rcvd_count++;
 #ifdef PRINT_TM
-            Serial.println(tm_byte);
+            if (ipb < npb) { print_buffer[ipb] = tm_byte; ipb++; }
+            //Serial.println(tm_byte);
 #endif
             prevWriteTime_BLE = GS_getTime();
         }
-        
-        
+          
         if (GS_configure_TM && TM_setting_sent && TM_config_rsp_count == 21)
         {
             GS_tmIO.end();
@@ -197,7 +206,21 @@ void GS_DebugPrints()
         prev_A1 = GS_getTime();
     }
 #endif
-    
+
+#ifdef PRINT_TM
+    static double prev_status0 = GS_getTime();
+    if ((GS_getTime() - prev_status0 > 1.0) && (ipb > 0))
+    {
+        for (int i=0; i<ipb; i++)
+        {
+            //Serial.println(print_buffer[i]);
+            Serial.print((char) print_buffer[i]);
+        }
+        ipb=0;
+        memset(print_buffer, 0, npb);
+        prev_status0 = GS_getTime();
+    }
+#endif
 #ifdef PRINT_IO_STATUS
     static double prev_status = GS_getTime();
     if (GS_getTime() - prev_status > 1.0)

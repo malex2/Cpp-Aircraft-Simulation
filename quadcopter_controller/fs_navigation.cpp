@@ -249,7 +249,7 @@ void FsNavigation_performNavigation( double &navDt )
         if (rejectUpdate)
         {
             NavData.rejectedUpdateCount[NavData.state]++;
-            std::cout << NavStateStr[NavData.state] << " rejected" << std::endl;
+            display(NavStateStr[NavData.state]); display(" rejected\n");
         }
         else
         {

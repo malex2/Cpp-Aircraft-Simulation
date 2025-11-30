@@ -875,7 +875,7 @@ TwoHardwareSerial::MCUIO::MCUIO()
 
 void TwoHardwareSerial::initialize()
 {
-    pTime  = (Time*) pMap->getModel("Time");
+    pTime = (Time*) pMap->getModel("Time");
 }
 
 TwoHardwareSerial::MCUIO::~MCUIO()
